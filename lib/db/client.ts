@@ -11,7 +11,9 @@ function open() {
   }
   const file = resolve(path);
   mkdirSync(dirname(file), { recursive: true });
-  return drizzle(new Database(file));
+  const sqlite = new Database(file);
+  sqlite.pragma("foreign_keys = ON"); // SQLite ignores FKs (and cascades) unless set per connection
+  return drizzle(sqlite);
 }
 
 // Cached on globalThis so dev hot reload does not re-open the file on every edit.
