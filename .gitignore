@@ -1,0 +1,9 @@
+# Claude configuration
+.claude/
+
+# Application documentation
+Application*.md
+
+# Claude and workflow files
+CLAUDE.md
+WORKFLOW.md
