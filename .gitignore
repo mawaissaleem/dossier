@@ -51,3 +51,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local database
+/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
