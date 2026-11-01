@@ -20,3 +20,9 @@ function open() {
 // Cached on globalThis so dev hot reload does not re-open the file on every edit.
 const g = globalThis as unknown as { __dossierDb?: ReturnType<typeof open> };
 export const getDb = () => (g.__dossierDb ??= open());
+
+// Closes and forgets the cached handle. Tests use it between files; Phase 8 restore will need it too.
+export function closeDb() {
+  g.__dossierDb?.$client.close();
+  delete g.__dossierDb;
+}

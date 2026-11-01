@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Agent work files, including baseline snapshots of old code.
+    ".claude/**",
   ]),
 ]);
 
