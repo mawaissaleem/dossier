@@ -16,6 +16,7 @@ function open() {
   return drizzle(sqlite);
 }
 
+// Opened on first call, not on import: `next build` imports route modules and must not create or need the DB file.
 // Cached on globalThis so dev hot reload does not re-open the file on every edit.
 const g = globalThis as unknown as { __dossierDb?: ReturnType<typeof open> };
-export const db = (g.__dossierDb ??= open());
+export const getDb = () => (g.__dossierDb ??= open());

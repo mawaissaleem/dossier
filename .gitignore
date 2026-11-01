@@ -1,12 +1,5 @@
-# Claude configuration
-.claude/
-
 # Application documentation
 Application*.md
-
-# Claude and workflow files
-CLAUDE.md
-WORKFLOW.md
 
 # Next.js
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
