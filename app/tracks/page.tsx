@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { listTracks } from "@/lib/db/tracks";
@@ -10,7 +11,9 @@ async function TrackList() {
   return (
     <ul className="list-disc pl-6">
       {tracks.map((t) => (
-        <li key={t.id}>{t.name}</li>
+        <li key={t.id}>
+          <Link href={`/tracks/${t.id}`} className="underline">{t.name}</Link>
+        </li>
       ))}
     </ul>
   );

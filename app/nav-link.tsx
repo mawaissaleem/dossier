@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  const active = usePathname() === href;
+  const path = usePathname();
+  // Prefix match so /tracks/1 keeps "Tracks" lit; "/" stays exact.
+  const active = href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`);
   return (
     <Link
       href={href}

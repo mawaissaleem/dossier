@@ -1,7 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApplication } from "@/app/actions/applications";
+import { listApplications } from "@/lib/db/applications";
 import { applications, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
+
+// refresh() only works inside a real Server Action request.
+vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
 let db: ReturnType<typeof useTestDb>;
 let trackId: number;
@@ -43,5 +47,19 @@ describe("createApplication", () => {
     const other = db.insert(tracks).values({ userId: "someone-else", name: "X", position: 0 }).returning().get().id;
     expect(await createApplication("ok", other)).toEqual({ ok: false, error: "Track not found." });
     expect(db.select().from(applications).all()).toHaveLength(0);
+  });
+});
+
+describe("listApplications", () => {
+  it("returns only this track's non-archived rows for the current user, newest first", async () => {
+    const other = db.insert(tracks).values({ userId: "local", name: "PhD", position: 1 }).returning().get().id;
+    const add = (v: Partial<typeof applications.$inferInsert> & { title: string }) =>
+      db.insert(applications).values({ userId: "local", trackId, ...v }).returning().get().id;
+    const a = add({ title: "first" });
+    add({ title: "archived", archived: true });
+    add({ title: "other track", trackId: other });
+    add({ title: "other user", userId: "someone-else" });
+    const c = add({ title: "second" });
+    expect(await listApplications(trackId)).toEqual([{ id: c, title: "second" }, { id: a, title: "first" }]);
   });
 });

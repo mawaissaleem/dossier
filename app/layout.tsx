@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import "./globals.css";
 import { NavLink } from "./nav-link";
@@ -13,9 +14,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full">
         <nav aria-label="Main" className="flex w-48 shrink-0 flex-col gap-1 border-r border-foreground/15 p-4">
           <span className="mb-4 px-3 text-lg font-semibold">Dossier</span>
-          <NavLink href="/">Dashboard</NavLink>
-          <NavLink href="/tracks">Tracks</NavLink>
-          <NavLink href="/settings">Settings</NavLink>
+          {/* usePathname suspends on dynamic routes under cacheComponents; the boundary keeps the build working. */}
+          <Suspense>
+            <NavLink href="/">Dashboard</NavLink>
+            <NavLink href="/tracks">Tracks</NavLink>
+            <NavLink href="/settings">Settings</NavLink>
+          </Suspense>
         </nav>
         <main className="flex-1 p-6">{children}</main>
       </body>
