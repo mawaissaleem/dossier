@@ -52,7 +52,8 @@ export async function listApplicationRows(trackId: number, cols?: ColumnItem[]):
     .all();
   for (const { cell } of cells) {
     const t = type.get(cell.columnId);
-    if (t) byApp.get(cell.applicationId)![cell.columnId] = readCell(t, cell); // skips cells of columns outside this track
+    const vals = byApp.get(cell.applicationId); // undefined if the app was (un)archived between the two reads
+    if (t && vals) vals[cell.columnId] = readCell(t, cell); // skips cells of columns outside this track
   }
   return apps.map((a) => ({ ...a, values: byApp.get(a.id)! }));
 }

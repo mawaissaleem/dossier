@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getApplicationDetail, listApplicationRows } from "@/lib/db/applications";
 import { setCellValue } from "@/lib/db/cells";
@@ -88,6 +89,16 @@ describe("listApplicationRows", () => {
     const foreign = db.insert(tracks).values({ userId: "someone", name: "Theirs", position: 0 }).returning().get().id;
     db.insert(applications).values({ userId: "someone", trackId: foreign, title: "theirs" }).run();
     expect(await listApplicationRows(foreign)).toEqual([]);
+  });
+
+  it("leaves out an archived application that still has cell values", async () => {
+    const t = col("text");
+    const live = app("live");
+    const old = app("old");
+    await setCellValue(live, t, "kept");
+    await setCellValue(old, t, "hidden");
+    db.update(applications).set({ archived: true }).where(eq(applications.id, old)).run();
+    expect(await listApplicationRows(trackId)).toEqual([{ id: live, title: "live", values: { [t]: "kept" } }]);
   });
 
   it("shows a column added after rows exist as null on all of them", async () => {

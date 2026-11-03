@@ -11,12 +11,16 @@ export function NewApplicationForm({ trackId }: { trackId: number }) {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const r = await createApplication(title, trackId);
-      if (r.ok) {
-        setTitle("");
-        setError(null);
-      } else {
-        setError(r.error);
+      try {
+        const r = await createApplication(title, trackId);
+        if (r.ok) {
+          setTitle("");
+          setError(null);
+        } else {
+          setError(r.error);
+        }
+      } catch {
+        setError("Could not save. Try again.");
       }
     });
   }
