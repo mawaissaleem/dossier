@@ -25,7 +25,7 @@ async function TrackView({ params }: { params: Promise<{ id: string }> }) {
       <TrackTabs tracks={tracks} currentId={track.id} />
       <h1 className="mb-4 text-2xl font-semibold">{track.name}</h1>
       <NewApplicationForm trackId={track.id} />
-      <ApplicationsTable columns={cols} rows={rows} />
+      <ApplicationsTable trackId={track.id} columns={cols} rows={rows} />
     </>
   );
 }

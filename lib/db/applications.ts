@@ -1,19 +1,42 @@
 // Server-only. See lib/db/tracks.ts for the convention.
-import { and, count, desc, eq } from "drizzle-orm";
-import { readCell, type CellScalar } from "../cells";
+import { and, count, desc, eq, isNotNull } from "drizzle-orm";
+import { CELL_FIELD, decodeDefault, readCell, type CellScalar } from "../cells";
 import { getDb } from "./client";
 import { listColumns, type ColumnItem } from "./columns";
-import { applications, cellValues, tracks } from "./schema";
+import { applications, cellValues, columnOptions, columns, tracks } from "./schema";
 import { getUserId } from "./user";
 
+type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
+
+// Cell rows a new application starts with: every track column's default (FR-1.6), Status included (one mechanism, see decodeDefault).
+// A default is used only if it decodes for the column's type and, for a single_select, names an option that still belongs to that
+// column; anything else (hand-edited, deleted or foreign option) is skipped, so the application is created with a blank cell.
+function defaultCells(tx: Tx, trackId: number, userId: string) {
+  const cols = tx.select({ id: columns.id, type: columns.type, defaultValue: columns.defaultValue }).from(columns)
+    .where(and(eq(columns.trackId, trackId), eq(columns.userId, userId), isNotNull(columns.defaultValue))).all();
+  const cells: { columnId: number }[] = []; // plus the one typed value field of the column's type
+  for (const c of cols) {
+    const value = decodeDefault(c.type, c.defaultValue);
+    if (value === null) continue;
+    if (c.type === "single_select" && !tx.select({ id: columnOptions.id }).from(columnOptions)
+      .where(and(eq(columnOptions.id, value as number), eq(columnOptions.columnId, c.id), eq(columnOptions.userId, userId))).get()) continue;
+    cells.push({ columnId: c.id, [CELL_FIELD[c.type]]: value });
+  }
+  return cells;
+}
+
 // Returns the new id, or null (nothing inserted) if the track does not exist or is not the current user's.
-// No await between the check and the insert, and better-sqlite3 is sync, so nothing can interleave.
+// The application and its default cells go in one transaction, so it never exists half pre-filled.
 export async function createApplication({ title, trackId }: { title: string; trackId: number }): Promise<number | null> {
-  const db = getDb();
   const userId = getUserId();
-  const track = db.select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, trackId), eq(tracks.userId, userId))).get();
-  if (!track) return null;
-  return db.insert(applications).values({ userId, trackId, title }).returning({ id: applications.id }).get().id;
+  return getDb().transaction((tx) => {
+    const track = tx.select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, trackId), eq(tracks.userId, userId))).get();
+    if (!track) return null;
+    const id = tx.insert(applications).values({ userId, trackId, title }).returning({ id: applications.id }).get().id;
+    const cells = defaultCells(tx, trackId, userId);
+    if (cells.length) tx.insert(cellValues).values(cells.map((c) => ({ userId, applicationId: id, ...c }))).run();
+    return id;
+  });
 }
 
 export type ApplicationListItem = { id: number; title: string };

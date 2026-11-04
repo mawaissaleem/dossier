@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { createApplication as insertApplication } from "@/lib/db/applications";
+import { isId } from "@/lib/ids";
 
 export type CreateApplicationResult = { ok: true; id: number } | { ok: false; error: string };
 
@@ -15,7 +16,7 @@ export async function createApplication(title: string, trackId: number): Promise
   const t = title.trim();
   if (!t) return { ok: false, error: "Title is required." };
   if (t.length > MAX_TITLE) return { ok: false, error: `Title must be at most ${MAX_TITLE} characters.` };
-  if (typeof trackId !== "number" || !Number.isSafeInteger(trackId) || trackId < 1) return { ok: false, error: "Invalid track." };
+  if (!isId(trackId)) return { ok: false, error: "Invalid track." };
 
   const id = await insertApplication({ title: t, trackId });
   if (id === null) return { ok: false, error: "Track not found." };

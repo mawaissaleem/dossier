@@ -81,3 +81,20 @@ export function parseCell(type: ColumnType, raw: unknown): ParsedCell {
 export function readCell(type: ColumnType, row: Partial<Record<CellField, CellScalar | null>>): CellScalar | null {
   return row[CELL_FIELD[type]] ?? null;
 }
+
+// Column default_value encoding: raw text in columns.default_value, one rule per type. A default is a typed value that parseCell
+// accepted, stored as String(value): text/link as given (link already normalised), number as its canonical decimal ("4.5"),
+// date as YYYY-MM-DD, checkbox as "true"/"false", single_select as the option id ("12"). null (no default) is the NULL column.
+export const encodeDefault = (value: CellScalar): string => String(value);
+
+// Typed default for `type`, or null (= no default) when the text is empty or invalid, e.g. hand-edited. Callers skip null, so a
+// bad default never blocks creating an application. A single_select result still has to be checked against the column's options.
+export function decodeDefault(type: ColumnType, text: string | null): CellScalar | null {
+  if (text === null) return null;
+  let raw: unknown = text;
+  if (type === "checkbox") raw = text === "true" ? true : text === "false" ? false : null;
+  // Number() would also take "0x10" and " 5"; only the exact text encodeDefault writes is accepted.
+  else if (type === "number") raw = String(Number(text)) === text ? Number(text) : null;
+  const p = parseCell(type, raw);
+  return p.ok ? p.value : null;
+}

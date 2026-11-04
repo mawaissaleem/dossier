@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { refresh } from "next/cache";
 import { updateCell } from "@/app/actions/cells";
-import { applications, cellValues, columns, tracks } from "@/lib/db/schema";
+import { applications, cellValues, columnOptions, columns, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
 // refresh() only works inside a real Server Action request.
@@ -12,8 +12,8 @@ let trackId: number;
 let appId: number;
 let textCol: number;
 let numCol: number;
-const mkCol = (type: (typeof columns.$inferInsert)["type"], tid = trackId) =>
-  db.insert(columns).values({ userId: "local", trackId: tid, name: type, type, position: 0 }).returning().get().id;
+const mkCol = (type: (typeof columns.$inferInsert)["type"], tid = trackId, name: string = type) =>
+  db.insert(columns).values({ userId: "local", trackId: tid, name, type, position: 0 }).returning().get().id;
 const stored = () => db.select().from(cellValues).all();
 
 beforeEach(() => {
@@ -111,5 +111,21 @@ describe("updateCell", () => {
     }
     expect(stored().map((r) => r.valueText)).toEqual(["https://example.com/jobs"]);
     expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateCell on a single-select column", () => {
+  it("saves an option id, clears on blank, and rejects another column's option", async () => {
+    const mine = mkCol("single_select");
+    const theirs = mkCol("single_select", trackId, "other");
+    const opt = (columnId: number) =>
+      db.insert(columnOptions).values({ userId: "local", columnId, label: "x", color: "red", position: 0 }).returning().get().id;
+    const o = opt(mine);
+    expect(await updateCell(appId, mine, o)).toEqual({ ok: true, value: o });
+    expect(stored().map((r) => r.valueOptionId)).toEqual([o]);
+    expect((await updateCell(appId, mine, opt(theirs))).ok).toBe(false);
+    expect(stored().map((r) => r.valueOptionId)).toEqual([o]); // rejected: unchanged
+    expect(await updateCell(appId, mine, null)).toEqual({ ok: true, value: null });
+    expect(stored()).toHaveLength(0);
   });
 });

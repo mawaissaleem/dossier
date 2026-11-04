@@ -2,8 +2,7 @@
 
 import { refresh } from "next/cache";
 import { archiveApplication as setArchived, deleteApplication as removeApplication } from "@/lib/db/applications";
-
-const isId = (n: unknown) => typeof n === "number" && Number.isSafeInteger(n) && n >= 1;
+import { isId } from "@/lib/ids";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 

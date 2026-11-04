@@ -2,6 +2,7 @@
 import { createColumnHelper, tableFeatures } from "@tanstack/react-table";
 import type { ApplicationRow } from "./db/applications";
 import type { ColumnItem } from "./db/columns";
+import { findOption } from "./options";
 
 // Stable row identity by application id, not array index: a new application at the top must not shift edit state onto another row.
 export const getRowId = (r: ApplicationRow) => String(r.id);
@@ -22,7 +23,7 @@ export function formatCell(col: Pick<ColumnItem, "type" | "options">, v: string 
     case "checkbox":
       return v ? "✓" : "";
     case "single_select":
-      return col.options.find((o) => o.id === v)?.label ?? "";
+      return findOption(col.options, v)?.label ?? "";
     case "number":
       return typeof v === "number" ? plainNumber(v) : String(v);
     default:

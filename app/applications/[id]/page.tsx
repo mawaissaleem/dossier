@@ -6,6 +6,8 @@ import { getApplicationDetail, getDeleteImpact } from "@/lib/db/applications";
 import { ApplicationActions } from "./application-actions";
 import { linkLabel, safeHref } from "@/lib/cells";
 import { formatCell } from "@/lib/table";
+import { OptionChip } from "@/app/option-chip";
+import { findOption } from "@/lib/options";
 
 // Same pattern as the track page: request-time work inside Suspense. Unknown ids render the 404 page but with status 200
 // (tested: also without Suspense and without the layout's nav boundary; a real 404 needs a Proxy lookup, see the 1.10 report).
@@ -28,6 +30,7 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
         {detail.columns.map((col) => {
           const text = formatCell(col, detail.values[col.id]);
           const href = col.type === "link" ? safeHref(text) : null;
+          const option = col.type === "single_select" ? findOption(col.options, detail.values[col.id]) : undefined;
           return (
             <div key={col.id} className="contents">
               <dt className="font-medium">
@@ -40,6 +43,8 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
                   <a href={href} target="_blank" rel="noopener noreferrer" title={href} className="text-blue-600 underline">
                     {linkLabel(href)}
                   </a>
+                ) : option ? (
+                  <OptionChip option={option} />
                 ) : (
                   text || "—"
                 )}

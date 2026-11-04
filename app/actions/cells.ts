@@ -2,8 +2,7 @@
 
 import { refresh } from "next/cache";
 import { setCellValue, type SetCellResult } from "@/lib/db/cells";
-
-const isId = (n: unknown) => typeof n === "number" && Number.isSafeInteger(n) && n >= 1;
+import { isId } from "@/lib/ids";
 
 // Generic for every column type: setCellValue validates `raw` against the column's type, and blank deletes the value.
 // Runs on any POST, so the ids are checked here; raw is `unknown` and parseCell rejects wrong shapes.

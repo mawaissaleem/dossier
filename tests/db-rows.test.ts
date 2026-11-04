@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getApplicationDetail, listApplicationRows } from "@/lib/db/applications";
 import { setCellValue } from "@/lib/db/cells";
 import { listColumns } from "@/lib/db/columns";
-import { applications, columnOptions, columns, tracks } from "@/lib/db/schema";
+import { applications, cellValues, columnOptions, columns, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
 let db: ReturnType<typeof useTestDb>;
@@ -122,7 +122,13 @@ describe("listApplicationRows", () => {
     const id = app("one");
     await setCellValue(id, t, "x");
     const few = await count();
-    for (let i = 0; i < 200; i++) await setCellValue(app(`app ${i}`), t, `v${i}`);
+    // One transaction: 200 separate fsyncing commits made this test time out under a loaded full suite.
+    db.transaction((tx) => {
+      for (let i = 0; i < 200; i++) {
+        const a = tx.insert(applications).values({ userId: "local", trackId, title: `app ${i}` }).returning().get().id;
+        tx.insert(cellValues).values({ userId: "local", applicationId: a, columnId: t, valueText: `v${i}` }).run();
+      }
+    });
     expect((await listApplicationRows(trackId)).length).toBe(201);
     expect(await count()).toBe(few);
     expect(few).toBeLessThanOrEqual(4);

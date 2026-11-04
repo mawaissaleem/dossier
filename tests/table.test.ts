@@ -5,7 +5,7 @@ import { parseCell } from "@/lib/cells";
 import { buildColumns, editorKind, formatCell, getRowId } from "@/lib/table";
 
 const col = (id: number, name: string, type: ColumnItem["type"], over: Partial<ColumnItem> = {}): ColumnItem => ({
-  id, name, type, hidden: false, isStatus: false, options: [], ...over,
+  id, name, type, hidden: false, isStatus: false, defaultValue: null, options: [], ...over,
 });
 
 describe("formatCell", () => {
