@@ -13,6 +13,7 @@ export type AddOptionResult = { ok: true; id: number } | { ok: false; error: str
 const DUP = { ok: false, error: "An option with that label already exists." } as const;
 const NO_COLUMN = { ok: false, error: "Column not found." } as const;
 const NO_OPTION = { ok: false, error: "Option not found." } as const;
+const STALE_COUNT = { ok: false, error: "The number of applications using this option changed. Check again." } as const;
 
 // The column's options in position order, or an error result if the column is not the current user's single-select column.
 function selectOptions(columnId: number) {
@@ -92,18 +93,22 @@ export async function reorderOptions(columnId: number, orderedIds: number[]): Pr
 
 export type OptionDeleteImpact = { label: string; useCount: number; archivedCount: number };
 
+// The cell rows deleteOption rewrites; getOptionDeleteImpact counts the same set so the shown count and the delete agree.
+const holding = (columnId: number, optionId: number, userId: string) =>
+  and(eq(cellValues.columnId, columnId), eq(cellValues.valueOptionId, optionId), eq(cellValues.userId, userId));
+
 // How many applications hold this option in its column (archived included, reported separately in archivedCount).
 // Null if the option is missing or not the current user's.
 export async function getOptionDeleteImpact(optionId: number): Promise<OptionDeleteImpact | null> {
   const db = getDb();
   const userId = getUserId();
-  const opt = db.select({ label: columnOptions.label }).from(columnOptions).where(and(eq(columnOptions.id, optionId), eq(columnOptions.userId, userId))).get();
+  const opt = db.select({ label: columnOptions.label, columnId: columnOptions.columnId }).from(columnOptions).where(and(eq(columnOptions.id, optionId), eq(columnOptions.userId, userId))).get();
   if (!opt) return null;
   const rows = db
     .select({ archived: applications.archived, n: count() })
     .from(cellValues)
     .innerJoin(applications, eq(applications.id, cellValues.applicationId))
-    .where(and(eq(cellValues.valueOptionId, optionId), eq(cellValues.userId, userId)))
+    .where(holding(opt.columnId, optionId, userId))
     .groupBy(applications.archived)
     .all();
   return { label: opt.label, useCount: rows.reduce((s, r) => s + r.n, 0), archivedCount: rows.find((r) => r.archived)?.n ?? 0 };
@@ -111,8 +116,9 @@ export async function getOptionDeleteImpact(optionId: number): Promise<OptionDel
 
 // One transaction: move this option's cell values to `reassignTo` (another option of the same column) or, for null, delete those
 // cell rows (blank = missing row); repoint or clear the column default if it was this option; delete the option; close the position gap.
-// The last option of the Status column is refused so the status default cannot dangle. Callers must have confirmed with the user.
-export async function deleteOption(optionId: number, reassignTo: number | null): Promise<OptionResult> {
+// The last option of the Status column is refused so the status default cannot dangle. Callers must have confirmed with the user,
+// and `expectedUseCount` is the count they were shown: if it no longer matches, nothing is written (values added meanwhile are never wiped).
+export async function deleteOption(optionId: number, reassignTo: number | null, expectedUseCount: number): Promise<OptionResult> {
   const userId = getUserId();
   try {
     return getDb().transaction((tx) => {
@@ -123,9 +129,10 @@ export async function deleteOption(optionId: number, reassignTo: number | null):
       const siblings = tx.select({ id: columnOptions.id }).from(columnOptions).where(and(eq(columnOptions.columnId, opt.columnId), eq(columnOptions.userId, userId))).orderBy(asc(columnOptions.position), asc(columnOptions.id)).all().map((o) => o.id);
       if (col.isStatus && siblings.length === 1) return { ok: false, error: "The Status column needs at least one option." } as const;
       if (reassignTo !== null && (reassignTo === optionId || !siblings.includes(reassignTo))) return { ok: false, error: "Choose another option of this column to reassign to." } as const;
-      const holding = and(eq(cellValues.columnId, opt.columnId), eq(cellValues.valueOptionId, optionId), eq(cellValues.userId, userId));
-      if (reassignTo === null) tx.delete(cellValues).where(holding).run();
-      else tx.update(cellValues).set({ valueOptionId: reassignTo, updatedAt: new Date() }).where(holding).run();
+      const held = holding(opt.columnId, optionId, userId);
+      if (tx.select({ n: count() }).from(cellValues).where(held).get()!.n !== expectedUseCount) return STALE_COUNT;
+      if (reassignTo === null) tx.delete(cellValues).where(held).run();
+      else tx.update(cellValues).set({ valueOptionId: reassignTo, updatedAt: new Date() }).where(held).run();
       if (col.defaultValue === String(optionId)) {
         tx.update(columns).set({ defaultValue: reassignTo === null ? null : String(reassignTo), updatedAt: new Date() }).where(and(eq(columns.id, opt.columnId), eq(columns.userId, userId))).run();
       }

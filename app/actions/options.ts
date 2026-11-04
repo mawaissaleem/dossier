@@ -44,11 +44,13 @@ export async function fetchOptionDeleteImpact(optionId: number): Promise<({ ok: 
 }
 
 // `confirm` must be literally true and `reassignTo` explicit: another option's id, or null to leave those applications blank (FR-3.4, NFR-4).
-export async function deleteOption(optionId: number, choice: { confirm: boolean; reassignTo: number | null }): Promise<OptionResult> {
+// `expectedUseCount` is the count the dialog showed; the data layer refuses if it changed since.
+export async function deleteOption(optionId: number, choice: { confirm: boolean; reassignTo: number | null; expectedUseCount: number }): Promise<OptionResult> {
   if (typeof choice !== "object" || choice === null || choice.confirm !== true) return { ok: false, error: "Deleting must be confirmed." };
+  if (!Number.isSafeInteger(choice.expectedUseCount) || choice.expectedUseCount < 0) return { ok: false, error: "Deleting must be confirmed." };
   if (!isId(optionId)) return { ok: false, error: "Option not found." };
   if (choice.reassignTo !== null && !isId(choice.reassignTo)) return { ok: false, error: "Choose another option of this column to reassign to." };
-  const r = await remove(optionId, choice.reassignTo);
+  const r = await remove(optionId, choice.reassignTo, choice.expectedUseCount);
   if (r.ok) refresh();
   return r;
 }

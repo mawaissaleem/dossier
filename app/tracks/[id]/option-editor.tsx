@@ -11,7 +11,7 @@ import { MAX_OPTION_LABEL } from "@/lib/options";
 type Result = { ok: true } | { ok: false; error: string };
 export type OptionPatch = { label: string; color: string };
 export type OptionImpact = { ok: true; label: string; useCount: number; archivedCount: number } | { ok: false; error: string };
-export type DeleteChoice = { confirm: true; reassignTo: number | null };
+export type DeleteChoice = { confirm: true; reassignTo: number | null; expectedUseCount: number };
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 // One option: label input + colour select (palette tokens only) + Save. The chip previews the draft.
@@ -123,17 +123,27 @@ export function OptionEditor({ column, innerRef, onAdd, onUpdate, onReorder, onL
     setChoice("");
     setDelError(null);
     delDialog.current?.showModal();
-    onLoadImpact(o.id).then(setImpact, () => setImpact({ ok: false, error: "Could not load the count. Try again." }));
+    loadImpact(o.id);
+  }
+  function loadImpact(optionId: number) {
+    onLoadImpact(optionId).then(setImpact, () => setImpact({ ok: false, error: "Could not load the count. Try again." }));
   }
   function confirmDelete() {
-    if (!deleting) return;
+    if (!deleting || !impact?.ok) return;
+    const expectedUseCount = impact.useCount;
     startDelete(async () => {
       try {
-        const r = await onDelete(deleting.id, { confirm: true, reassignTo: choice === "" || choice === "blank" ? null : Number(choice) });
+        const r = await onDelete(deleting.id, { confirm: true, reassignTo: choice === "" || choice === "blank" ? null : Number(choice), expectedUseCount });
         if (r.ok) {
           delDialog.current?.close();
           document.getElementById(`${uid}-new`)?.focus(); // the deleted row's button is going away
-        } else setDelError(r.error);
+        } else {
+          // Refused (e.g. the count changed meanwhile): show the fresh count and ask for the choice again before confirm re-enables.
+          setDelError(r.error);
+          setImpact(null);
+          setChoice("");
+          loadImpact(deleting.id);
+        }
       } catch {
         setDelError("Could not delete. Try again.");
       }

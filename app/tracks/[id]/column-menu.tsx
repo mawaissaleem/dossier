@@ -10,10 +10,12 @@ type Impact = { ok: true; name: string; valueCount: number; archivedCount: numbe
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 // Native <details> dropdown: the summary is a keyboard-focusable button (Enter/Space). Escape and focus leaving close it.
-function Dropdown({ label, summary, innerRef, children }: { label: string; summary: React.ReactNode; innerRef?: React.RefObject<HTMLDetailsElement | null>; children: React.ReactNode }) {
+// Clicking any item closes it and returns focus to the summary, so a disabled-while-saving item never strands focus.
+// `error` renders outside the <details> so a failed action's message is visible after the menu has closed.
+function Dropdown({ label, summary, error, children }: { label: string; summary: React.ReactNode; error?: string | null; children: React.ReactNode }) {
   return (
+    <>
     <details
-      ref={innerRef}
       className="relative inline-block font-normal"
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.open = false;
@@ -25,8 +27,21 @@ function Dropdown({ label, summary, innerRef, children }: { label: string; summa
       }}
     >
       <summary aria-label={label} className="cursor-pointer select-none px-1">{summary}</summary>
-      <div className="absolute left-0 z-10 mt-1 flex min-w-40 flex-col rounded border border-foreground/30 bg-background p-1 text-left">{children}</div>
+      <div
+        // Capture phase: runs before the item's own onClick, so an item that opens a modal dialog still gets focus moved into it (and back to the summary on close).
+        onClickCapture={(e) => {
+          if (!(e.target as Element).closest("button")) return;
+          const d = e.currentTarget.parentElement as HTMLDetailsElement;
+          d.open = false;
+          d.querySelector("summary")?.focus();
+        }}
+        className="absolute left-0 z-10 mt-1 flex min-w-40 flex-col rounded border border-foreground/30 bg-background p-1 text-left"
+      >
+        {children}
+      </div>
     </details>
+    {error && <p role="alert" className="text-sm font-normal text-red-600">{error}</p>}
+    </>
   );
 }
 
@@ -51,7 +66,6 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
   onSetStatus: () => Promise<Result>;
   onSetDefault: (value: string | number | boolean | null) => Promise<Result>;
 }) {
-  const menu = useRef<HTMLDetailsElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const delDialog = useRef<HTMLDialogElement>(null);
   const optDialog = useRef<HTMLDialogElement>(null);
@@ -67,13 +81,12 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
   const [pending, startTransition] = useTransition();
 
   function run(fn: () => Promise<Result>, onOk?: () => void, fail: (m: string) => void = setMenuError) {
+    setMenuError(null); // a retry re-inserts the alert, so the same message is announced again
     startTransition(async () => {
       try {
         const r = await fn();
-        if (r.ok) {
-          setMenuError(null);
-          onOk?.();
-        } else fail(r.error);
+        if (r.ok) onOk?.();
+        else fail(r.error);
       } catch {
         fail("Could not save. Try again.");
       }
@@ -81,14 +94,12 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
   }
 
   function openRename() {
-    if (menu.current) menu.current.open = false;
     setName(column.name);
     setError(null);
     dialog.current?.showModal();
   }
 
   function openDefault() {
-    if (menu.current) menu.current.open = false;
     const current = decodeDefault(column.type, column.defaultValue);
     setDraft(current === null || (column.type === "single_select" && !column.options.some((o) => o.id === current)) ? "" : String(current)); // a dangling option shows as No default
     setDefError(null);
@@ -99,13 +110,11 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
   const draftValue = () => (draft === "" ? null : column.type === "checkbox" ? draft === "true" : column.type === "single_select" ? Number(draft) : draft);
 
   function openOptions() {
-    if (menu.current) menu.current.open = false;
     optDialog.current?.showModal();
   }
 
   // Fetched fresh on every open; the delete button stays disabled until the real count is shown.
   function openDelete() {
-    if (menu.current) menu.current.open = false;
     setImpact(null);
     setDelError(null);
     delDialog.current?.showModal();
@@ -114,7 +123,7 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
 
   return (
     <>
-      <Dropdown label={`Column menu: ${column.name}`} summary="⋮" innerRef={menu}>
+      <Dropdown label={`Column menu: ${column.name}`} summary="⋮" error={menuError}>
         <button type="button" onClick={openRename} className={item}>Rename</button>
         {column.type === "single_select" && <button type="button" onClick={openOptions} className={item}>Edit options…</button>}
         {column.type === "single_select" && !column.isStatus && <button type="button" disabled={pending} onClick={() => run(onSetStatus)} className={item}>Use as status column</button>}
@@ -123,7 +132,6 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
         <button type="button" disabled={pending || first} onClick={() => run(() => onMove("left"))} className={item}>Move left</button>
         <button type="button" disabled={pending || last} onClick={() => run(() => onMove("right"))} className={item}>Move right</button>
         {!column.isStatus && <button type="button" disabled={pending} onClick={openDelete} className={`${item} text-red-600`}>Delete column…</button>}
-        {menuError && <p role="alert" className="px-2 text-sm text-red-600">{menuError}</p>}
       </Dropdown>
       {column.type === "single_select" && <OptionEditor column={column} innerRef={optDialog} onAdd={onAddOption} onUpdate={onUpdateOption} onReorder={onReorderOptions} onLoadImpact={onLoadOptionImpact} onDelete={onDeleteOption} />}
       <dialog
@@ -236,7 +244,7 @@ export function HiddenColumns({ columns, onShow }: { columns: ColumnItem[]; onSh
   const [pending, startTransition] = useTransition();
   if (columns.length === 0) return null;
   return (
-    <Dropdown label={`Hidden columns (${columns.length})`} summary={`Hidden columns (${columns.length})`}>
+    <Dropdown label={`Hidden columns (${columns.length})`} summary={`Hidden columns (${columns.length})`} error={error}>
       {columns.map((c) => (
         <div key={c.id} className="flex items-center justify-between gap-2 px-2 py-1">
           <span>{c.name}</span>
@@ -260,7 +268,6 @@ export function HiddenColumns({ columns, onShow }: { columns: ColumnItem[]; onSh
           </button>
         </div>
       ))}
-      {error && <p role="alert" className="px-2 text-sm text-red-600">{error}</p>}
     </Dropdown>
   );
 }
