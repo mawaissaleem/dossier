@@ -2,20 +2,27 @@
 
 import { useState, useTransition } from "react";
 import { createApplication } from "@/app/actions/applications";
+import { ApplicationFields } from "@/app/application-fields";
+import { buildCreateValues, defaultState, type FormState } from "@/lib/application-form";
+import type { ColumnItem } from "@/lib/db/columns";
 
-export function NewApplicationForm({ trackId }: { trackId: number }) {
+// Hidden columns are shown too (marked), so no column is unreachable. `columns` comes from the page, so a column added through
+// the header "+" appears here after the router refresh, and the state (keyed by column id) keeps what was typed in the others.
+export function NewApplicationForm({ trackId, columns }: { trackId: number; columns: ColumnItem[] }) {
   const [title, setTitle] = useState("");
+  const [fields, setFields] = useState<FormState>({}); // only what the user touched; the rest shows the column default (defaultState)
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null); // so the same error on a second submit is a change again and reopens "More fields"
     startTransition(async () => {
       try {
-        const r = await createApplication(title, trackId);
+        const r = await createApplication(title, trackId, buildCreateValues(columns, fields));
         if (r.ok) {
           setTitle("");
-          setError(null);
+          setFields({});
         } else {
           setError(r.error);
         }
@@ -26,18 +33,12 @@ export function NewApplicationForm({ trackId }: { trackId: number }) {
   }
 
   return (
-    <form onSubmit={submit} className="mb-4 flex flex-wrap items-center gap-2">
-      <label htmlFor="new-title" className="text-sm">Title</label>
-      <input
-        id="new-title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="rounded border border-foreground/30 px-2 py-1"
-      />
+    <form aria-label="Add application" onSubmit={submit} className="mb-4 flex flex-col items-start gap-2">
+      <ApplicationFields title={title} onTitleChange={setTitle} columns={columns} state={{ ...defaultState(columns), ...fields }} onChange={(id, v) => setFields((f) => ({ ...f, [id]: v }))} error={error} />
       <button type="submit" disabled={pending} className="rounded bg-foreground px-3 py-1 text-background disabled:opacity-50">
         {pending ? "Saving…" : "Save"}
       </button>
-      {error && <p role="alert" className="w-full text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     </form>
   );
 }

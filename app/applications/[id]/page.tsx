@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getApplicationDetail, getDeleteImpact } from "@/lib/db/applications";
 import { ApplicationActions } from "./application-actions";
+import { EditApplication } from "./edit-application";
 import { linkLabel, safeHref } from "@/lib/cells";
 import { formatCell } from "@/lib/table";
 import { OptionChip } from "@/app/option-chip";
@@ -26,6 +27,7 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
       </p>
       <h1 className="mb-1 text-2xl font-semibold">{detail.title}</h1>
       {detail.archived && <p className="mb-4 text-sm font-medium">Archived</p>}
+      <EditApplication id={detail.id} title={detail.title} columns={detail.columns} values={detail.values}>
       <dl className="mt-4 grid max-w-xl grid-cols-[max-content_1fr] gap-x-6 gap-y-2">
         {detail.columns.map((col) => {
           const text = formatCell(col, detail.values[col.id]);
@@ -53,6 +55,7 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
           );
         })}
       </dl>
+      </EditApplication>
       <ApplicationActions id={detail.id} title={detail.title} archived={detail.archived} cellCount={impact.cellCount} fileCount={impact.fileCount} />
     </>
   );

@@ -1,9 +1,10 @@
 // Server-only. See lib/db/tracks.ts for the convention.
 import { and, count, desc, eq, isNotNull } from "drizzle-orm";
-import { CELL_FIELD, decodeDefault, readCell, type CellScalar } from "../cells";
+import { CELL_FIELD, decodeDefault, parseCell, readCell, type CellScalar } from "../cells";
+import { optionBelongs, writeCell } from "./cells";
 import { getDb } from "./client";
 import { listColumns, type ColumnItem } from "./columns";
-import { applications, cellValues, columnOptions, columns, tracks } from "./schema";
+import { applications, cellValues, columnOptions, columns, tracks, type ColumnType } from "./schema";
 import { getUserId } from "./user";
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
@@ -25,17 +26,64 @@ function defaultCells(tx: Tx, trackId: number, userId: string) {
   return cells;
 }
 
-// Returns the new id, or null (nothing inserted) if the track does not exist or is not the current user's.
-// The application and its default cells go in one transaction, so it never exists half pre-filled.
-export async function createApplication({ title, trackId }: { title: string; trackId: number }): Promise<number | null> {
+export type NewCell = { columnId: number; value: unknown };
+export type CreateResult = { ok: true; id: number } | { ok: false; error: string };
+
+// The one per-value check for create and update. Every value is validated before anything is written. Errors name the column.
+// A column that is missing, in another track or another user's is "A column was removed or changed" (it can be deleted while the form is open).
+// Result: columnId -> typed value, null = blank (no row). Insertion order = submitted order.
+function validateValues(tx: Tx, userId: string, trackId: number, values: NewCell[]) {
+  const cols = new Map(tx.select({ id: columns.id, name: columns.name, type: columns.type }).from(columns)
+    .where(and(eq(columns.trackId, trackId), eq(columns.userId, userId))).all().map((c) => [c.id, c]));
+  const submitted = new Map<number, { type: ColumnType; value: CellScalar | null }>();
+  for (const { columnId, value } of values) {
+    const col = cols.get(columnId);
+    if (!col) return { ok: false as const, error: "A column was removed or changed. Reload the page and try again." };
+    if (submitted.has(columnId)) return { ok: false as const, error: `${col.name}: given twice.` };
+    const parsed = parseCell(col.type, value);
+    if (!parsed.ok) return { ok: false as const, error: `${col.name}: ${parsed.error}` };
+    if (parsed.value !== null && col.type === "single_select" && !optionBelongs(tx, userId, columnId, parsed.value as number))
+      return { ok: false as const, error: `${col.name}: Choose a valid option.` };
+    submitted.set(columnId, { type: col.type, value: parsed.value });
+  }
+  return { ok: true as const, submitted };
+}
+
+// `values` are the submitted cells. A column listed there (even blank, value null) is the user's choice and gets no default;
+// a column not listed gets its default (FR-1.6). Every value is validated before anything is inserted, and the application,
+// submitted cells and defaults go in one transaction, so a bad value creates nothing and the application is never half filled.
+export async function createApplication({ title, trackId, values = [] }: { title: string; trackId: number; values?: NewCell[] }): Promise<CreateResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
     const track = tx.select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, trackId), eq(tracks.userId, userId))).get();
-    if (!track) return null;
+    if (!track) return { ok: false, error: "Track not found." };
+    const v = validateValues(tx, userId, trackId, values);
+    if (!v.ok) return v;
     const id = tx.insert(applications).values({ userId, trackId, title }).returning({ id: applications.id }).get().id;
-    const cells = defaultCells(tx, trackId, userId);
+    const cells = [
+      ...[...v.submitted].filter(([, c]) => c.value !== null).map(([columnId, c]) => ({ columnId, [CELL_FIELD[c.type]]: c.value })),
+      ...defaultCells(tx, trackId, userId).filter((c) => !v.submitted.has(c.columnId)),
+    ];
     if (cells.length) tx.insert(cellValues).values(cells.map((c) => ({ userId, applicationId: id, ...c }))).run();
-    return id;
+    return { ok: true, id };
+  });
+}
+
+export type UpdateResult = { ok: true } | { ok: false; error: string };
+
+// Edit form save: sets the title and writes only the listed cells (the form sends just the fields the user changed), in one transaction.
+// Same validation as create; a blank value deletes the cell row; no defaults. A bad value changes nothing. Works on archived
+// applications and leaves them archived. "Application not found." if missing or not the current user's.
+export async function updateApplication({ id, title, values = [] }: { id: number; title: string; values?: NewCell[] }): Promise<UpdateResult> {
+  const userId = getUserId();
+  return getDb().transaction((tx) => {
+    const app = tx.select({ trackId: applications.trackId }).from(applications).where(and(eq(applications.id, id), eq(applications.userId, userId))).get();
+    if (!app) return { ok: false, error: "Application not found." };
+    const v = validateValues(tx, userId, app.trackId, values);
+    if (!v.ok) return v;
+    tx.update(applications).set({ title }).where(eq(applications.id, id)).run();
+    for (const [columnId, c] of v.submitted) writeCell(tx, userId, id, columnId, c.type, c.value);
+    return { ok: true };
   });
 }
 
