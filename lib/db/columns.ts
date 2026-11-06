@@ -45,6 +45,8 @@ export async function listColumns(trackId: number): Promise<ColumnItem[]> {
 }
 
 export const MAX_COLUMN_NAME = 100;
+// The add form sends one entry per column, and createApplication accepts at most this many, so a track never outgrows its own form.
+export const MAX_COLUMNS = 200;
 export type AddColumnResult = { ok: true; id: number } | { ok: false; error: string };
 export type ColumnResult = { ok: true } | { ok: false; error: string };
 
@@ -71,6 +73,7 @@ export async function addColumn({ trackId, name, type }: { trackId: number; name
   const track = db.select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, trackId), eq(tracks.userId, userId))).get();
   if (!track) return { ok: false, error: "Track not found." };
   const existing = db.select({ name: columns.name, position: columns.position }).from(columns).where(and(eq(columns.trackId, trackId), eq(columns.userId, userId))).all();
+  if (existing.length >= MAX_COLUMNS) return { ok: false, error: `A track can have at most ${MAX_COLUMNS} columns.` };
   if (existing.some((c) => c.name.toLowerCase() === n.toLowerCase())) return DUP;
   const position = existing.reduce((m, c) => Math.max(m, c.position + 1), 0);
   try {

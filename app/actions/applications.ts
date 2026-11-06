@@ -1,16 +1,19 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { MAX_TEXT } from "@/lib/cells";
 import { createApplication as insertApplication, updateApplication as changeApplication } from "@/lib/db/applications";
+import { MAX_COLUMNS } from "@/lib/db/columns";
 import { isId } from "@/lib/ids";
 
 export type CreateApplicationResult = { ok: true; id: number } | { ok: false; error: string };
 
 const MAX_TITLE = 300;
 
-// Payload bounds: a form has one entry per column, so these are far above real use.
-const MAX_VALUES = 200;
-const MAX_VALUE_TEXT = 10_000;
+// Payload shape bounds, never tighter than what the form can hold: one entry per column (addColumn caps the count), and strings well
+// above parseCell's MAX_TEXT so an over-long field gets parseCell's error naming the column, not "Invalid form data.".
+const MAX_VALUES = MAX_COLUMNS;
+const MAX_VALUE_TEXT = 10 * MAX_TEXT;
 
 // `values` is the form's payload: [{ columnId, value }], value a string, number, boolean or null (blank). A column listed there is
 // the user's choice, blank included; a column left out gets its default. Omit `values` for a title-only application.

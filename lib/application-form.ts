@@ -18,10 +18,13 @@ export const inputKind = (type: ColumnType): InputKind => {
 };
 
 // Keyed by column id, not position, so adding or removing a column never shifts what was typed.
-// A column is in the state only once the user touched it: untouched = omitted (server applies the default),
-// touched and cleared = blank (server stores nothing and skips the default).
+// Add form: holds only touched fields; buildCreateValues fills the rest from the defaults (or blank) and sends every column.
+// Edit form: starts with every column (initialState); changedState picks what to send. A cleared field ("") is sent as blank.
 export type FormState = Record<number, string | boolean>;
 export type FormValue = { columnId: number; value: string | number | boolean | null };
+// State of a date input the browser reports as badInput (half-typed or impossible). Sent as is, so the server refuses it with
+// "<Column>: Enter a valid date as YYYY-MM-DD." instead of saving a blank the user did not choose. Shown as an empty input value.
+export const BAD_DATE = "invalid date";
 
 // Entries for columns that still exist (a deleted column's leftover state is dropped). Strings are sent as typed;
 // blank is null; a select value is the option id as a number. A select option deleted while the form is open is sent as

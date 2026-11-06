@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCreateValues, buildValues, defaultState, changedState, errorNamesColumn, initialState, inputKind, splitEssentials } from "@/lib/application-form";
+import { BAD_DATE, buildCreateValues, buildValues, defaultState, changedState, errorNamesColumn, initialState, inputKind, splitEssentials } from "@/lib/application-form";
 import type { ColumnType } from "@/lib/db/schema";
 
 describe("inputKind", () => {
@@ -122,6 +122,11 @@ describe("initialState and changedState", () => {
     const init = initialState(cols, { 1: "hi", 2: 3, 3: true, 4: 9, 5: "2026-03-04", 6: null });
     expect(changedState(cols, { ...init, 1: "", 3: false, 4: "", 6: "x.example" }, init)).toEqual({ 1: "", 3: false, 4: "", 6: "x.example" });
     expect(changedState(cols, { ...init, 2: "3.0" }, init)).toEqual({ 2: "3.0" }); // compared as text
+  });
+
+  it("a date the browser reported as bad input is a change and is sent as is (never as blank)", () => {
+    const init = initialState(cols, { 1: null, 2: null, 3: null, 4: null, 5: "2026-03-04", 6: null });
+    expect(buildValues(cols, changedState(cols, { ...init, 5: BAD_DATE }, init))).toEqual([{ columnId: 5, value: BAD_DATE }]);
   });
 
   it("ignores state of columns that are not in the list, and columns missing from initial count as blank", () => {

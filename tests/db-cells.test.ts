@@ -39,6 +39,14 @@ describe("setCellValue / getCellValue", () => {
     expect(rows()).toHaveLength(0);
   });
 
+  it("refuses text or a link over the cap and writes nothing; exactly the cap is fine", async () => {
+    const t = col("text");
+    expect(await setCellValue(appId, t, "x".repeat(10_001))).toEqual({ ok: false, error: "Text must be at most 10,000 characters." });
+    expect(await setCellValue(appId, col("link"), `a.com/${"x".repeat(10_000)}`)).toEqual({ ok: false, error: "Link must be at most 10,000 characters." });
+    expect(rows()).toHaveLength(0);
+    expect((await setCellValue(appId, t, ` ${"x".repeat(10_000)} `)).ok).toBe(true); // the cap counts the trimmed text
+  });
+
   it("overwrite replaces the value, leaves other typed fields null and bumps updatedAt", async () => {
     const c = col("number");
     await setCellValue(appId, c, 1);

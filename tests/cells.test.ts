@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CELL_FIELD, linkLabel, parseCell, readCell, safeHref } from "@/lib/cells";
+import { CELL_FIELD, MAX_TEXT, decodeDefault, linkLabel, parseCell, readCell, safeHref } from "@/lib/cells";
 
 const value = (type: Parameters<typeof parseCell>[0], raw: unknown) => {
   const r = parseCell(type, raw);
@@ -35,6 +35,15 @@ describe("parseCell", () => {
     ["text", 5],
   ] as const)("rejects %s %j", (t, raw) => {
     expect(parseCell(t, raw).ok).toBe(false);
+  });
+
+  it("caps text and the stored link at MAX_TEXT, so an over-long stored default decodes as no default", () => {
+    expect(value("text", "x".repeat(MAX_TEXT))).toHaveLength(MAX_TEXT);
+    expect(parseCell("text", "x".repeat(MAX_TEXT + 1))).toEqual({ ok: false, error: "Text must be at most 10,000 characters." });
+    const link = `https://a.co/${"x".repeat(MAX_TEXT - 13)}`;
+    expect(value("link", link)).toBe(link);
+    expect(parseCell("link", `${link}x`)).toEqual({ ok: false, error: "Link must be at most 10,000 characters." });
+    expect(decodeDefault("text", "x".repeat(MAX_TEXT + 1))).toBeNull();
   });
 
   it("accepts plain decimals for number", () => {

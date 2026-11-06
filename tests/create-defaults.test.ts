@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApplication } from "@/app/actions/applications";
-import { buildCreateValues } from "@/lib/application-form";
+import { BAD_DATE, buildCreateValues } from "@/lib/application-form";
 import { getApplicationDetail } from "@/lib/db/applications";
-import { listColumns, setColumnDefault } from "@/lib/db/columns";
+import { MAX_COLUMNS, addColumn, listColumns, setColumnDefault } from "@/lib/db/columns";
 import { applications, cellValues, columnOptions, columns, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
@@ -78,6 +78,30 @@ describe("add form defaults end to end", () => {
     db.delete(columnOptions).where(eq(columnOptions.id, optA)).run();
     const r = await submit("A", {}, shown);
     expect(r).toMatchObject({ ok: false, error: "Priority: Choose a valid option." });
+    expect(db.select().from(applications).all()).toEqual([]);
+  });
+
+  it("an existing over-long default (from before the text cap) shows blank and creates blank, not an error", async () => {
+    db.update(columns).set({ defaultValue: "x".repeat(10_001) }).where(eq(columns.id, id.text)).run();
+    const r = await submit("A");
+    expect(r).toMatchObject({ ok: true, values: { [id.text]: null, [id.number]: 4.5 } });
+  });
+
+  it("a default at the text cap is sent back as shown and saved", async () => {
+    expect(await setColumnDefault(id.text, "x".repeat(10_000))).toEqual({ ok: true });
+    expect(await setColumnDefault(id.text, "x".repeat(10_001))).toEqual({ ok: false, error: "Text must be at most 10,000 characters." });
+    expect(await submit("A")).toMatchObject({ ok: true, values: { [id.text]: "x".repeat(10_000) } });
+  });
+
+  it("a track at the column cap still creates title-only through the form payload, and refuses one more column", async () => {
+    db.insert(columns).values(Array.from({ length: MAX_COLUMNS - 6 }, (_, i) => ({ userId: "local", trackId, name: `C${i}`, type: "text" as const, position: i + 6 }))).run(); // one statement: fast
+    expect(await submit("A")).toMatchObject({ ok: true, values: { [id.text]: "Remote" } });
+    expect(await addColumn({ trackId, name: "One more", type: "text" })).toEqual({ ok: false, error: `A track can have at most ${MAX_COLUMNS} columns.` });
+    expect((await listColumns(trackId)).length).toBe(MAX_COLUMNS);
+  });
+
+  it("a bad-input date over a pre-filled default is refused with a named error, not saved blank", async () => {
+    expect(await submit("A", { [id.date]: BAD_DATE })).toEqual({ ok: false, error: "Deadline: Enter a valid date as YYYY-MM-DD." });
     expect(db.select().from(applications).all()).toEqual([]);
   });
 });

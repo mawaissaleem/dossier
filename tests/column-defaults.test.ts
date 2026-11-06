@@ -54,7 +54,7 @@ describe("setColumnDefault", () => {
 
   it.each([
     ["number", "abc"], ["number", true], ["date", "2026-02-30"], ["link", "javascript:alert(1)"], ["checkbox", "yes"], ["text", 5],
-    ["single_select", 99999], ["single_select", "x"], ["single_select", 1.5],
+    ["single_select", 99999], ["single_select", "x"], ["single_select", 1.5], ["text", "x".repeat(10_001)], ["link", `a.com/${"x".repeat(10_000)}`],
   ] as const)("rejects an invalid %s default %j and changes nothing", async (type, raw) => {
     const r = await setColumnDefault(ids[type], raw as string);
     expect(r.ok).toBe(false);

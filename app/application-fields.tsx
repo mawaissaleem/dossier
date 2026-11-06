@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import { errorNamesColumn, inputKind, splitEssentials, type FormState } from "@/lib/application-form";
+import { BAD_DATE, errorNamesColumn, inputKind, splitEssentials, type FormState } from "@/lib/application-form";
 import type { ColumnItem } from "@/lib/db/columns";
 
 const box = "rounded border border-foreground/30 px-2 py-1";
@@ -21,6 +21,7 @@ export function ApplicationFields({ title, onTitleChange, columns, state, onChan
     const id = `${uid}-${c.id}`;
     const kind = inputKind(c.type);
     const v = state[c.id];
+    const read = (el: HTMLInputElement) => onChange(c.id, el.validity.badInput ? BAD_DATE : el.value);
     const label = <label htmlFor={id} className="text-sm">{c.name}{c.hidden && " (hidden)"}</label>;
     return (
       <div key={c.id} className="flex items-center gap-2">
@@ -42,8 +43,12 @@ export function ApplicationFields({ title, onTitleChange, columns, state, onChan
                 id={id}
                 type={kind === "date" ? "date" : "text"}
                 inputMode={kind === "number" ? "decimal" : undefined}
-                value={typeof v === "string" ? v : ""}
-                onChange={(e) => onChange(c.id, e.target.value)}
+                value={typeof v === "string" && !(kind === "date" && v === BAD_DATE) ? v : ""}
+                // A half-typed or impossible date reads as "" (validity.badInput), which would save as blank and silently clear a
+                // stored date; record it as BAD_DATE so the save is refused. Read while typing, not at submit: Firefox resets the input on
+                // blur. On keyup too: Firefox fires no input event when only badInput changes (e.g. the last segment cleared = blank).
+                onChange={(e) => read(e.target)}
+                onKeyUp={kind === "date" ? (e) => read(e.currentTarget) : undefined}
                 className={box}
               />
             )}

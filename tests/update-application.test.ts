@@ -2,7 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { refresh } from "next/cache";
 import { createApplication, updateApplication } from "@/app/actions/applications";
+import { BAD_DATE, buildValues, changedState, initialState } from "@/lib/application-form";
 import { getApplicationDetail } from "@/lib/db/applications";
+import { listColumns } from "@/lib/db/columns";
 import { setCellValue } from "@/lib/db/cells";
 import { applications, cellValues, columnOptions, columns, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
@@ -84,6 +86,8 @@ describe("updateApplication", () => {
     ["checkbox", "yes", "Referred: Checkbox must be true or false."],
     ["single_select", "x", "Stage: Choose a valid option."],
     ["text", 5, "Notes: Text must be a string."],
+    ["text", "x".repeat(10_001), "Notes: Text must be at most 10,000 characters."],
+    ["link", `a.com/${"x".repeat(10_000)}`, "Posting: Link must be at most 10,000 characters."],
   ] as const)("rejects an invalid %s value, naming the column, and changes nothing (title and other values included)", async (type, value, error) => {
     const before = await valuesOf();
     const good = type === "text" ? { columnId: ids.number, value: "7" } : { columnId: ids.text, value: "valid" }; // a valid entry before it: must not be kept
@@ -92,6 +96,15 @@ describe("updateApplication", () => {
     expect(await valuesOf()).toEqual(before);
     expect((await getApplicationDetail(appId))!.title).toBe("Acme");
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("edit form: a bad-input date is refused with a named error and the stored date is kept", async () => {
+    await updateApplication(appId, "Acme", [{ columnId: ids.date, value: "2026-12-01" }]);
+    const cols = await listColumns(trackId);
+    const init = initialState(cols, await valuesOf());
+    const r = await updateApplication(appId, "Acme", buildValues(cols, changedState(cols, { ...init, [ids.date]: BAD_DATE }, init)));
+    expect(r).toEqual({ ok: false, error: "Deadline: Enter a valid date as YYYY-MM-DD." });
+    expect((await valuesOf())[ids.date]).toBe("2026-12-01");
   });
 
   it("rejects an option of another column and a missing option", async () => {
@@ -145,7 +158,7 @@ describe("updateApplication", () => {
     ["string columnId", [{ columnId: "1", value: "x" }]],
     ["object value", [{ columnId: 1, value: { a: 1 } }]],
     ["missing value", [{ columnId: 1 }]],
-    ["too long text", [{ columnId: 1, value: "x".repeat(10_001) }]],
+    ["too long text", [{ columnId: 1, value: "x".repeat(100_001) }]],
     ["too many entries", Array.from({ length: 201 }, () => ({ columnId: 1, value: null }))],
   ])("rejects a bad payload shape: %s", async (_n, payload) => {
     expect(await updateApplication(appId, "Acme", payload as never)).toEqual({ ok: false, error: "Invalid form data." });

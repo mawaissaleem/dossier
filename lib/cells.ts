@@ -19,6 +19,11 @@ const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)$/;
 const bad = (error: string): ParsedCell => ({ ok: false, error });
 const good = (value: CellScalar | null): ParsedCell => ({ ok: true, value });
 
+// Longest stored text or link. One cap for cells, defaults and the add/edit form, so a value the app accepted (a default the add
+// form sends back as shown) is never refused later; an older over-long default fails decodeDefault and is skipped (blank).
+export const MAX_TEXT = 10_000;
+const tooLong = (what: string) => bad(`${what} must be at most ${MAX_TEXT.toLocaleString("en-US")} characters.`);
+
 // The only way a link value reaches an href: http(s) with a host and no whitespace/control characters, else null.
 // Returns the normalised URL (new URL().href), so "//example.com" and "https:////example.com" both become "https://example.com/".
 // The URL parser silently drops tabs and newlines, so they are rejected up front rather than stored.
@@ -46,7 +51,8 @@ export function parseCell(type: ColumnType, raw: unknown): ParsedCell {
   if (raw === null || raw === undefined || (typeof raw === "string" && raw.trim() === "")) return good(null);
   switch (type) {
     case "text":
-      return typeof raw === "string" ? good(raw.trim()) : bad("Text must be a string.");
+      if (typeof raw !== "string") return bad("Text must be a string.");
+      return raw.trim().length > MAX_TEXT ? tooLong("Text") : good(raw.trim());
     case "number": {
       // Plain decimals only: Number() would also take "0x10" (16) and "1e3" (1000), which surprise someone typing into a cell.
       const n = typeof raw === "number" ? raw : typeof raw === "string" && DECIMAL.test(raw.trim()) ? Number(raw.trim()) : NaN;
@@ -66,7 +72,8 @@ export function parseCell(type: ColumnType, raw: unknown): ParsedCell {
       // A bare "example.com" gets https:// prepended. "host:8080" has no scheme (digit after the colon).
       if (!/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(s)) s = `https://${s}`;
       const href = safeHref(s);
-      return href ? good(href) : bad("Enter a valid http or https link, without spaces.");
+      if (!href) return bad("Enter a valid http or https link, without spaces.");
+      return href.length > MAX_TEXT ? tooLong("Link") : good(href); // the stored (normalised) form is what must fit
     }
     case "checkbox":
       return typeof raw === "boolean" ? good(raw) : bad("Checkbox must be true or false.");

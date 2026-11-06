@@ -67,6 +67,8 @@ describe("createApplication with values", () => {
     ["checkbox", "yes", "Referred: Checkbox must be true or false."],
     ["single_select", "x", "Stage: Choose a valid option."],
     ["text", 5, "Notes: Text must be a string."],
+    ["text", "x".repeat(10_001), "Notes: Text must be at most 10,000 characters."],
+    ["link", `a.com/${"x".repeat(10_000)}`, "Posting: Link must be at most 10,000 characters."],
   ] as const)("rejects an invalid %s value, naming the column, and creates nothing", async (type, value, error) => {
     const r = await createApplication("A", trackId, [{ columnId: ids[type], value } as never]);
     expect(r).toEqual({ ok: false, error });
@@ -108,7 +110,7 @@ describe("createApplication with values", () => {
     ["object value", [{ columnId: 1, value: { a: 1 } }]],
     ["array value", [{ columnId: 1, value: ["x"] }]],
     ["missing value", [{ columnId: 1 }]],
-    ["too long text", [{ columnId: 1, value: "x".repeat(10_001) }]],
+    ["too long text", [{ columnId: 1, value: "x".repeat(100_001) }]],
     ["too many entries", Array.from({ length: 201 }, () => ({ columnId: 1, value: null }))],
   ])("rejects a bad payload shape: %s", async (_n, payload) => {
     expect(await createApplication("A", trackId, payload as never)).toEqual({ ok: false, error: "Invalid form data." });
