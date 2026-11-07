@@ -36,13 +36,16 @@ export function SearchPalette({ className }: { className?: string }) {
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [active, setActive] = useState(0);
-  const returnFocus = useReturnFocus();
+  const button = useRef<HTMLButtonElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  const returnFocus = useReturnFocus(button);
   const navigated = useRef(false);
   const openWhenReady = useRef(false); // Enter pressed before the answer for this query arrived
   const q = query.trim();
 
   function openPalette() {
-    returnFocus.remember();
+    // Reopened during its own close animation: focus is still in the old input, and the target remembered last time still holds.
+    if (!content.current?.contains(document.activeElement)) returnFocus.remember();
     navigated.current = false;
     openWhenReady.current = false;
     setQuery("");
@@ -121,13 +124,14 @@ export function SearchPalette({ className }: { className?: string }) {
 
   return (
     <>
-      <Button variant="outline" className={cn("justify-start gap-2 text-muted-foreground", className)} aria-keyshortcuts={mac ? "Meta+K" : "Control+K"} onClick={openPalette}>
+      <Button ref={button} variant="outline" className={cn("justify-start gap-2 text-muted-foreground", className)} aria-keyshortcuts={mac ? "Meta+K" : "Control+K"} onClick={openPalette}>
         <SearchIcon aria-hidden />
         Search
         <kbd className="ml-auto rounded-sm border border-border px-1.5 text-xs font-medium">{chordLabel(mac)}</kbd>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
+          ref={content}
           showCloseButton={false}
           className="top-[15%] translate-y-0 gap-2 p-2 sm:max-w-xl"
           onCloseAutoFocus={(e) => (navigated.current ? e.preventDefault() : returnFocus.onCloseAutoFocus(e))}
