@@ -4,7 +4,7 @@ import { CELL_FIELD, decodeDefault, parseCell, readCell, type CellScalar } from 
 import { optionBelongs, writeCell } from "./cells";
 import { getDb } from "./client";
 import { listColumns, type ColumnItem } from "./columns";
-import { applications, cellValues, columnOptions, columns, tracks, type ColumnType } from "./schema";
+import { applications, cellValues, columnOptions, columns, files, tracks, type ColumnType } from "./schema";
 import { getUserId } from "./user";
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
@@ -166,11 +166,10 @@ export async function archiveApplication(id: number, archived: boolean): Promise
   return getDb().update(applications).set({ archived }).where(and(eq(applications.id, id), eq(applications.userId, getUserId()))).run().changes > 0;
 }
 
-// shortcut: no files exist until phase 5, so this is 0. Phase 5 must count the application's stored files here, so the
-// delete confirmation already says the final thing and the delete removes them too.
+// Stored file rows of the application, so the delete confirmation states the real number (NFR-4).
 async function countApplicationFiles(applicationId: number): Promise<number> {
-  void applicationId;
-  return 0;
+  const { n } = getDb().select({ n: count() }).from(files).where(and(eq(files.applicationId, applicationId), eq(files.userId, getUserId()))).get()!;
+  return n;
 }
 
 export type DeleteImpact = { title: string; cellCount: number; fileCount: number };
@@ -188,12 +187,12 @@ export async function getDeleteImpact(id: number): Promise<DeleteImpact | null> 
 export type DeleteResult = { ok: true; trackId: number } | { ok: false; error: string };
 const NO_APP = { ok: false, error: "Application not found." } as const;
 
-// Returns the application's track id (for the redirect). Cell values go with it via ON DELETE CASCADE (foreign_keys is on, see client.ts).
+// Returns the application's track id (for the redirect). Cell values, file rows and submissions go with it via ON DELETE CASCADE (foreign_keys is on, see client.ts).
 // Callers must have confirmed with the user, and `expected` is the impact they were shown: if a count changed since, nothing is deleted (NFR-4).
 export async function deleteApplication(id: number, expected: { cellCount: number; fileCount: number }): Promise<DeleteResult> {
   const userId = getUserId();
   const stale = { ok: false, error: "This application changed since the count was shown. Check again." } as const;
-  if ((await countApplicationFiles(id)) !== expected.fileCount) return stale; // async, so outside the transaction (phase 5)
+  if ((await countApplicationFiles(id)) !== expected.fileCount) return stale; // async, so outside the transaction 
   return getDb().transaction((tx) => {
     const owned = and(eq(applications.id, id), eq(applications.userId, userId));
     if (!tx.select({ id: applications.id }).from(applications).where(owned).get()) return NO_APP;

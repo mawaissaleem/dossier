@@ -1,6 +1,6 @@
-// Schema for tracks, columns, column_options, applications, cell_values and settings. Stay on plain columns/FKs/indexes so v2 can move to Postgres (NFR-6).
+// Schema for tracks, columns, column_options, applications, cell_values, files, submissions, submission_files and settings. Stay on plain columns/FKs/indexes so v2 can move to Postgres (NFR-6).
 import { sql } from "drizzle-orm";
-import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const COLUMN_TYPES = ["text", "number", "date", "link", "checkbox", "single_select"] as const;
 export type ColumnType = (typeof COLUMN_TYPES)[number];
@@ -114,6 +114,77 @@ export const cellValues = sqliteTable(
   ],
 );
 
+// One row per stored file. relative_path is relative to the files root, forward slashes (FR-5.6); the file bytes are on disk.
+// Deleting the application removes its rows (the bytes are removed by later phase 5 code, not by the database).
+// base_name + extension + seq make the FR-6.2 counter: the next seq for (application, date, base name, extension) is one indexed query.
+export const files = sqliteTable(
+  "files",
+  {
+    ...base,
+    applicationId: integer("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
+    label: text("label").notNull(), // CV, cover letter, ...; the editable label list is separate (FR-5.3)
+    originalName: text("original_name").notNull(),
+    storedName: text("stored_name").notNull(),
+    relativePath: text("relative_path").notNull(),
+    sha256: text("sha256").notNull(), // 64 lowercase hex
+    sizeBytes: integer("size_bytes").notNull(),
+    uploadDate: text("upload_date").notNull(), // YYYY-MM-DD, same encoding as cell_values.value_date
+    baseName: text("base_name").notNull(),
+    extension: text("extension").notNull(),
+    seq: integer("seq").notNull(),
+  },
+  (t) => [
+    index("files_user_id_idx").on(t.userId),
+    index("files_application_id_sha256_idx").on(t.applicationId, t.sha256), // FR-5.7 duplicate lookup
+    uniqueIndex("files_user_id_relative_path_uniq").on(t.userId, t.relativePath),
+    // Unique so two uploads racing for the same counter fail instead of overwriting each other's name.
+    uniqueIndex("files_counter_uniq").on(t.applicationId, t.uploadDate, t.baseName, t.extension, t.seq),
+    check("files_sha256_check", sql`length(${t.sha256}) = 64 AND ${t.sha256} NOT GLOB '*[^0-9a-f]*'`),
+    check("files_size_bytes_check", sql`${t.sizeBytes} >= 0`),
+    check("files_seq_check", sql`${t.seq} >= 1`),
+  ],
+);
+
+// FR-7.8: nothing here is deleted by a status change; only deleting the application removes submissions.
+export const submissions = sqliteTable(
+  "submissions",
+  {
+    ...base,
+    applicationId: integer("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // YYYY-MM-DD
+    note: text("note"),
+  },
+  (t) => [
+    index("submissions_user_id_idx").on(t.userId),
+    index("submissions_application_id_date_idx").on(t.applicationId, t.date),
+  ],
+);
+
+// Many to many (FR-7.5). Deleting a submission removes its links. file_id is NO ACTION (the default, like cell_values.value_option_id):
+// deleting a file that is still in a submission fails (FR-5.8), but deleting the application works because the check runs at end of
+// statement, after the cascades have removed its submissions and links.
+export const submissionFiles = sqliteTable(
+  "submission_files",
+  {
+    ...base,
+    submissionId: integer("submission_id")
+      .notNull()
+      .references(() => submissions.id, { onDelete: "cascade" }),
+    fileId: integer("file_id")
+      .notNull()
+      .references(() => files.id),
+  },
+  (t) => [
+    index("submission_files_user_id_idx").on(t.userId),
+    uniqueIndex("submission_files_submission_id_file_id_uniq").on(t.submissionId, t.fileId),
+    index("submission_files_file_id_idx").on(t.fileId),
+  ],
+);
+
 // value is JSON-encoded text.
 export const settings = sqliteTable(
   "settings",
@@ -137,3 +208,9 @@ export type CellValue = typeof cellValues.$inferSelect;
 export type NewCellValue = typeof cellValues.$inferInsert;
 export type Setting = typeof settings.$inferSelect;
 export type NewSetting = typeof settings.$inferInsert;
+export type StoredFile = typeof files.$inferSelect; // not "File": that clashes with the DOM type
+export type NewStoredFile = typeof files.$inferInsert;
+export type Submission = typeof submissions.$inferSelect;
+export type NewSubmission = typeof submissions.$inferInsert;
+export type SubmissionFile = typeof submissionFiles.$inferSelect;
+export type NewSubmissionFile = typeof submissionFiles.$inferInsert;
