@@ -2,8 +2,9 @@
 
 import { useOptimistic, useRef, useState, useTransition } from "react";
 import { updateCell } from "@/app/actions/cells";
+import { Checkbox } from "@/components/ui/checkbox";
 
-// Native checkbox, one updateCell call per toggle. Unchecked is saved as false (not blank); a row with no value also shows unchecked.
+// Checkbox (components/ui), one updateCell call per toggle. Unchecked is saved as false (not blank); a row with no value also shows unchecked.
 // useOptimistic shows the new state while saving and reverts by itself if the save fails (props stay the same).
 export function CheckboxCell({ applicationId, columnId, checked, label }: {
   applicationId: number; columnId: number; checked: boolean; label: string;
@@ -33,8 +34,10 @@ export function CheckboxCell({ applicationId, columnId, checked, label }: {
 
   return (
     <>
-      <input type="checkbox" aria-label={label} checked={shown} onChange={(e) => toggle(e.target.checked)} />
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      <div className="flex h-8 items-center">
+        <Checkbox aria-label={label} checked={shown} onCheckedChange={(c) => toggle(c === true)} />
+      </div>
+      {error && <p role="alert" className="mt-1 w-0 min-w-full text-sm text-destructive">{error}</p>}
     </>
   );
 }

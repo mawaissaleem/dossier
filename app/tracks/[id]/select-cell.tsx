@@ -3,10 +3,12 @@
 import { useOptimistic, useRef, useState, useTransition } from "react";
 import { updateCell } from "@/app/actions/cells";
 import type { OptionItem } from "@/lib/db/columns";
-import { chipClasses } from "@/lib/colors";
+import { ChevronDownIcon } from "lucide-react";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { OptionChip } from "@/app/option-chip";
 import { findOption } from "@/lib/options";
 
-// Native <select> (full keyboard support), styled as the chosen option's chip. One updateCell call per change; blank clears.
+// NativeSelect (full keyboard support) shown as the chosen option's chip. One updateCell call per change; blank clears.
 // useOptimistic shows the new choice while saving and reverts by itself if the save fails (props stay the same).
 export function SelectCell({ applicationId, columnId, value, options, label }: {
   applicationId: number; columnId: number; value: string | number | boolean | null | undefined; options: OptionItem[]; label: string;
@@ -35,28 +37,27 @@ export function SelectCell({ applicationId, columnId, value, options, label }: {
     });
   }
 
-  if (options.length === 0) {
-    return (
-      <select aria-label={label} disabled className="text-sm text-foreground/60">
-        <option>No options yet</option>
-      </select>
-    );
-  }
-  const color = findOption(options, shown)?.color;
+  if (options.length === 0) return <span role="note" aria-label={`${label}: no options yet`} className="flex h-8 items-center text-muted-foreground">No options yet</span>;
+  const chosen = findOption(options, shown);
   return (
     <>
-      <select
-        aria-label={label}
-        value={shown === null ? "" : String(shown)}
-        onChange={(e) => choose(e.target.value)}
-        className={`rounded-full px-2 py-0.5 text-sm ${color ? chipClasses(color) : "border border-foreground/30"}`}
-      >
-        <option value="">— (blank)</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>{o.label}</option>
-        ))}
-      </select>
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {/* The chip is what you see; the transparent native select on top is what you click and tab to (full keyboard support, no per-cell Radix). */}
+      <div className="group/sel relative flex h-8 min-w-24 items-center rounded-md hover:bg-muted has-[select:focus-visible]:ring-2 has-[select:focus-visible]:ring-ring">
+        {chosen && <OptionChip option={chosen} />}
+        <ChevronDownIcon aria-hidden="true" className="pointer-events-none absolute right-1.5 size-3.5 text-muted-foreground opacity-0 group-hover/sel:opacity-100 group-has-[select:focus-visible]/sel:opacity-100" />
+        <NativeSelect
+          aria-label={label}
+          value={shown === null ? "" : String(shown)}
+          onChange={(e) => choose(e.target.value)}
+          className="absolute inset-0 w-full [&>select]:h-full [&>select]:cursor-pointer [&>select]:opacity-0 [&>svg]:hidden"
+        >
+          <NativeSelectOption value="">— (blank)</NativeSelectOption>
+          {options.map((o) => (
+            <NativeSelectOption key={o.id} value={o.id}>{o.label}</NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </div>
+      {error && <p role="alert" className="mt-1 w-0 min-w-full text-sm text-destructive">{error}</p>}
     </>
   );
 }

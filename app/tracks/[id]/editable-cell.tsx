@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { PencilIcon } from "lucide-react";
 import { updateCell } from "@/app/actions/cells";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { linkLabel } from "@/lib/cells";
 import type { EditorKind } from "@/lib/table";
 
@@ -18,6 +22,7 @@ export function EditableCell({ applicationId, columnId, text, label, kind, href 
   const locked = useRef(false);
   const refocus = useRef(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const num = kind === "number" ? "text-right tabular-nums" : "";
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -63,27 +68,27 @@ export function EditableCell({ applicationId, columnId, text, label, kind, href 
 
   if (!editing && href) {
     return (
-      <span className="flex items-center gap-2">
+      <span className="flex h-8 items-center gap-1">
         {/* Never fetched or previewed (NFR-2): the browser only follows it on click. */}
-        <a href={href} target="_blank" rel="noopener noreferrer" title={href} className="text-blue-600 underline">
+        <a href={href} target="_blank" rel="noopener noreferrer" title={href} className="truncate rounded-sm text-accent underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {linkLabel(href)}
         </a>
-        <button ref={trigger} type="button" onClick={start} aria-label={`Edit ${label}`} className="text-sm underline">
-          Edit
-        </button>
+        <Button ref={trigger} type="button" variant="ghost" size="icon-xs" onClick={start} aria-label={`Edit ${label}`} className="text-muted-foreground">
+          <PencilIcon aria-hidden="true" />
+        </Button>
       </span>
     );
   }
   if (!editing) {
     return (
-      <button ref={trigger} type="button" onClick={start} aria-label={`${label}: ${text || "empty"}`} className="block min-h-6 w-full min-w-16 text-left">
+      <button ref={trigger} type="button" onClick={start} aria-label={`${label}: ${text || "empty"}`} title={text || undefined} className={cn("block h-8 w-full min-w-24 max-w-72 cursor-text truncate rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring", num && "ml-auto", num)}>
         {text}
       </button>
     );
   }
   return (
     <>
-      <input
+      <Input
         ref={input}
         autoFocus
         // type="date": value is always YYYY-MM-DD in the user's calendar, no time zone involved.
@@ -100,9 +105,10 @@ export function EditableCell({ applicationId, columnId, text, label, kind, href 
           if (e.key === "Enter") { refocus.current = true; commit(); }
           else if (e.key === "Escape" && !locked.current) cancel(); // ignored while saving, so a failed save's error is never hidden
         }}
-        className="w-full rounded border border-foreground/30 px-1"
+        className={cn("min-w-32 px-1.5 text-sm", num)}
       />
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {/* w-0 min-w-full: the message wraps inside the column instead of widening it. */}
+      {error && <p role="alert" className="mt-1 w-0 min-w-full text-sm text-destructive">{error}</p>}
     </>
   );
 }

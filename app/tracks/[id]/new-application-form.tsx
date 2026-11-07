@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
 import { createApplication } from "@/app/actions/applications";
 import { ApplicationFields } from "@/app/application-fields";
-import { buildCreateValues, defaultState, type FormState } from "@/lib/application-form";
+import { buildCreateValues, defaultState, errorField, type FormState } from "@/lib/application-form";
 import type { ColumnItem } from "@/lib/db/columns";
 
 // Hidden columns are shown too (marked), so no column is unreachable. `columns` comes from the page, so a column added through
@@ -33,12 +34,10 @@ export function NewApplicationForm({ trackId, columns }: { trackId: number; colu
   }
 
   return (
-    <form aria-label="Add application" onSubmit={submit} className="mb-4 flex flex-col items-start gap-2">
+    <form aria-label="Add application" onSubmit={submit} className="flex max-w-3xl flex-col gap-4">
       <ApplicationFields title={title} onTitleChange={setTitle} columns={columns} state={{ ...defaultState(columns), ...fields }} onChange={(id, v) => setFields((f) => ({ ...f, [id]: v }))} error={error} />
-      <button type="submit" disabled={pending} className="rounded bg-foreground px-3 py-1 text-background disabled:opacity-50">
-        {pending ? "Saving…" : "Save"}
-      </button>
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {error && errorField(error, columns) === null && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <div><Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button></div>
     </form>
   );
 }

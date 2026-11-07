@@ -1,25 +1,231 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Data-attribute variants the components use (copied from shadcn/tailwind.css so the shadcn CLI package is not a runtime dependency; none of its gradient utilities are included). */
+@custom-variant data-open {
+  &:where([data-state="open"]),
+  &:where([data-open]:not([data-open="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-closed {
+  &:where([data-state="closed"]),
+  &:where([data-closed]:not([data-closed="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-checked {
+  &:where([data-state="checked"]),
+  &:where([data-checked]:not([data-checked="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]),
+  &:where([data-disabled]:not([data-disabled="false"])) {
+    @slot;
+  }
+}
+
+/*
+  Design tokens (see DESIGN.md). Every colour is a #rrggbb value so tests/theme-contrast.test.ts can
+  measure WCAG contrast straight from this file. Themes are selected by <html data-theme="...">; the
+  :root block is Graphite, so a page with no stored choice renders Graphite. Keep the theme blocks in
+  this order (graphite, ink, paper): later blocks override earlier ones.
+  Hard rules: no gradients, no blur, no glow or coloured shadows, no purple/violet/indigo accent.
+*/
+:root,
+[data-theme="graphite"] {
+  color-scheme: dark;
+  --background: #151515;
+  --foreground: #ececec;
+  --card: #1b1b1b;
+  --card-foreground: #ececec;
+  --popover: #1f1f1f;
+  --popover-foreground: #ececec;
+  --muted: #242424;
+  --muted-foreground: #a3a3a3;
+  --border: #333333;
+  --input: #737373;
+  --ring: #e5a63c;
+  --accent: #e5a63c;
+  --accent-foreground: #1a1405;
+  --destructive: #ff7a70;
+  --destructive-foreground: #1a0705;
+}
+
+[data-theme="ink"] {
+  color-scheme: dark;
+  --background: #0e1420;
+  --foreground: #e6ebf2;
+  --card: #131b29;
+  --card-foreground: #e6ebf2;
+  --popover: #162033;
+  --popover-foreground: #e6ebf2;
+  --muted: #1b2536;
+  --muted-foreground: #9fb0c7;
+  --border: #2a374d;
+  --input: #6b7d98;
+  --ring: #56b4e9;
+  --accent: #56b4e9;
+  --accent-foreground: #04141f;
+  --destructive: #ff8a80;
+  --destructive-foreground: #1a0705;
+}
+
+[data-theme="paper"] {
+  color-scheme: light;
+  --background: #faf8f3;
+  --foreground: #1f1c17;
+  --card: #fffdf8;
+  --card-foreground: #1f1c17;
+  --popover: #fffdf8;
+  --popover-foreground: #1f1c17;
+  --muted: #efebe2;
+  --muted-foreground: #5f5a50;
+  --border: #d9d3c5;
+  --input: #8a8374;
+  --ring: #0b6b66;
+  --accent: #0b6b66;
+  --accent-foreground: #ffffff;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+}
+
+/* Option chip colours (lib/colors.ts token names are stored data). Pairs are chip background + text. Dark themes share one set. */
+:root,
+[data-theme="graphite"],
+[data-theme="ink"] {
+  --chip-red: #5c1f1f;
+  --chip-red-foreground: #ffd0cc;
+  --chip-orange: #5c3012;
+  --chip-orange-foreground: #ffd9b8;
+  --chip-amber: #54400c;
+  --chip-amber-foreground: #ffe9a8;
+  --chip-green: #1b4a2a;
+  --chip-green-foreground: #c4f0d0;
+  --chip-teal: #124a47;
+  --chip-teal-foreground: #bdf0ea;
+  --chip-blue: #1c3f66;
+  --chip-blue-foreground: #c9e1fb;
+  --chip-purple: #43275f;
+  --chip-purple-foreground: #e6d2f8;
+  --chip-gray: #3a3a3a;
+  --chip-gray-foreground: #e4e4e4;
+}
+
+[data-theme="paper"] {
+  --chip-red: #fee2e2;
+  --chip-red-foreground: #7f1d1d;
+  --chip-orange: #ffedd5;
+  --chip-orange-foreground: #7c2d12;
+  --chip-amber: #fef3c7;
+  --chip-amber-foreground: #78350f;
+  --chip-green: #dcfce7;
+  --chip-green-foreground: #14532d;
+  --chip-teal: #ccfbf1;
+  --chip-teal-foreground: #134e4a;
+  --chip-blue: #dbeafe;
+  --chip-blue-foreground: #1e3a8a;
+  --chip-purple: #f3e8ff;
+  --chip-purple-foreground: #581c87;
+  --chip-gray: #e5e7eb;
+  --chip-gray-foreground: #111827;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--muted);
+  --color-secondary-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  /* The one accent. shadcn's "primary" is the same colour. Hover/selected surfaces use muted, not accent. */
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-chip-red: var(--chip-red);
+  --color-chip-red-foreground: var(--chip-red-foreground);
+  --color-chip-orange: var(--chip-orange);
+  --color-chip-orange-foreground: var(--chip-orange-foreground);
+  --color-chip-amber: var(--chip-amber);
+  --color-chip-amber-foreground: var(--chip-amber-foreground);
+  --color-chip-green: var(--chip-green);
+  --color-chip-green-foreground: var(--chip-green-foreground);
+  --color-chip-teal: var(--chip-teal);
+  --color-chip-teal-foreground: var(--chip-teal-foreground);
+  --color-chip-blue: var(--chip-blue);
+  --color-chip-blue-foreground: var(--chip-blue-foreground);
+  --color-chip-purple: var(--chip-purple);
+  --color-chip-purple-foreground: var(--chip-purple-foreground);
+  --color-chip-gray: var(--chip-gray);
+  --color-chip-gray-foreground: var(--chip-gray-foreground);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  /* System stacks only: nothing is fetched at runtime (NFR-2). */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-heading: var(--font-sans);
+
+  /* Compact type scale: 12 / 13 / 14 (body) / 16 / 20 / 24 px. */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.25rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+
+  /* 4 px spacing grid (Tailwind's default step, pinned here on purpose). */
+  --spacing: 0.25rem;
+
+  /* Small radii. Nothing is rounder than 6 px except pill chips. */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-2xl: 6px;
+  --radius-3xl: 6px;
+  --radius-4xl: 6px;
+
+  /* Flat surfaces: no elevation shadows. */
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
+  body {
+    @apply bg-background text-base text-foreground;
+  }
+  html {
+    @apply font-sans;
+    /* Inherited by every scroll area (the table's too); the browser default draws light bars in the dark themes. */
+    scrollbar-color: var(--input) transparent;
+  }
 }

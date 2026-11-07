@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getApplicationDetail, getDeleteImpact } from "@/lib/db/applications";
+import { CheckIcon } from "lucide-react";
+import { Page } from "@/components/page-header";
 import { ApplicationActions } from "./application-actions";
 import { EditApplication } from "./edit-application";
 import { linkLabel, safeHref } from "@/lib/cells";
@@ -21,49 +22,49 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
   const impact = await getDeleteImpact(detail.id);
   if (!impact) notFound(); // deleted between the two reads
   return (
-    <>
-      <p className="mb-2 text-sm">
-        <Link href={`/tracks/${detail.track.id}`} className="underline">{detail.track.name}</Link>
-      </p>
-      <h1 className="mb-1 text-2xl font-semibold">{detail.title}</h1>
-      {detail.archived && <p className="mb-4 text-sm font-medium">Archived</p>}
-      <EditApplication id={detail.id} title={detail.title} columns={detail.columns} values={detail.values}>
-      <dl className="mt-4 grid max-w-xl grid-cols-[max-content_1fr] gap-x-6 gap-y-2">
-        {detail.columns.map((col) => {
-          const text = formatCell(col, detail.values[col.id]);
-          const href = col.type === "link" ? safeHref(text) : null;
-          const option = col.type === "single_select" ? findOption(col.options, detail.values[col.id]) : undefined;
-          return (
-            <div key={col.id} className="contents">
-              <dt className="font-medium">
-                {col.name}
-                {col.hidden && <span className="ml-2 text-sm font-normal text-foreground/60">(hidden)</span>}
-              </dt>
-              <dd>
-                {href ? (
-                  // Never fetched or previewed (NFR-2): the browser only follows it on click.
-                  <a href={href} target="_blank" rel="noopener noreferrer" title={href} className="text-blue-600 underline">
-                    {linkLabel(href)}
-                  </a>
-                ) : option ? (
-                  <OptionChip option={option} />
-                ) : (
-                  text || "—"
-                )}
-              </dd>
-            </div>
-          );
-        })}
-      </dl>
+    <Page narrow>
+      <EditApplication id={detail.id} title={detail.title} back={{ href: `/tracks/${detail.track.id}`, label: detail.track.name }} archived={detail.archived} columns={detail.columns} values={detail.values}>
+        <dl className="divide-y divide-border rounded-lg border border-border">
+          {detail.columns.map((col) => {
+            const value = detail.values[col.id];
+            const text = formatCell(col, value);
+            const href = col.type === "link" ? safeHref(text) : null;
+            const option = col.type === "single_select" ? findOption(col.options, value) : undefined;
+            return (
+              <div key={col.id} className="grid gap-1 px-3 py-2 sm:grid-cols-[12rem_1fr] sm:gap-4">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  {col.name}
+                  {col.hidden && <span className="ml-2 font-normal">(hidden)</span>}
+                </dt>
+                <dd className="min-w-0 break-words">
+                  {col.type === "checkbox" ? (
+                    value === true ? <span className="inline-flex items-center gap-1.5"><CheckIcon aria-hidden className="size-4 text-accent" />Yes</span> : <span className="text-muted-foreground">No</span>
+                  ) : href ? (
+                    // Never fetched or previewed (NFR-2): the browser only follows it on click.
+                    <a href={href} target="_blank" rel="noopener noreferrer" title={href} className="rounded-sm text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      {linkLabel(href)}
+                    </a>
+                  ) : option ? (
+                    <OptionChip option={option} />
+                  ) : text ? (
+                    text
+                  ) : (
+                    <span className="text-muted-foreground"><span aria-hidden>—</span><span className="sr-only">Empty</span></span>
+                  )}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
       </EditApplication>
       <ApplicationActions id={detail.id} title={detail.title} archived={detail.archived} cellCount={impact.cellCount} fileCount={impact.fileCount} />
-    </>
+    </Page>
   );
 }
 
 export default function ApplicationPage(props: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<p>Loading…</p>}>
+    <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
       <ApplicationView params={props.params} />
     </Suspense>
   );

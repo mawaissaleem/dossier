@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BAD_DATE, buildCreateValues, buildValues, defaultState, changedState, errorNamesColumn, initialState, inputKind, splitEssentials } from "@/lib/application-form";
+import { BAD_DATE, buildCreateValues, buildValues, defaultState, changedState, errorField, errorNamesColumn, initialState, inputKind, splitEssentials } from "@/lib/application-form";
 import type { ColumnType } from "@/lib/db/schema";
 
 describe("inputKind", () => {
@@ -167,5 +167,24 @@ describe("buildCreateValues", () => {
     expect(buildCreateValues(cols, { 1: "", 2: false, 3: "" })).toEqual([
       { columnId: 1, value: null }, { columnId: 2, value: false }, { columnId: 3, value: null }, { columnId: 4, value: null }, { columnId: 5, value: null },
     ]);
+  });
+});
+
+describe("errorField", () => {
+  const cols = [{ id: 4, name: "Deadline" }, { id: 9, name: "Salary" }];
+  it("finds the column a server error names, or the title", () => {
+    expect(errorField("Salary: Enter a number.", cols)).toBe(9);
+    expect(errorField("Title is required.", cols)).toBe("title");
+    expect(errorField("Title must be at most 200 characters.", cols)).toBe("title");
+  });
+  it("reads a column error as that column, even when a column is named Title", () => {
+    const withTitle = [...cols, { id: 11, name: "Title" }];
+    expect(errorField("Title: Enter a valid date as YYYY-MM-DD.", withTitle)).toBe(11);
+    expect(errorField("Title is required.", withTitle)).toBe("title");
+    expect(errorField("Salary: Title is required.", withTitle)).toBe(9); // a column error is never taken for the title error
+  });
+  it("is null for form-level or no errors", () => {
+    expect(errorField("Could not save. Try again.", cols)).toBeNull();
+    expect(errorField(null, cols)).toBeNull();
   });
 });

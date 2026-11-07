@@ -5,7 +5,7 @@ describe("chipClasses", () => {
   it("maps every seed palette token to its own classes", () => {
     for (const t of ["red", "orange", "amber", "green", "teal", "blue", "purple", "gray"]) {
       expect(chipClasses(t)).toBe(CHIP_CLASSES[t]);
-      expect(chipClasses(t)).toMatch(/^bg-\S+ text-\S+$/);
+      expect(chipClasses(t)).toBe(`bg-chip-${t} text-chip-${t}-foreground`);
     }
   });
 

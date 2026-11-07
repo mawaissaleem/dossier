@@ -1,14 +1,15 @@
 // Pure: palette tokens (stored in column_options.color, same set as scripts/seed.ts) to Tailwind chip classes.
-// Full static strings, so Tailwind's scanner keeps them. Light mode; each pair is background + dark text.
+// Full static strings, so Tailwind's scanner keeps them. The colours are theme tokens (--chip-<token> and
+// --chip-<token>-foreground in app/globals.css), so each theme supplies its own AA-checked pair.
 export const CHIP_CLASSES: Record<string, string> = {
-  red: "bg-red-100 text-red-900",
-  orange: "bg-orange-100 text-orange-900",
-  amber: "bg-amber-100 text-amber-900",
-  green: "bg-green-100 text-green-900",
-  teal: "bg-teal-100 text-teal-900",
-  blue: "bg-blue-100 text-blue-900",
-  purple: "bg-purple-100 text-purple-900",
-  gray: "bg-gray-200 text-gray-900",
+  red: "bg-chip-red text-chip-red-foreground",
+  orange: "bg-chip-orange text-chip-orange-foreground",
+  amber: "bg-chip-amber text-chip-amber-foreground",
+  green: "bg-chip-green text-chip-green-foreground",
+  teal: "bg-chip-teal text-chip-teal-foreground",
+  blue: "bg-chip-blue text-chip-blue-foreground",
+  purple: "bg-chip-purple text-chip-purple-foreground",
+  gray: "bg-chip-gray text-chip-gray-foreground",
 };
 
 // Unknown token (hasOwn, so "constructor" is unknown too) falls back to gray.

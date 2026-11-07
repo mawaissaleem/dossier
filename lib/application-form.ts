@@ -102,3 +102,12 @@ export function splitEssentials<T extends SplitCol>(cols: T[]): { essentials: T[
 // The server prefixes field errors with "<column name>: ". True when the error names one of these columns.
 export const errorNamesColumn = (error: string | null | undefined, cols: { name: string }[]) =>
   !!error && cols.some((c) => error.startsWith(`${c.name}: `));
+
+// Which field a server error is about: a column id, "title", or null for a form-level error (e.g. "Could not save").
+// Same "<column name>: " prefix rule as errorNamesColumn; title errors come from checkTitle in app/actions/applications.ts.
+export function errorField(error: string | null | undefined, cols: { id: number; name: string }[]): number | "title" | null {
+  if (!error) return null;
+  const c = cols.find((col) => error.startsWith(`${col.name}: `));
+  if (c) return c.id;
+  return /^Title (is required|must be)/.test(error) ? "title" : null;
+}
