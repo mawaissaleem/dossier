@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BAD_DATE, buildCreateValues, buildValues, defaultState, changedState, errorField, errorNamesColumn, initialState, inputKind, splitEssentials } from "@/lib/application-form";
+import { BAD_DATE, buildCreateValues, buildValues, defaultState, changedState, errorField, errorNamesColumn, initialState, inputKind, isPriority, splitEssentials } from "@/lib/application-form";
 import type { ColumnType } from "@/lib/db/schema";
 
 describe("inputKind", () => {
@@ -186,5 +186,13 @@ describe("errorField", () => {
   it("is null for form-level or no errors", () => {
     expect(errorField("Could not save. Try again.", cols)).toBeNull();
     expect(errorField(null, cols)).toBeNull();
+  });
+});
+
+describe("isPriority", () => {
+  it("is a single_select named priority, trimmed and case-insensitive", () => {
+    expect(isPriority({ name: " Priority", type: "single_select" })).toBe(true);
+    expect(isPriority({ name: "Priority", type: "text" })).toBe(false);
+    expect(isPriority({ name: "Prio", type: "single_select" })).toBe(false);
   });
 });

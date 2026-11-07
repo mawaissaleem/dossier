@@ -2,6 +2,7 @@
 import { createColumnHelper, tableFeatures } from "@tanstack/react-table";
 import type { ApplicationRow } from "./db/applications";
 import type { ColumnItem } from "./db/columns";
+import { columnId } from "./column-id";
 import { findOption } from "./options";
 
 // Stable row identity by application id, not array index: a new application at the top must not shift edit state onto another row.
@@ -10,7 +11,7 @@ export const getRowId = (r: ApplicationRow) => String(r.id);
 export type EditorKind = "text" | "number" | "date" | "link";
 export const editorKind = (type: ColumnItem["type"]): EditorKind | null =>
   type === "text" || type === "number" || type === "date" || type === "link" ? type : null;
-export const columnId = (c: Pick<ColumnItem, "id">) => `col-${c.id}`;
+export { columnId };
 
 // Core features only for now; sorting, filtering and editing register theirs in later tasks.
 export const features = tableFeatures({});

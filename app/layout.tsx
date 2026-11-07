@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { FileStackIcon, LayoutDashboardIcon, ListChecksIcon, SettingsIcon } from "lucide-react";
 import "./globals.css";
 import { NavLink } from "./nav-link";
+import { SearchPalette } from "./search-palette";
 import { ThemeSwitcher } from "./theme-switcher";
 import { DEFAULT_THEME, THEME_INIT_SCRIPT } from "@/lib/theme";
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </span>
             Dossier
           </span>
+          <SearchPalette className="lg:mb-2" />
           {/* usePathname suspends on dynamic routes under cacheComponents; the boundary keeps the build working. */}
           <Suspense>
             <NavLink href="/" icon={<LayoutDashboardIcon />}>Dashboard</NavLink>

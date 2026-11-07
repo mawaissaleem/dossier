@@ -2,6 +2,7 @@
 import { decodeDefault, type CellScalar } from "./cells";
 import type { ColumnItem } from "./db/columns";
 import type { ColumnType } from "./db/schema";
+import { isPriority } from "./priority";
 import { formatCell } from "./table";
 
 export type InputKind = "text" | "number" | "date" | "checkbox" | "select";
@@ -93,9 +94,10 @@ export function changedState(cols: { id: number }[], state: FormState, initial: 
 // Limits: renaming "Deadline" or changing its type moves it to `rest`; with two matches the first (column order) wins, the other goes to `rest`.
 // A track missing any of them just has fewer essentials. `rest` keeps column order.
 type SplitCol = { name: string; type: ColumnType; hidden: boolean; isStatus: boolean };
+export { isPriority };
 export function splitEssentials<T extends SplitCol>(cols: T[]): { essentials: T[]; rest: T[] } {
   const named = (name: string, type: ColumnType) => cols.find((c) => !c.hidden && c.type === type && c.name.trim().toLowerCase() === name);
-  const essentials = [cols.find((c) => !c.hidden && c.isStatus), named("priority", "single_select"), named("deadline", "date")].filter((c): c is T => c !== undefined);
+  const essentials = [cols.find((c) => !c.hidden && c.isStatus), cols.find((c) => !c.hidden && isPriority(c)), named("deadline", "date")].filter((c): c is T => c !== undefined);
   return { essentials, rest: cols.filter((c) => !essentials.includes(c)) };
 }
 

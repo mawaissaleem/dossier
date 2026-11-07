@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { linkLabel } from "@/lib/cells";
 import type { EditorKind } from "@/lib/table";
+import { EDITOR_MIN_WIDTH } from "@/lib/virtual-rows";
+import { usePinRow } from "./row-pins";
 
 // Click-to-edit text/number/date/link cell. A link with a safe `href` shows as an anchor (new tab) plus an Edit button; an unsafe or blank one is plain text. Edit state is local to this component, and the table keys it by application id + column id.
 // Enter or blur saves, Escape cancels. The server validates (no rules here beyond the input type) and its error is shown with the typed text kept.
@@ -24,6 +26,7 @@ export function EditableCell({ applicationId, columnId, text, label, kind, href 
   const trigger = useRef<HTMLButtonElement>(null);
   const num = kind === "number" ? "text-right tabular-nums" : "";
   const input = useRef<HTMLInputElement>(null);
+  usePinRow(applicationId, editing); // the virtualised table keeps this row mounted while the editor is open
 
   useEffect(() => {
     // Only when focus was lost with the input (it is on body); if the user moved to another field or cell, leave it there.
@@ -105,7 +108,8 @@ export function EditableCell({ applicationId, columnId, text, label, kind, href 
           if (e.key === "Enter") { refocus.current = true; commit(); }
           else if (e.key === "Escape" && !locked.current) cancel(); // ignored while saving, so a failed save's error is never hidden
         }}
-        className={cn("min-w-32 px-1.5 text-sm", num)}
+        style={{ minWidth: EDITOR_MIN_WIDTH }}
+        className={cn("px-1.5 text-sm", num)}
       />
       {/* w-0 min-w-full: the message wraps inside the column instead of widening it. */}
       {error && <p role="alert" className="mt-1 w-0 min-w-full text-sm text-destructive">{error}</p>}
