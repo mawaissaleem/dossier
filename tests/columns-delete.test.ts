@@ -53,7 +53,7 @@ describe("deleteColumn action", () => {
   it("removes the column, its cells and options; others and the applications stay; order is kept (gap left)", async () => {
     cell(apps[0], ids[0], { valueText: "x" });
     cell(apps[0], ids[1], { valueText: "keep" });
-    expect(await deleteColumn(ids[0], true)).toEqual({ ok: true });
+    expect(await deleteColumn(ids[0], true, 1)).toEqual({ ok: true });
     expect((await listColumns(trackId)).map((c) => c.name)).toEqual(["B", "C"]);
     expect(db.select().from(cellValues).all().map((c) => c.columnId)).toEqual([ids[1]]);
     expect(db.select().from(applications).all()).toHaveLength(4);
@@ -67,7 +67,7 @@ describe("deleteColumn action", () => {
     const opt = db.insert(columnOptions).values({ userId: "local", columnId: sel, label: "Open", color: "blue", position: 0 }).returning().get().id;
     cell(apps[0], sel, { valueOptionId: opt });
     cell(apps[1], sel, { valueOptionId: opt });
-    expect(await deleteColumn(sel, true)).toEqual({ ok: true });
+    expect(await deleteColumn(sel, true, 2)).toEqual({ ok: true });
     expect(db.select().from(columns).where(eq(columns.id, sel)).all()).toHaveLength(0);
     expect(db.select().from(columnOptions).all()).toHaveLength(0);
     expect(db.select().from(cellValues).all()).toHaveLength(0);
@@ -76,7 +76,8 @@ describe("deleteColumn action", () => {
   it("rejects without confirm (anything but true) and deletes nothing", async () => {
     cell(apps[0], ids[0], { valueText: "x" });
     const before = everything();
-    for (const c of [false, undefined, "true", 1]) expect(await deleteColumn(ids[0], c as boolean)).toEqual({ ok: false, error: "Deleting must be confirmed." });
+    for (const c of [false, undefined, "true", 1]) expect(await deleteColumn(ids[0], c as boolean, 1)).toEqual({ ok: false, error: "Deleting must be confirmed." });
+    for (const n of [undefined, -1, 1.5, "1", null]) expect(await deleteColumn(ids[0], true, n as number)).toEqual({ ok: false, error: "Deleting must be confirmed." });
     expect(everything()).toBe(before);
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -85,7 +86,7 @@ describe("deleteColumn action", () => {
     db.update(columns).set({ isStatus: true }).where(eq(columns.id, ids[0])).run();
     cell(apps[0], ids[0], { valueText: "x" });
     const before = everything();
-    expect(await deleteColumn(ids[0], true)).toEqual({ ok: false, error: "The Status column cannot be deleted." });
+    expect(await deleteColumn(ids[0], true, 1)).toEqual({ ok: false, error: "The Status column cannot be deleted." });
     expect(everything()).toBe(before);
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -94,9 +95,25 @@ describe("deleteColumn action", () => {
     const other = db.insert(tracks).values({ userId: "someone-else", name: "X", position: 0 }).returning().get().id;
     const foreign = db.insert(columns).values({ userId: "someone-else", trackId: other, name: "Z", type: "text", position: 0 }).returning().get().id;
     const before = everything();
-    for (const c of [foreign, 9999, 0, 1.5, "1"]) expect(await deleteColumn(c as number, true)).toEqual({ ok: false, error: "Column not found." });
+    for (const c of [foreign, 9999, 0, 1.5, "1"]) expect(await deleteColumn(c as number, true, 0)).toEqual({ ok: false, error: "Column not found." });
     expect(everything()).toBe(before);
     expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe("stale value count (NFR-4: values added while the dialog was open are never deleted unannounced)", () => {
+  it("refuses when the count changed since it was shown (more or fewer), deletes nothing, then works with the fresh count", async () => {
+    cell(apps[0], ids[0], { valueText: "x" });
+    const shown = await fetchColumnDeleteImpact(ids[0]);
+    expect(shown).toEqual({ ok: true, name: "A", valueCount: 1, archivedCount: 0 });
+    cell(apps[3], ids[0], { valueText: "added in another tab" });
+    const before = everything();
+    for (const n of [1, 3, 0]) expect(await deleteColumn(ids[0], true, n)).toEqual({ ok: false, error: "The number of values in this column changed. Check again." });
+    expect(everything()).toBe(before);
+    expect(refresh).not.toHaveBeenCalled();
+    const fresh = await fetchColumnDeleteImpact(ids[0]);
+    expect(fresh.ok && fresh.valueCount).toBe(2);
+    expect(await deleteColumn(ids[0], true, 2)).toEqual({ ok: true });
   });
 });
 

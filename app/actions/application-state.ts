@@ -1,7 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { archiveApplication as setArchived, deleteApplication as removeApplication } from "@/lib/db/applications";
+import { archiveApplication as setArchived, deleteApplication as removeApplication, getDeleteImpact, type DeleteImpact, type DeleteResult } from "@/lib/db/applications";
 import { isId } from "@/lib/ids";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -14,11 +14,22 @@ export async function archiveApplication(id: number, archived: boolean): Promise
   return { ok: true };
 }
 
-// `confirm` must be literally true: the UI sets it only after the user saw what will be lost (FR-1.9, NFR-4).
-// No refresh(): the detail page would re-render as a 404 before the client navigates to the track page (trackId).
-export async function deleteApplication(id: number, confirm: boolean): Promise<{ ok: true; trackId: number } | { ok: false; error: string }> {
-  if (confirm !== true) return { ok: false, error: "Deleting must be confirmed." };
+// Read on each dialog open so the counts are never stale page data.
+export async function fetchDeleteImpact(id: number): Promise<({ ok: true } & DeleteImpact) | { ok: false; error: string }> {
   if (!isId(id)) return { ok: false, error: "Application not found." };
-  const trackId = await removeApplication(id);
-  return trackId === null ? { ok: false, error: "Application not found." } : { ok: true, trackId };
+  const impact = await getDeleteImpact(id);
+  return impact ? { ok: true, ...impact } : { ok: false, error: "Application not found." };
+}
+
+const count = (n: unknown) => Number.isSafeInteger(n) && (n as number) >= 0;
+
+// `confirm` must be literally true: the UI sets it only after the user saw what will be lost (FR-1.9, NFR-4). `expected` is the impact
+// the dialog showed; the data layer refuses if it changed since.
+// No refresh(): the detail page would re-render as a 404 before the client navigates to the track page (trackId).
+export async function deleteApplication(id: number, confirm: boolean, expected: { cellCount: number; fileCount: number }): Promise<DeleteResult> {
+  if (confirm !== true || typeof expected !== "object" || expected === null || !count(expected.cellCount) || !count(expected.fileCount)) {
+    return { ok: false, error: "Deleting must be confirmed." };
+  }
+  if (!isId(id)) return { ok: false, error: "Application not found." };
+  return removeApplication(id, { cellCount: expected.cellCount, fileCount: expected.fileCount });
 }

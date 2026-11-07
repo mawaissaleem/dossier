@@ -19,7 +19,8 @@ const tokens = (theme: string) => {
 
 describe.each(THEMES)("%s theme contrast (WCAG AA)", (theme) => {
   const t = tokens(theme);
-  const surfaces = ["--background", "--card", "--muted", "--popover"];
+  // --wash is the top stop of the canvas gradient (body), so text on the page is measured on both of its stops.
+  const surfaces = ["--background", "--wash", "--card", "--muted", "--popover"];
 
   it("body and muted text reach 4.5:1 on every surface", () => {
     for (const s of surfaces) {
@@ -29,9 +30,14 @@ describe.each(THEMES)("%s theme contrast (WCAG AA)", (theme) => {
       expect(contrast(t["--destructive"], t[s]), `destructive text on ${s}`).toBeGreaterThanOrEqual(4.5);
     }
   });
-  it("accent and destructive buttons have readable text", () => {
-    expect(contrast(t["--accent-foreground"], t["--accent"])).toBeGreaterThanOrEqual(4.5);
+  it("primary (gradient) and destructive buttons have readable text on every stop", () => {
+    // The primary button and the logo mark are a gradient accent -> accent-to; hover flattens it to accent-to.
+    expect(contrast(t["--accent-foreground"], t["--accent"]), "label on accent stop").toBeGreaterThanOrEqual(4.5);
+    expect(contrast(t["--accent-foreground"], t["--accent-to"]), "label on accent-to stop").toBeGreaterThanOrEqual(4.5);
     expect(contrast(t["--destructive-foreground"], t["--destructive"])).toBeGreaterThanOrEqual(4.5);
+  });
+  it("the active nav bar and tab underline (accent -> accent-to) reach 3:1 on every surface", () => {
+    for (const s of surfaces) for (const stop of ["--accent", "--accent-to"]) expect(contrast(t[stop], t[s]), `${stop} on ${s}`).toBeGreaterThanOrEqual(3);
   });
   it("control borders and the focus ring reach 3:1 on every surface a control sits on", () => {
     for (const s of surfaces) {
@@ -40,9 +46,8 @@ describe.each(THEMES)("%s theme contrast (WCAG AA)", (theme) => {
       expect(contrast(t["--destructive"], t[s]), `invalid border on ${s}`).toBeGreaterThanOrEqual(3);
     }
   });
-  it("solid button hover (bg-primary/90, bg-destructive/90 over the page) keeps the label readable", () => {
-    expect(contrast(t["--accent-foreground"], mix(t["--accent"], t["--background"], 0.9))).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(t["--destructive-foreground"], mix(t["--destructive"], t["--popover"], 0.9))).toBeGreaterThanOrEqual(4.5);
+  it("destructive button hover (bg-destructive/90 over any surface) keeps the label readable", () => {
+    for (const s of surfaces) expect(contrast(t["--destructive-foreground"], mix(t["--destructive"], t[s], 0.9)), `on ${s}`).toBeGreaterThanOrEqual(4.5);
   });
   it("the selected colour swatch border (foreground) stands out from every chip colour", () => {
     for (const p of PALETTE) expect(contrast(t["--foreground"], t[`--chip-${p}`]), `swatch ${p}`).toBeGreaterThanOrEqual(3);

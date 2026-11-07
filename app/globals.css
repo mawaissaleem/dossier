@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* The word "blur" in code comments (input blur events) would otherwise emit an unused .blur utility that a hard-rule grep flags. */
+@source not inline("blur");
 
 /* Data-attribute variants the components use (copied from shadcn/tailwind.css so the shadcn CLI package is not a runtime dependency; none of its gradient utilities are included). */
 @custom-variant data-open {
@@ -35,64 +37,76 @@
   measure WCAG contrast straight from this file. Themes are selected by <html data-theme="...">; the
   :root block is Graphite, so a page with no stored choice renders Graphite. Keep the theme blocks in
   this order (graphite, ink, paper): later blocks override earlier ones.
-  Hard rules: no gradients, no blur, no glow or coloured shadows, no purple/violet/indigo accent.
+  Surfaces layer background < card < popover. `accent-to` is the second stop of the accent gradients
+  (primary button, active nav and tab indicator, logo mark); `wash` is the top stop of the faint canvas
+  wash. `elevation` is the neutral shadow of floating layers (menus, dialogs). Never purple, violet,
+  indigo, magenta, pink or orange in the chrome; no blur, no glow or coloured shadows.
 */
 :root,
 [data-theme="graphite"] {
   color-scheme: dark;
-  --background: #151515;
-  --foreground: #ececec;
-  --card: #1b1b1b;
-  --card-foreground: #ececec;
-  --popover: #1f1f1f;
-  --popover-foreground: #ececec;
-  --muted: #242424;
-  --muted-foreground: #a3a3a3;
-  --border: #333333;
-  --input: #737373;
-  --ring: #e5a63c;
-  --accent: #e5a63c;
-  --accent-foreground: #1a1405;
+  --background: #0d0f0f;
+  --wash: #0f1b17;
+  --foreground: #e7ebea;
+  --card: #141717;
+  --card-foreground: #e7ebea;
+  --popover: #1a1e1e;
+  --popover-foreground: #e7ebea;
+  --muted: #212626;
+  --muted-foreground: #9ba5a2;
+  --border: #2b3232;
+  --input: #6b7674;
+  --ring: #34d399;
+  --accent: #34d399;
+  --accent-to: #22c3b4;
+  --accent-foreground: #03140d;
   --destructive: #ff7a70;
   --destructive-foreground: #1a0705;
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.7);
 }
 
 [data-theme="ink"] {
   color-scheme: dark;
-  --background: #0e1420;
-  --foreground: #e6ebf2;
-  --card: #131b29;
-  --card-foreground: #e6ebf2;
-  --popover: #162033;
-  --popover-foreground: #e6ebf2;
-  --muted: #1b2536;
-  --muted-foreground: #9fb0c7;
-  --border: #2a374d;
-  --input: #6b7d98;
-  --ring: #56b4e9;
-  --accent: #56b4e9;
-  --accent-foreground: #04141f;
+  --background: #080d19;
+  --wash: #0a1926;
+  --foreground: #e5ecf7;
+  --card: #0d1424;
+  --card-foreground: #e5ecf7;
+  --popover: #121b30;
+  --popover-foreground: #e5ecf7;
+  --muted: #18233b;
+  --muted-foreground: #98abc6;
+  --border: #233150;
+  --input: #5b7093;
+  --ring: #22d3ee;
+  --accent: #22d3ee;
+  --accent-to: #4f9dff;
+  --accent-foreground: #03131f;
   --destructive: #ff8a80;
   --destructive-foreground: #1a0705;
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.75);
 }
 
 [data-theme="paper"] {
   color-scheme: light;
-  --background: #faf8f3;
-  --foreground: #1f1c17;
-  --card: #fffdf8;
-  --card-foreground: #1f1c17;
-  --popover: #fffdf8;
-  --popover-foreground: #1f1c17;
-  --muted: #efebe2;
-  --muted-foreground: #5f5a50;
-  --border: #d9d3c5;
-  --input: #8a8374;
-  --ring: #0b6b66;
-  --accent: #0b6b66;
+  --background: #f5f6f8;
+  --wash: #eceff7;
+  --foreground: #14171c;
+  --card: #ffffff;
+  --card-foreground: #14171c;
+  --popover: #ffffff;
+  --popover-foreground: #14171c;
+  --muted: #edf0f4;
+  --muted-foreground: #525a66;
+  --border: #dce0e6;
+  --input: #79818e;
+  --ring: #1d4ed8;
+  --accent: #1d4ed8;
+  --accent-to: #2f62e6;
   --accent-foreground: #ffffff;
   --destructive: #b3261e;
   --destructive-foreground: #ffffff;
+  --elevation: 0 1px 2px rgb(16 24 40 / 0.06), 0 12px 32px -8px rgb(16 24 40 / 0.18);
 }
 
 /* Option chip colours (lib/colors.ts token names are stored data). Pairs are chip background + text. Dark themes share one set. */
@@ -152,8 +166,11 @@
   --color-ring: var(--ring);
   /* The one accent. shadcn's "primary" is the same colour. Hover/selected surfaces use muted, not accent. */
   --color-accent: var(--accent);
+  --color-accent-to: var(--accent-to);
   --color-accent-foreground: var(--accent-foreground);
+  --color-wash: var(--wash);
   --color-primary: var(--accent);
+  --color-primary-to: var(--accent-to);
   --color-primary-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
@@ -173,15 +190,17 @@
   --color-chip-purple-foreground: var(--chip-purple-foreground);
   --color-chip-gray: var(--chip-gray);
   --color-chip-gray-foreground: var(--chip-gray-foreground);
+  /* Only floating layers (menus, dialogs) are elevated, with a neutral per-theme shadow. */
+  --shadow-lg: var(--elevation);
+  /* Geist, bundled by the `geist` package through next/font/local and served from this app's origin (NFR-2). */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme {
-  /* System stacks only: nothing is fetched at runtime (NFR-2). */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-heading: var(--font-sans);
 
-  /* Compact type scale: 12 / 13 / 14 (body) / 16 / 20 / 24 px. */
+  /* Compact type scale: 12 / 13 / 14 (body) / 16 / 20 / 26 px. */
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
   --text-sm: 0.8125rem;
@@ -192,28 +211,31 @@
   --text-lg--line-height: 1.5rem;
   --text-xl: 1.25rem;
   --text-xl--line-height: 1.75rem;
-  --text-2xl: 1.5rem;
+  --text-2xl: 1.625rem;
   --text-2xl--line-height: 2rem;
 
   /* 4 px spacing grid (Tailwind's default step, pinned here on purpose). */
   --spacing: 0.25rem;
 
-  /* Small radii. Nothing is rounder than 6 px except pill chips. */
-  --radius-sm: 3px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
-  --radius-xl: 6px;
-  --radius-2xl: 6px;
-  --radius-3xl: 6px;
-  --radius-4xl: 6px;
+  /* Controls 6 px (rounded-md), panels and dialogs 10 px (rounded-lg, the cap); only chips and swatches are pills. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 10px;
+  --radius-2xl: 10px;
+  --radius-3xl: 10px;
+  --radius-4xl: 10px;
 
-  /* Flat surfaces: no elevation shadows. */
+  /* In-page surfaces are flat; only shadow-lg (floating layers) is defined, in @theme inline above. */
+  --shadow-2xs: none;
   --shadow-xs: none;
   --shadow-sm: none;
   --shadow-md: none;
-  --shadow-lg: none;
   --shadow-xl: none;
   --shadow-2xl: none;
+
+  /* 150 ms on hover, focus and open (Tailwind's default, pinned); off under prefers-reduced-motion below. */
+  --default-transition-duration: 150ms;
 }
 
 @layer base {
@@ -221,11 +243,23 @@
     @apply border-border outline-ring;
   }
   body {
-    @apply bg-background text-base text-foreground;
+    @apply text-base text-foreground;
+    /* The one canvas gradient: a faint accent wash fading into the background (text on it is measured against both stops). */
+    background: linear-gradient(to bottom, var(--wash), var(--background) 24rem) no-repeat, var(--background);
   }
   html {
     @apply font-sans;
     /* Inherited by every scroll area (the table's too); the browser default draws light bars in the dark themes. */
     scrollbar-color: var(--input) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

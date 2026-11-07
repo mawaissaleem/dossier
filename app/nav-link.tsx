@@ -14,8 +14,9 @@ export function NavLink({ href, icon, children }: { href: string; icon: React.Re
       href={href}
       aria-current={path === href ? "page" : active ? "true" : undefined}
       className={cn(
-        "flex items-center gap-2 rounded-md px-3 py-2 text-sm outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-        active ? "bg-muted font-semibold text-foreground" : "text-muted-foreground",
+        "relative flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+        // Active: a 3px accent-gradient bar on the left edge (no text on it), one of the allowed gradients.
+        active ? "bg-muted font-semibold text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.75 before:rounded-full before:bg-linear-to-b before:from-accent before:to-accent-to" : "text-muted-foreground",
       )}
     >
       <span aria-hidden className={cn("flex [&_svg]:size-4", active && "text-accent")}>{icon}</span>

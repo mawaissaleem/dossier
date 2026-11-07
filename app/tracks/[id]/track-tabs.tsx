@@ -14,9 +14,10 @@ export function TrackTabs({ tracks, currentId }: { tracks: TrackListItem[]; curr
             href={`/tracks/${t.id}`}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              "relative -mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              // Active: a 2px accent-gradient underline drawn over the transparent border.
               active
-                ? "border-accent font-semibold text-foreground"
+                ? "border-transparent font-semibold text-foreground after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:bg-linear-to-r after:from-accent after:to-accent-to"
                 : "border-transparent text-muted-foreground hover:border-input hover:text-foreground",
             )}
           >

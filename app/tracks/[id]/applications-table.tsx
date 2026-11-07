@@ -40,7 +40,7 @@ export function ApplicationsTable({ trackId, columns, rows }: { trackId: number;
       </div>
     )}
     {/* The table scrolls inside its own area (both ways, so the sticky header and Title column work); the page never scrolls sideways. */}
-    <div className="max-h-[75vh] overflow-auto rounded-lg border border-border">
+    <div className="max-h-[75vh] overflow-auto rounded-lg border border-border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring">
     <table className="w-full min-w-max border-separate border-spacing-0 text-left text-sm tabular-nums [&_tr>:last-child]:border-r-0 [&_tbody>tr:last-child>td]:border-b-0">
       <thead>
         {table.getHeaderGroups().map((group) => (
@@ -65,7 +65,7 @@ export function ApplicationsTable({ trackId, columns, rows }: { trackId: number;
                         onHide={() => setColumnHidden(trackId, col.id, true)}
                         onMove={(dir) => moveColumn(trackId, col.id, dir)}
                         onLoadImpact={() => fetchColumnDeleteImpact(col.id)}
-                        onDelete={() => deleteColumn(col.id, true)}
+                        onDelete={(expected) => deleteColumn(col.id, true, expected)}
                         onAddOption={(label) => addOption(col.id, label)}
                         onUpdateOption={(optionId, patch) => updateOption(col.id, optionId, patch)}
                         onReorderOptions={(ids) => reorderOptions(col.id, ids)}
@@ -92,7 +92,7 @@ export function ApplicationsTable({ trackId, columns, rows }: { trackId: number;
               const col = byId.get(cell_.column.id); // undefined for Title, which is a link to the detail page
               const kind = col && editorKind(col.type);
               return (
-                <td key={cell_.id} className={cn(cell, !col && "sticky left-0 z-10 min-w-48 bg-background group-hover:bg-muted")}>
+                <td key={cell_.id} className={cn(cell, !col && "sticky left-0 z-10 min-w-48 bg-card group-hover:bg-muted")}>
                   {col?.type === "checkbox" ? (
                     <CheckboxCell
                       applicationId={row.original.id}

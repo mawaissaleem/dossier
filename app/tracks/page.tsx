@@ -12,7 +12,7 @@ async function TrackList() {
   const tracks = await listTracks();
   if (tracks.length === 0) return <EmptyState title="No tracks yet" description={<>Run <code>npm run db:seed</code> to create the Job and PhD tracks.</>} />;
   return (
-    <ul className="divide-y divide-border rounded-lg border border-border">
+    <ul className="divide-y divide-border rounded-lg border border-border bg-card">
       {tracks.map((t) => (
         <li key={t.id}>
           <Link

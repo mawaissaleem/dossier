@@ -64,7 +64,7 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
   onHide: () => Promise<Result>;
   onMove: (direction: "left" | "right") => Promise<Result>;
   onLoadImpact: () => Promise<Impact>;
-  onDelete: () => Promise<Result>;
+  onDelete: (expectedValueCount: number) => Promise<Result>;
   onAddOption: (label: string) => Promise<Result>;
   onUpdateOption: (optionId: number, patch: OptionPatch) => Promise<Result>;
   onReorderOptions: (orderedIds: number[]) => Promise<Result>;
@@ -127,10 +127,13 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
 
   // Fetched fresh on every open; the delete button stays disabled until the real count is shown.
   function openDelete() {
-    setImpact(null);
     setDelError(null);
     back.remember();
     setDelOpen(true);
+    loadImpact();
+  }
+  function loadImpact() {
+    setImpact(null);
     const token = latest.start();
     onLoadImpact().then(
       (r) => latest.current(token) && setImpact(r),
@@ -211,7 +214,7 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
             "Counting values…"
           ) : impact.ok ? (
             <>
-              This permanently deletes the column <strong>{impact.name}</strong> and the values in it: {plural(impact.valueCount, "application")} hold a value
+              This permanently deletes the column <strong>{impact.name}</strong> and the values in it: {plural(impact.valueCount, "application")} {impact.valueCount === 1 ? "holds" : "hold"} a value
               {impact.archivedCount > 0 ? `, including ${impact.archivedCount} archived` : ""}. This cannot be undone.
             </>
           ) : (
@@ -223,7 +226,8 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
         busyLabel="Deleting…"
         confirmDisabled={!impact?.ok}
         busy={pending}
-        onConfirm={() => run(onDelete, () => setDelOpen(false), setDelError)}
+        // A refusal (e.g. the count changed meanwhile) shows the fresh count before confirm re-enables.
+        onConfirm={() => impact?.ok && run(() => onDelete(impact.valueCount), () => setDelOpen(false), (m) => { setDelError(m); loadImpact(); })}
       />
       <Dialog open={renameOpen} onOpenChange={(o) => { if (o || !pending) setRenameOpen(o); }}>
         <DialogContent showCloseButton={false} className="sm:max-w-md" onCloseAutoFocus={back.onCloseAutoFocus}>

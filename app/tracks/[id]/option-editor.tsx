@@ -55,7 +55,7 @@ function OptionRow({ option, locked, onSave, onDelete }: { option: OptionItem; l
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: option.id, disabled: locked });
   // No native `disabled` while saving: a disabled button drops focus to <body>; useSortable sets aria-disabled and ignores input.
   return (
-    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`rounded-lg border border-border p-2 ${isDragging ? "relative z-10 bg-muted" : "bg-card"}`}>
+    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`rounded-md border border-border p-2 ${isDragging ? "relative z-10 bg-muted" : "bg-card"}`}>
       <form
         className="flex flex-wrap items-center gap-2"
         onSubmit={(e) => {
@@ -271,7 +271,7 @@ export function OptionEditor({ column, open, onOpenChange, onCloseAutoFocus, onA
               <>This permanently deletes the option <strong>{impact.label}</strong>. No applications use it.</>
             ) : (
               <>
-                {plural(impact.useCount, "application")} use the option <strong>{impact.label}</strong>
+                {plural(impact.useCount, "application")} {impact.useCount === 1 ? "uses" : "use"} the option <strong>{impact.label}</strong>
                 {impact.archivedCount > 0 ? `, including ${impact.archivedCount} archived` : ""}. Choose what happens to them. This cannot be undone.
               </>
             )

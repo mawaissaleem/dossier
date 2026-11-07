@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { getApplicationDetail, getDeleteImpact } from "@/lib/db/applications";
+import { getApplicationDetail } from "@/lib/db/applications";
 import { CheckIcon } from "lucide-react";
 import { Page } from "@/components/page-header";
 import { ApplicationActions } from "./application-actions";
@@ -19,12 +19,10 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
   const { id: raw } = await params;
   const detail = /^\d+$/.test(raw) ? await getApplicationDetail(Number(raw)) : null;
   if (!detail) notFound();
-  const impact = await getDeleteImpact(detail.id);
-  if (!impact) notFound(); // deleted between the two reads
   return (
     <Page narrow>
       <EditApplication id={detail.id} title={detail.title} back={{ href: `/tracks/${detail.track.id}`, label: detail.track.name }} archived={detail.archived} columns={detail.columns} values={detail.values}>
-        <dl className="divide-y divide-border rounded-lg border border-border">
+        <dl className="divide-y divide-border rounded-lg border border-border bg-card">
           {detail.columns.map((col) => {
             const value = detail.values[col.id];
             const text = formatCell(col, value);
@@ -57,7 +55,7 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
           })}
         </dl>
       </EditApplication>
-      <ApplicationActions id={detail.id} title={detail.title} archived={detail.archived} cellCount={impact.cellCount} fileCount={impact.fileCount} />
+      <ApplicationActions id={detail.id} archived={detail.archived} />
     </Page>
   );
 }

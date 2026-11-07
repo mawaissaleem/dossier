@@ -163,13 +163,16 @@ export async function getColumnDeleteImpact(columnId: number): Promise<ColumnDel
 
 // Cell values and options go with the column via ON DELETE CASCADE. Positions are left as they are: the order is preserved,
 // and addColumn/moveColumn already cope with a gap. The status column is refused (FR-3.1; 2.9 manages it).
-// Callers must have confirmed with the user.
-export async function deleteColumn(columnId: number): Promise<ColumnResult> {
+// Callers must have confirmed with the user, and `expectedValueCount` is the valueCount they were shown: if it no longer matches,
+// nothing is deleted (values added meanwhile are never lost unannounced, NFR-4).
+export async function deleteColumn(columnId: number, expectedValueCount: number): Promise<ColumnResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
     const col = tx.select({ isStatus: columns.isStatus }).from(columns).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).get();
     if (!col) return NOT_FOUND;
     if (col.isStatus) return { ok: false, error: "The Status column cannot be deleted." } as const;
+    const { n } = tx.select({ n: count() }).from(cellValues).where(and(eq(cellValues.columnId, columnId), eq(cellValues.userId, userId))).get()!;
+    if (n !== expectedValueCount) return { ok: false, error: "The number of values in this column changed. Check again." } as const;
     tx.delete(columns).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).run();
     return { ok: true } as const;
   });

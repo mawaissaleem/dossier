@@ -48,10 +48,11 @@ export async function fetchColumnDeleteImpact(columnId: number): Promise<({ ok: 
 }
 
 // `confirm` must be literally true: the UI sets it only after the user saw what will be lost (FR-2.3, NFR-4).
-export async function deleteColumn(columnId: number, confirm: boolean): Promise<ColumnResult> {
-  if (confirm !== true) return { ok: false, error: "Deleting must be confirmed." };
+// `expectedValueCount` is the count the dialog showed; the data layer refuses if it changed since.
+export async function deleteColumn(columnId: number, confirm: boolean, expectedValueCount: number): Promise<ColumnResult> {
+  if (confirm !== true || !Number.isSafeInteger(expectedValueCount) || expectedValueCount < 0) return { ok: false, error: "Deleting must be confirmed." };
   if (!isId(columnId)) return bad;
-  const r = await remove(columnId);
+  const r = await remove(columnId, expectedValueCount);
   if (r.ok) refresh();
   return r;
 }

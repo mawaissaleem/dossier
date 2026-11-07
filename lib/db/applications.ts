@@ -185,11 +185,21 @@ export async function getDeleteImpact(id: number): Promise<DeleteImpact | null> 
   return { title: app.title, cellCount: n, fileCount: await countApplicationFiles(id) };
 }
 
-// Returns the application's track id (for the redirect), or null if missing or not the current user's (nothing deleted).
-// Cell values go with it via ON DELETE CASCADE (foreign_keys is on, see client.ts). Callers must have confirmed with the user.
-export async function deleteApplication(id: number): Promise<number | null> {
-  const db = getDb();
-  return db.transaction((tx) =>
-    tx.delete(applications).where(and(eq(applications.id, id), eq(applications.userId, getUserId()))).returning({ trackId: applications.trackId }).get()?.trackId ?? null,
-  );
+export type DeleteResult = { ok: true; trackId: number } | { ok: false; error: string };
+const NO_APP = { ok: false, error: "Application not found." } as const;
+
+// Returns the application's track id (for the redirect). Cell values go with it via ON DELETE CASCADE (foreign_keys is on, see client.ts).
+// Callers must have confirmed with the user, and `expected` is the impact they were shown: if a count changed since, nothing is deleted (NFR-4).
+export async function deleteApplication(id: number, expected: { cellCount: number; fileCount: number }): Promise<DeleteResult> {
+  const userId = getUserId();
+  const stale = { ok: false, error: "This application changed since the count was shown. Check again." } as const;
+  if ((await countApplicationFiles(id)) !== expected.fileCount) return stale; // async, so outside the transaction (phase 5)
+  return getDb().transaction((tx) => {
+    const owned = and(eq(applications.id, id), eq(applications.userId, userId));
+    if (!tx.select({ id: applications.id }).from(applications).where(owned).get()) return NO_APP;
+    const { n } = tx.select({ n: count() }).from(cellValues).where(and(eq(cellValues.applicationId, id), eq(cellValues.userId, userId))).get()!;
+    if (n !== expected.cellCount) return stale;
+    const { trackId } = tx.delete(applications).where(owned).returning({ trackId: applications.trackId }).get()!;
+    return { ok: true, trackId } as const;
+  });
 }

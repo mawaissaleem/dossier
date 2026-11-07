@@ -22,6 +22,7 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "drizzle-orm": "^0.45.4",
+    "geist": "^1.9.2",
     "lucide-react": "^1.70.0",
     "next": "16.4.3",
     "radix-ui": "^1.8.1",
