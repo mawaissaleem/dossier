@@ -192,12 +192,14 @@ const NO_APP = { ok: false, error: "Application not found." } as const;
 export async function deleteApplication(id: number, expected: { cellCount: number; fileCount: number }): Promise<DeleteResult> {
   const userId = getUserId();
   const stale = { ok: false, error: "This application changed since the count was shown. Check again." } as const;
-  if ((await countApplicationFiles(id)) !== expected.fileCount) return stale; // async, so outside the transaction 
   return getDb().transaction((tx) => {
     const owned = and(eq(applications.id, id), eq(applications.userId, userId));
     if (!tx.select({ id: applications.id }).from(applications).where(owned).get()) return NO_APP;
     const { n } = tx.select({ n: count() }).from(cellValues).where(and(eq(cellValues.applicationId, id), eq(cellValues.userId, userId))).get()!;
     if (n !== expected.cellCount) return stale;
+    // Files can be uploaded at any moment (5.7), so the count is checked here, in the same transaction as the delete.
+    const f = tx.select({ n: count() }).from(files).where(and(eq(files.applicationId, id), eq(files.userId, userId))).get()!;
+    if (f.n !== expected.fileCount) return stale;
     const { trackId } = tx.delete(applications).where(owned).returning({ trackId: applications.trackId }).get()!;
     return { ok: true, trackId } as const;
   });
