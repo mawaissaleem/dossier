@@ -1,5 +1,5 @@
 // Server-only. See lib/db/tracks.ts for the convention. Read helpers for the application folder rule (5.4).
-import { and, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { dirname } from "node:path/posix";
 import { getDb } from "./client";
 import { applications, cellValues, columns, files, tracks } from "./schema";
@@ -47,9 +47,30 @@ export async function applicationExists(applicationId: number): Promise<boolean>
     .where(and(eq(applications.id, applicationId), eq(applications.userId, getUserId()))).get();
 }
 
+// The earliest file of this application with this SHA-256 (FR-5.7; served by files_application_id_sha256_idx), or null.
+export async function findFileByHash(applicationId: number, sha256: string): Promise<{ id: number; storedName: string } | null> {
+  return getDb().select({ id: files.id, storedName: files.storedName }).from(files)
+    .where(and(eq(files.applicationId, applicationId), eq(files.sha256, sha256), eq(files.userId, getUserId()))).orderBy(files.id).limit(1).get() ?? null;
+}
+
 export type NewFileRow = Omit<typeof files.$inferInsert, "id" | "userId" | "createdAt" | "updatedAt">;
 
 // Throws on a unique violation (counter or path taken: the caller picks the next seq) or a foreign key violation (application gone).
 export async function insertFileRow(row: NewFileRow): Promise<number> {
   return getDb().insert(files).values({ ...row, userId: getUserId() }).returning({ id: files.id }).get().id;
+}
+
+export type FileListItem = { id: number; originalName: string; storedName: string; label: string; uploadDate: string; sizeBytes: number };
+
+// The application's uploaded files for the detail page: DB rows only (FR-5.11), newest upload date first, then the counter.
+export async function listApplicationFiles(applicationId: number): Promise<FileListItem[]> {
+  return getDb().select({ id: files.id, originalName: files.originalName, storedName: files.storedName, label: files.label, uploadDate: files.uploadDate, sizeBytes: files.sizeBytes }).from(files)
+    .where(and(eq(files.applicationId, applicationId), eq(files.userId, getUserId())))
+    .orderBy(desc(files.uploadDate), asc(files.seq), asc(files.id)).all();
+}
+
+// The row behind Open, by id and user. The path comes from here, never from the request.
+export async function getFileForOpen(id: number): Promise<{ storedName: string; relativePath: string } | null> {
+  return getDb().select({ storedName: files.storedName, relativePath: files.relativePath }).from(files)
+    .where(and(eq(files.id, id), eq(files.userId, getUserId()))).get() ?? null;
 }

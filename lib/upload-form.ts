@@ -3,6 +3,10 @@
 import { isValidDate, todayLocal } from "./filename";
 
 export const MAX_LABEL = 60;
+// The whole request limit, shared by the route (enforces it) and the upload form (refuses early).
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+// Label list used until the `file_labels` setting exists (seeded with the same list by `npm run db:seed`).
+export const DEFAULT_FILE_LABELS = ["CV", "Cover letter", "SOP", "Transcript", "Writing sample"];
 export type UploadFields = { label: string; uploadDate: string };
 export type UploadFieldsResult = { ok: true; fields: UploadFields } | { ok: false; errors: { label?: string; uploadDate?: string } };
 

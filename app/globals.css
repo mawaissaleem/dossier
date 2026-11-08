@@ -62,6 +62,7 @@
   --accent-foreground: #03140d;
   --destructive: #ff7a70;
   --destructive-foreground: #1a0705;
+  --warning: #e3c04d;
   --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.7);
 }
 
@@ -84,6 +85,7 @@
   --accent-foreground: #03131f;
   --destructive: #ff8a80;
   --destructive-foreground: #1a0705;
+  --warning: #e3c04d;
   --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.75);
 }
 
@@ -106,6 +108,7 @@
   --accent-foreground: #ffffff;
   --destructive: #b3261e;
   --destructive-foreground: #ffffff;
+  --warning: #7a5b00;
   --elevation: 0 1px 2px rgb(16 24 40 / 0.06), 0 12px 32px -8px rgb(16 24 40 / 0.18);
 }
 
@@ -174,6 +177,7 @@
   --color-primary-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
   --color-chip-red: var(--chip-red);
   --color-chip-red-foreground: var(--chip-red-foreground);
   --color-chip-orange: var(--chip-orange);

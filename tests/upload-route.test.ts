@@ -45,7 +45,9 @@ function post(id: number | string, parts: Part[], fields: Record<string, string>
     { params: Promise.resolve({ id: String(id) }) } as never,
   );
 }
-const upload = (name: string, content: Buffer | string = "x", fields?: Record<string, string>) => post(appId, [[name, content]], fields);
+// Default content differs per call: identical bytes in one application are now a duplicate (5.9).
+let n = 0;
+const upload = (name: string, content: Buffer | string = `content ${++n}`, fields?: Record<string, string>) => post(appId, [[name, content]], fields);
 const rows = () => db.select().from(files).all();
 const allEntries = () => readdirSync(root, { recursive: true }).map(String);
 
@@ -97,10 +99,10 @@ describe("POST /api/applications/:id/files", () => {
     expect((await (await upload("CV.pdf")).json()).files[0].storedName).toBe("02-20261108-CV.pdf");
   });
 
-  it("stores identical content again under a new seq (FR-5.7 duplicate warning is 5.9)", async () => {
-    await upload("CV.pdf", "same");
-    const r = await upload("CV.pdf", "same");
-    expect((await r.json()).files[0].storedName).toBe("02-20261108-CV.pdf");
+  it("AT-5 still holds: changed content under the same name is stored as 02 (not a duplicate)", async () => {
+    await upload("CV.pdf", "v1");
+    const r = await upload("CV.pdf", "v2");
+    expect([r.status, (await r.json()).files[0].storedName]).toEqual([201, "02-20261108-CV.pdf"]);
   });
 
   it("defaults the date to today when none is sent", async () => {
@@ -245,6 +247,66 @@ describe("POST /api/applications/:id/files", () => {
       expect(rows()).toHaveLength(0);
       expect(allEntries()).toEqual([]);
     });
+  });
+});
+
+describe("duplicate detection (FR-5.7, AT-7)", () => {
+  const folder = () => join(root, "Acme_Robotics_2026-11");
+
+  it("AT-7: the same file twice warns instead of storing: 200, one row, one file, no temp file", async () => {
+    const first = await (await upload("CV.pdf", "same")).json();
+    const res = await upload("CV.pdf", "same");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ files: [], duplicates: [{ originalName: "CV.pdf", id: first.files[0].id, storedName: "01-20261108-CV.pdf" }] });
+    expect(rows()).toHaveLength(1);
+    expect(readdirSync(folder())).toEqual(["01-20261108-CV.pdf"]);
+  });
+  it("only the hash counts: another name, label or date is still a duplicate", async () => {
+    await upload("CV.pdf", "same");
+    const r = await upload("Resume final.docx", "same", { label: "Cover letter", uploadDate: "2026-12-01" });
+    expect([r.status, (await r.json()).duplicates]).toEqual([200, [expect.objectContaining({ originalName: "Resume final.docx", storedName: "01-20261108-CV.pdf" })]]);
+    expect(rows()).toHaveLength(1);
+  });
+  it("two identical files in one request: the first is stored, the second is a duplicate of it (201)", async () => {
+    const res = await post(appId, [["a.pdf", "same"], ["b.pdf", "same"]]);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.files.map((f: { storedName: string }) => f.storedName)).toEqual(["01-20261108-a.pdf"]);
+    expect(body.duplicates).toEqual([{ originalName: "b.pdf", id: body.files[0].id, storedName: "01-20261108-a.pdf" }]);
+    expect(rows()).toHaveLength(1);
+  });
+  it("a mixed request stores the new file and reports the duplicate", async () => {
+    await upload("a.pdf", "old");
+    const res = await post(appId, [["a-again.pdf", "old"], ["new.pdf", "new"]]);
+    const body = await res.json();
+    expect([res.status, body.files.map((f: { storedName: string }) => f.storedName), body.duplicates.map((d: { originalName: string }) => d.originalName)]).toEqual([201, ["01-20261108-new.pdf"], ["a-again.pdf"]]);
+  });
+  it("the same bytes in a different application are stored normally", async () => {
+    await upload("CV.pdf", "same");
+    const other = await mkApp("Other Lab");
+    const r = await post(other, [["CV.pdf", "same"]]);
+    expect([r.status, (await r.json()).files[0].storedName]).toEqual([201, "01-20261108-CV.pdf"]);
+    expect(rows()).toHaveLength(2);
+  });
+  it("changed content is not a duplicate; after a duplicate warning the counter is unchanged", async () => {
+    await upload("CV.pdf", "v1");
+    await upload("CV.pdf", "v1"); // duplicate: takes no number
+    const r = await upload("CV.pdf", "v2");
+    expect((await r.json()).files[0].storedName).toBe("02-20261108-CV.pdf");
+  });
+  it("a duplicate that is the only result leaves no new folder behind (storeFileUnlocked on a first upload)", async () => {
+    const mod = await import("@/lib/db/files");
+    vi.spyOn(mod, "findFileByHash").mockResolvedValue({ id: 1, storedName: "01-20261108-x.pdf" });
+    const r = await storeUploadedFile({ applicationId: appId, file: new File(["x"], "x.pdf"), label: "CV", uploadDate: DATE });
+    expect(r).toEqual({ ok: true, duplicateOf: { id: 1, storedName: "01-20261108-x.pdf" } });
+    expect(rows()).toHaveLength(0);
+    expect(allEntries()).toEqual([]);
+  });
+  it("concurrent identical uploads store one copy (the per-application queue)", async () => {
+    const rs = await Promise.all([1, 2, 3].map(() => storeUploadedFile({ applicationId: appId, file: new File(["same"], "CV.pdf"), label: "CV", uploadDate: DATE })));
+    expect(rs.filter((r) => r.ok && "file" in r)).toHaveLength(1);
+    expect(rows()).toHaveLength(1);
+    expect(readdirSync(folder())).toHaveLength(1);
   });
 });
 

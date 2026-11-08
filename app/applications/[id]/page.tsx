@@ -2,10 +2,14 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getApplicationDetail } from "@/lib/db/applications";
+import { listApplicationFiles } from "@/lib/db/files";
+import { getFileLabels, getFilesRoot } from "@/lib/db/settings";
 import { CheckIcon } from "lucide-react";
 import { Page } from "@/components/page-header";
 import { ApplicationActions } from "./application-actions";
 import { EditApplication } from "./edit-application";
+import { FileList } from "./file-list";
+import { FileUpload } from "./file-upload";
 import { linkLabel, safeHref } from "@/lib/cells";
 import { formatCell } from "@/lib/table";
 import { OptionChip } from "@/app/option-chip";
@@ -19,6 +23,7 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
   const { id: raw } = await params;
   const detail = /^\d+$/.test(raw) ? await getApplicationDetail(Number(raw)) : null;
   if (!detail) notFound();
+  const [root, labels, files] = await Promise.all([getFilesRoot(), getFileLabels(), listApplicationFiles(detail.id)]);
   return (
     <Page narrow>
       <EditApplication id={detail.id} title={detail.title} back={{ href: `/tracks/${detail.track.id}`, label: detail.track.name }} archived={detail.archived} columns={detail.columns} values={detail.values}>
@@ -55,6 +60,11 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
           })}
         </dl>
       </EditApplication>
+      <section aria-labelledby="files" className="mt-8">
+        <h2 id="files" className="mb-2 text-lg font-semibold">Files</h2>
+        <FileUpload applicationId={detail.id} labels={labels} rootSet={root !== null} />
+        <FileList files={files} />
+      </section>
       <ApplicationActions id={detail.id} archived={detail.archived} />
     </Page>
   );

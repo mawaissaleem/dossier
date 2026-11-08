@@ -2,6 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "./client";
 import { settings } from "./schema";
+import { DEFAULT_FILE_LABELS, MAX_LABEL } from "../upload-form";
 import { getUserId } from "./user";
 
 export const FILES_ROOT_KEY = "files_root";
@@ -31,3 +32,10 @@ export async function getFilesRoot(): Promise<string | null> {
 }
 
 export const setFilesRoot = (path: string) => setSetting(FILES_ROOT_KEY, path);
+
+// The label choices (FR-5.3): the `file_labels` setting, or the default list when it is unset or not a list of short strings.
+export async function getFileLabels(): Promise<string[]> {
+  const v = await getSetting("file_labels");
+  const list = Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "" && x.length <= MAX_LABEL) : [];
+  return list.length ? list : DEFAULT_FILE_LABELS;
+}

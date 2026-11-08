@@ -39,20 +39,19 @@ const TRACKS = [
   },
 ];
 
-const FILE_LABELS = ["CV", "Cover letter", "SOP", "Transcript", "Writing sample"];
-
 async function main() {
   // Dynamic imports so DATABASE_PATH is loaded before the db module reads it.
   const db = (await import("../lib/db/client")).getDb();
   const { columnOptions, columns, settings, tracks } = await import("../lib/db/schema");
   const { getUserId } = await import("../lib/db/user");
+  const { DEFAULT_FILE_LABELS } = await import("../lib/upload-form");
   const { eq } = await import("drizzle-orm");
 
   const userId = getUserId();
   const seeded = db.transaction((tx) => {
     if (tx.select({ id: tracks.id }).from(tracks).where(eq(tracks.userId, userId)).limit(1).all().length) return false;
 
-    tx.insert(settings).values({ userId, key: "file_labels", value: JSON.stringify(FILE_LABELS) }).run();
+    tx.insert(settings).values({ userId, key: "file_labels", value: JSON.stringify(DEFAULT_FILE_LABELS) }).run();
 
     TRACKS.forEach((t, trackPos) => {
       const track = tx.insert(tracks).values({ userId, name: t.name, position: trackPos }).returning().get();
