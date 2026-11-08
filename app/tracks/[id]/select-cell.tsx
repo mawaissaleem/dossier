@@ -6,10 +6,13 @@ import type { OptionItem } from "@/lib/db/columns";
 import { ChevronDownIcon } from "lucide-react";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { OptionChip } from "@/app/option-chip";
+import { useSubmissionReview } from "@/app/submission-review";
 import { findOption } from "@/lib/options";
 
 // NativeSelect (full keyboard support) shown as the chosen option's chip. One updateCell call per change; blank clears.
 // useOptimistic shows the new choice while saving and reverts by itself if the save fails (props stay the same).
+// A move to a submitted status that needs the submission review (FR-7.2) is not saved: the server answers needsReview, the select shows the
+// old value again and the review dialog opens; only its Confirm saves (status + submission). Cancel leaves everything as it was.
 export function SelectCell({ applicationId, columnId, value, options, label }: {
   applicationId: number; columnId: number; value: string | number | boolean | null | undefined; options: OptionItem[]; label: string;
 }) {
@@ -17,6 +20,7 @@ export function SelectCell({ applicationId, columnId, value, options, label }: {
   const [shown, setShown] = useOptimistic(current?.id ?? null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const { review, dialog } = useSubmissionReview();
   // Set synchronously: a second change can land before a re-render, so state alone would not block it.
   const locked = useRef(false);
 
@@ -28,7 +32,10 @@ export function SelectCell({ applicationId, columnId, value, options, label }: {
       setShown(value === "" ? null : Number(value));
       try {
         const r = await updateCell(applicationId, columnId, value === "" ? null : Number(value));
-        if (!r.ok) setError(r.error);
+        if (r.ok) return;
+        const id = Number(value);
+        if (r.needsReview) review({ applicationId, columnId, optionId: id, statusLabel: options.find((o) => o.id === id)?.label ?? "this status" });
+        else setError(r.error);
       } catch {
         setError("Could not save. Try again.");
       } finally {
@@ -58,6 +65,7 @@ export function SelectCell({ applicationId, columnId, value, options, label }: {
         </NativeSelect>
       </div>
       {error && <p role="alert" className="mt-1 w-0 min-w-full text-sm text-destructive">{error}</p>}
+      {dialog}
     </>
   );
 }

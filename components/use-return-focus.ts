@@ -13,7 +13,8 @@ export function useReturnFocus(fallback?: RefObject<HTMLElement | null>) {
   return {
     remember: () => {
       const a = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      el.current = a?.closest(CLOSING_LAYER) ? null : a; // that layer's controls are about to unmount: use `fallback` instead
+      // Nothing focused (body: the control was disabled while saving) or inside that layer (its controls are about to unmount): use `fallback` instead.
+      el.current = a === document.body || a?.closest(CLOSING_LAYER) ? null : a;
     },
     onCloseAutoFocus: (e: Event) => {
       e.preventDefault();

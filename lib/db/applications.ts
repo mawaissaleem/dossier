@@ -1,10 +1,12 @@
 // Server-only. See lib/db/tracks.ts for the convention.
 import { and, count, desc, eq, isNotNull } from "drizzle-orm";
 import { CELL_FIELD, decodeDefault, parseCell, readCell, type CellScalar } from "../cells";
+import { NEEDS_REVIEW_ERROR } from "../submission-review";
 import { optionBelongs, writeCell } from "./cells";
+import { statusNeedsReview } from "./status-review";
 import { getDb } from "./client";
 import { listColumns, type ColumnItem } from "./columns";
-import { applications, cellValues, columnOptions, columns, files, tracks, type ColumnType } from "./schema";
+import { applications, cellValues, columnOptions, columns, files, submissions, tracks, type ColumnType } from "./schema";
 import { getUserId } from "./user";
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
@@ -33,9 +35,9 @@ export type CreateResult = { ok: true; id: number } | { ok: false; error: string
 // A column that is missing, in another track or another user's is "A column was removed or changed" (it can be deleted while the form is open).
 // Result: columnId -> typed value, null = blank (no row). Insertion order = submitted order.
 function validateValues(tx: Tx, userId: string, trackId: number, values: NewCell[]) {
-  const cols = new Map(tx.select({ id: columns.id, name: columns.name, type: columns.type }).from(columns)
+  const cols = new Map(tx.select({ id: columns.id, name: columns.name, type: columns.type, isStatus: columns.isStatus }).from(columns)
     .where(and(eq(columns.trackId, trackId), eq(columns.userId, userId))).all().map((c) => [c.id, c]));
-  const submitted = new Map<number, { type: ColumnType; value: CellScalar | null }>();
+  const submitted = new Map<number, { type: ColumnType; value: CellScalar | null; isStatus: boolean }>();
   for (const { columnId, value } of values) {
     const col = cols.get(columnId);
     if (!col) return { ok: false as const, error: "A column was removed or changed. Reload the page and try again." };
@@ -44,7 +46,7 @@ function validateValues(tx: Tx, userId: string, trackId: number, values: NewCell
     if (!parsed.ok) return { ok: false as const, error: `${col.name}: ${parsed.error}` };
     if (parsed.value !== null && col.type === "single_select" && !optionBelongs(tx, userId, columnId, parsed.value as number))
       return { ok: false as const, error: `${col.name}: Choose a valid option.` };
-    submitted.set(columnId, { type: col.type, value: parsed.value });
+    submitted.set(columnId, { type: col.type, value: parsed.value, isStatus: col.isStatus });
   }
   return { ok: true as const, submitted };
 }
@@ -52,6 +54,8 @@ function validateValues(tx: Tx, userId: string, trackId: number, values: NewCell
 // `values` are the submitted cells. A column listed there (even blank, value null) is the user's choice and gets no default;
 // a column not listed gets its default (FR-1.6). Every value is validated before anything is inserted, and the application,
 // submitted cells and defaults go in one transaction, so a bad value creates nothing and the application is never half filled.
+// A new application may start in a submitted status (default or chosen): it has no files yet, so there is nothing to review and no
+// submission is created (the submission review, FR-7.2, only guards moving an existing application). Add the submission later (6.6).
 export async function createApplication({ title, trackId, values = [] }: { title: string; trackId: number; values?: NewCell[] }): Promise<CreateResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
@@ -69,7 +73,9 @@ export async function createApplication({ title, trackId, values = [] }: { title
   });
 }
 
-export type UpdateResult = { ok: true } | { ok: false; error: string };
+// needsReview: the save would move a submission-less application to a submitted status. Nothing is saved (not even the title or other
+// cells); the caller runs the submission review (confirmSubmittedStatus) and saves the rest after it. Same rule as setCellValue.
+export type UpdateResult = { ok: true } | { ok: false; error: string; needsReview?: true };
 
 // Edit form save: sets the title and writes only the listed cells (the form sends just the fields the user changed), in one transaction.
 // Same validation as create; a blank value deletes the cell row; no defaults. A bad value changes nothing. Works on archived
@@ -81,6 +87,11 @@ export async function updateApplication({ id, title, values = [] }: { id: number
     if (!app) return { ok: false, error: "Application not found." };
     const v = validateValues(tx, userId, app.trackId, values);
     if (!v.ok) return v;
+    for (const [columnId, c] of v.submitted) {
+      if (statusNeedsReview(tx, userId, { applicationId: id, trackId: app.trackId, column: { id: columnId, isStatus: c.isStatus }, optionId: c.value as number | null })) {
+        return { ok: false, error: NEEDS_REVIEW_ERROR, needsReview: true };
+      }
+    }
     tx.update(applications).set({ title }).where(eq(applications.id, id)).run();
     for (const [columnId, c] of v.submitted) writeCell(tx, userId, id, columnId, c.type, c.value);
     return { ok: true };
@@ -172,16 +183,22 @@ async function countApplicationFiles(applicationId: number): Promise<number> {
   return n;
 }
 
-export type DeleteImpact = { title: string; cellCount: number; fileCount: number };
+// Submissions of the application: deleting it removes them and their file links, so the confirmation states the number (NFR-4).
+async function countApplicationSubmissions(applicationId: number): Promise<number> {
+  const { n } = getDb().select({ n: count() }).from(submissions).where(and(eq(submissions.applicationId, applicationId), eq(submissions.userId, getUserId()))).get()!;
+  return n;
+}
 
-// What deleting would lose: stored cell values (a blank cell has no row, FR-1.4) and files. Null if missing or not the current user's.
+export type DeleteImpact = { title: string; cellCount: number; fileCount: number; submissionCount: number };
+
+// What deleting would lose: stored cell values (a blank cell has no row, FR-1.4), files and submissions. Null if missing or not the current user's.
 export async function getDeleteImpact(id: number): Promise<DeleteImpact | null> {
   const db = getDb();
   const userId = getUserId();
   const app = db.select({ title: applications.title }).from(applications).where(and(eq(applications.id, id), eq(applications.userId, userId))).get();
   if (!app) return null;
   const { n } = db.select({ n: count() }).from(cellValues).where(and(eq(cellValues.applicationId, id), eq(cellValues.userId, userId))).get()!;
-  return { title: app.title, cellCount: n, fileCount: await countApplicationFiles(id) };
+  return { title: app.title, cellCount: n, fileCount: await countApplicationFiles(id), submissionCount: await countApplicationSubmissions(id) };
 }
 
 export type DeleteResult = { ok: true; trackId: number } | { ok: false; error: string };
@@ -189,7 +206,7 @@ const NO_APP = { ok: false, error: "Application not found." } as const;
 
 // Returns the application's track id (for the redirect). Cell values, file rows and submissions go with it via ON DELETE CASCADE (foreign_keys is on, see client.ts).
 // Callers must have confirmed with the user, and `expected` is the impact they were shown: if a count changed since, nothing is deleted (NFR-4).
-export async function deleteApplication(id: number, expected: { cellCount: number; fileCount: number }): Promise<DeleteResult> {
+export async function deleteApplication(id: number, expected: { cellCount: number; fileCount: number; submissionCount: number }): Promise<DeleteResult> {
   const userId = getUserId();
   const stale = { ok: false, error: "This application changed since the count was shown. Check again." } as const;
   return getDb().transaction((tx) => {
@@ -200,6 +217,8 @@ export async function deleteApplication(id: number, expected: { cellCount: numbe
     // Files can be uploaded at any moment (5.7), so the count is checked here, in the same transaction as the delete.
     const f = tx.select({ n: count() }).from(files).where(and(eq(files.applicationId, id), eq(files.userId, userId))).get()!;
     if (f.n !== expected.fileCount) return stale;
+    const s = tx.select({ n: count() }).from(submissions).where(and(eq(submissions.applicationId, id), eq(submissions.userId, userId))).get()!;
+    if (s.n !== expected.submissionCount) return stale;
     const { trackId } = tx.delete(applications).where(owned).returning({ trackId: applications.trackId }).get()!;
     return { ok: true, trackId } as const;
   });

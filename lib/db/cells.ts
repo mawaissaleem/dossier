@@ -1,7 +1,9 @@
 // Server-only. See lib/db/tracks.ts for the convention.
 import { and, eq } from "drizzle-orm";
 import { CELL_FIELD, parseCell, readCell, type CellScalar } from "../cells";
+import { NEEDS_REVIEW_ERROR } from "../submission-review";
 import { getDb } from "./client";
+import { statusNeedsReview } from "./status-review";
 import { applications, cellValues, columnOptions, columns, type ColumnType } from "./schema";
 import { getUserId } from "./user";
 
@@ -11,7 +13,9 @@ export function optionBelongs(db: Pick<ReturnType<typeof getDb>, "select">, user
     .where(and(eq(columnOptions.id, optionId), eq(columnOptions.columnId, columnId), eq(columnOptions.userId, userId))).get();
 }
 
-export type SetCellResult = { ok: true; value: CellScalar | null } | { ok: false; error: string };
+// needsReview: a status-only save to a submitted status, for an application with no submission yet, is refused and nothing is saved.
+// The caller must go through the submission review (confirmSubmittedStatus) instead. Also enforced here so a stale tab or a direct POST cannot skip it.
+export type SetCellResult = { ok: true; value: CellScalar | null } | { ok: false; error: string; needsReview?: true };
 
 // Validates, then upserts one typed field (others null). Blank deletes the row: a missing row means blank.
 // No await between the checks and the write, and better-sqlite3 is sync, so nothing can interleave.
@@ -21,13 +25,15 @@ export async function setCellValue(applicationId: number, columnId: number, raw:
   const app = db.select({ trackId: applications.trackId }).from(applications)
     .where(and(eq(applications.id, applicationId), eq(applications.userId, userId))).get();
   if (!app) return { ok: false, error: "Application not found." };
-  const col = db.select({ type: columns.type, trackId: columns.trackId }).from(columns)
+  const col = db.select({ type: columns.type, trackId: columns.trackId, isStatus: columns.isStatus }).from(columns)
     .where(and(eq(columns.id, columnId), eq(columns.userId, userId))).get();
   if (!col || col.trackId !== app.trackId) return { ok: false, error: "Column not found." };
 
   const parsed = parseCell(col.type, raw);
   if (!parsed.ok) return parsed;
   if (parsed.value !== null && col.type === "single_select" && !optionBelongs(db, userId, columnId, parsed.value as number)) return { ok: false, error: "Choose a valid option." };
+  if (statusNeedsReview(db, userId, { applicationId, trackId: app.trackId, column: { id: columnId, isStatus: col.isStatus }, optionId: parsed.value as number | null }))
+    return { ok: false, error: NEEDS_REVIEW_ERROR, needsReview: true };
   writeCell(db, userId, applicationId, columnId, col.type, parsed.value);
   return parsed;
 }

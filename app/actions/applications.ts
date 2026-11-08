@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { MAX_TEXT } from "@/lib/cells";
-import { createApplication as insertApplication, updateApplication as changeApplication } from "@/lib/db/applications";
+import { createApplication as insertApplication, updateApplication as changeApplication, type UpdateResult } from "@/lib/db/applications";
 import { MAX_COLUMNS } from "@/lib/db/columns";
 import { isId } from "@/lib/ids";
 
@@ -33,7 +33,8 @@ export async function createApplication(title: string, trackId: number, values?:
 
 // Edit form save (same limits as create). `values` is required and holds only the fields the user changed, blank (null) included.
 // refresh() only on success: nothing changed otherwise, and the form keeps what was typed.
-export async function updateApplication(id: number, title: string, values: { columnId: number; value: string | number | boolean | null }[]): Promise<{ ok: true } | { ok: false; error: string }> {
+// A save that moves an application with no submission to a submitted status returns { needsReview: true } and saves nothing (see UpdateResult).
+export async function updateApplication(id: number, title: string, values: { columnId: number; value: string | number | boolean | null }[]): Promise<UpdateResult> {
   if (!isId(id)) return { ok: false, error: "Application not found." };
   const t = checkTitle(title);
   if (!t.ok) return t;

@@ -9,6 +9,11 @@ export const FILES_ROOT_KEY = "files_root";
 
 // undefined = never set (or unreadable JSON, which is treated as unset rather than crashing the page).
 export async function getSetting(key: string): Promise<unknown> {
+  return readSetting(key);
+}
+
+// Same, synchronous: for code that must not await between its checks and its write (better-sqlite3 is sync).
+export function readSetting(key: string): unknown {
   const row = getDb().select({ value: settings.value }).from(settings).where(and(eq(settings.userId, getUserId()), eq(settings.key, key))).get();
   if (!row) return undefined;
   try {

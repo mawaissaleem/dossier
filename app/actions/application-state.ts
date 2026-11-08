@@ -26,10 +26,10 @@ const count = (n: unknown) => Number.isSafeInteger(n) && (n as number) >= 0;
 // `confirm` must be literally true: the UI sets it only after the user saw what will be lost (FR-1.9, NFR-4). `expected` is the impact
 // the dialog showed; the data layer refuses if it changed since.
 // No refresh(): the detail page would re-render as a 404 before the client navigates to the track page (trackId).
-export async function deleteApplication(id: number, confirm: boolean, expected: { cellCount: number; fileCount: number }): Promise<DeleteResult> {
-  if (confirm !== true || typeof expected !== "object" || expected === null || !count(expected.cellCount) || !count(expected.fileCount)) {
+export async function deleteApplication(id: number, confirm: boolean, expected: { cellCount: number; fileCount: number; submissionCount: number }): Promise<DeleteResult> {
+  if (confirm !== true || typeof expected !== "object" || expected === null || !count(expected.cellCount) || !count(expected.fileCount) || !count(expected.submissionCount)) {
     return { ok: false, error: "Deleting must be confirmed." };
   }
   if (!isId(id)) return { ok: false, error: "Application not found." };
-  return removeApplication(id, { cellCount: expected.cellCount, fileCount: expected.fileCount });
+  return removeApplication(id, { cellCount: expected.cellCount, fileCount: expected.fileCount, submissionCount: expected.submissionCount });
 }

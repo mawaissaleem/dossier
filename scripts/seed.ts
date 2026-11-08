@@ -22,6 +22,7 @@ const TRACKS = [
   {
     name: "Job",
     expectedLabels: ["CV", "Cover letter"],
+    submitted: ["Applied"],
     columns: [
       status("To apply", "Applied", "Interview", "Offer", "Rejected", "Withdrawn"),
       text("Company"), text("Role"), priority, effort,
@@ -31,6 +32,7 @@ const TRACKS = [
   {
     name: "PhD",
     expectedLabels: ["CV", "SOP", "Transcript"],
+    submitted: ["Submitted"],
     columns: [
       status("To apply", "In progress", "Submitted", "Interview", "Offer", "Rejected", "Withdrawn"),
       text("University"), text("Program"), text("Supervisor"), priority, effort,
@@ -74,6 +76,11 @@ async function main() {
             .get();
           ids.set(label, o.id);
         });
+        if (c.isStatus) {
+          tx.insert(settings)
+            .values({ userId, key: `track.${track.id}.submitted_statuses`, value: JSON.stringify(t.submitted.map((l) => ids.get(l))) })
+            .run();
+        }
         if (c.defaultOption) {
           tx.update(columns).set({ defaultValue: String(ids.get(c.defaultOption)) }).where(eq(columns.id, col.id)).run();
         }
