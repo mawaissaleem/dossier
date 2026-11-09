@@ -113,6 +113,32 @@ describe("GET /api/files/:id", () => {
       expect(res.headers.get("content-disposition")).toBeNull();
     }
   });
+  it("Cross-Origin-Resource-Policy: same-origin on success and on every error", async () => {
+    const f = await store("a.pdf", "1", "2026-11-08");
+    const corp = (r: Response) => r.headers.get("cross-origin-resource-policy");
+    expect(corp(await get(f.id))).toBe("same-origin");
+    expect(corp(await get(f.id + 100))).toBe("same-origin"); // 404
+    expect(corp(await get("abc"))).toBe("same-origin"); // 404
+    expect(corp(await get(f.id, { host: "evil.example" }))).toBe("same-origin"); // 403 host
+    expect(corp(await get(f.id, { "sec-fetch-site": "cross-site" }))).toBe("same-origin"); // 403 fetch site
+    db.delete(settings).run();
+    expect(corp(await get(f.id))).toBe("same-origin"); // 409
+  });
+  it("Sec-Fetch-Site: cross-site and same-site (another localhost port) get 403 without the file; same-origin, none and no header get it", async () => {
+    const f = await store("a.pdf", "secret cv", "2026-11-08");
+    for (const site of ["cross-site", "same-site"]) {
+      const res = await get(f.id, { "sec-fetch-site": site });
+      expect(res.status, site).toBe(403);
+      expect(res.headers.get("content-disposition")).toBeNull();
+      expect(await res.text()).not.toContain("secret cv");
+    }
+    for (const site of ["same-origin", "none"]) {
+      const res = await get(f.id, { "sec-fetch-site": site });
+      expect(res.status, site).toBe(200);
+      expect(await res.text()).toBe("secret cv");
+    }
+    expect((await get(f.id)).status).toBe(200);
+  });
   it("409 when the files folder is not set", async () => {
     const f = await store("a.pdf", "1", "2026-11-08");
     db.delete(settings).run();

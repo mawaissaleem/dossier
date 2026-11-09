@@ -74,3 +74,9 @@ export async function getFileForOpen(id: number): Promise<{ storedName: string; 
   return getDb().select({ storedName: files.storedName, relativePath: files.relativePath }).from(files)
     .where(and(eq(files.id, id), eq(files.userId, getUserId()))).get() ?? null;
 }
+
+// Relative paths of every stored file of the application. Read before deleting it: the rows (and these paths) go with the delete.
+export async function listApplicationFilePaths(applicationId: number): Promise<string[]> {
+  return getDb().select({ p: files.relativePath }).from(files)
+    .where(and(eq(files.applicationId, applicationId), eq(files.userId, getUserId()))).all().map((r) => r.p);
+}

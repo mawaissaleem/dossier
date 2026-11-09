@@ -7,6 +7,10 @@ export function isLocalHost(headers: Headers): boolean {
   return LOCAL_HOSTS.has((headers.get("host") ?? "").replace(/:\d+$/, "").toLowerCase());
 }
 
+// Fetch-metadata guard for reads that must not be embedded by another page (GET /api/files/:id). Refuses a request the browser marks
+// cross-site, or same-site (another localhost port is same-site). same-origin, none (typed URL, new tab) and a missing header (curl, old clients) pass.
+export const isCrossSiteFetch = (headers: Headers): boolean => ["cross-site", "same-site"].includes((headers.get("sec-fetch-site") ?? "").toLowerCase());
+
 // CSRF guard for requests that change data: a cross-site page can POST a multipart form to localhost with a valid Host.
 // Browsers always send Origin on such a POST; it must be this server's own origin (same host and port as Host).
 // Without Origin, Sec-Fetch-Site must say same-origin. Anything else (curl without Origin, "null", other sites) is refused.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isLocalHost, isSameOrigin } from "@/lib/local-request";
+import { isCrossSiteFetch, isLocalHost, isSameOrigin } from "@/lib/local-request";
 import { parseUploadFields } from "@/lib/upload-form";
 
 const h = (o: Record<string, string>) => new Headers(o);
@@ -45,5 +45,15 @@ describe("parseUploadFields", () => {
   });
   it("rejects a bad date", () => {
     for (const d of ["2026-02-30", "08/11/2026", "2026-1-1", " 2026-11-08", 20261108]) expect(parseUploadFields("CV", d, today)).toMatchObject({ ok: false, errors: { uploadDate: expect.any(String) } });
+  });
+});
+
+describe("isCrossSiteFetch", () => {
+  it("refuses cross-site and same-site (another localhost port), any case", () => {
+    for (const v of ["cross-site", "same-site", "Cross-Site"]) expect(isCrossSiteFetch(h({ "sec-fetch-site": v }))).toBe(true);
+  });
+  it("allows same-origin, none, a missing header and unknown values", () => {
+    for (const v of ["same-origin", "none"]) expect(isCrossSiteFetch(h({ "sec-fetch-site": v }))).toBe(false);
+    expect(isCrossSiteFetch(h({}))).toBe(false);
   });
 });

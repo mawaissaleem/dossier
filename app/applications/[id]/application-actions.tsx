@@ -18,6 +18,7 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
   const [error, setError] = useState<string | null>(null);
   const [impact, setImpact] = useState<Impact | null>(null); // null while loading
   const [delError, setDelError] = useState<string | null>(null);
+  const [done, setDone] = useState<{ trackId: number; warning: string } | null>(null); // deleted, but files were left: show it before leaving
   const [latest] = useState(createLatest); // a late count from an earlier open must not replace the current one
   const [pending, startTransition] = useTransition();
 
@@ -49,7 +50,9 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
     startTransition(async () => {
       try {
         const r = await deleteApplication(id, true, expected);
-        if (r.ok) {
+        if (r.ok && "warning" in r) {
+          setDone({ trackId: r.trackId, warning: r.warning });
+        } else if (r.ok) {
           setOpen(false);
           router.push(`/tracks/${r.trackId}`);
         } else {
@@ -71,6 +74,7 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
       <ConfirmDialog
         open={open}
         onOpenChange={(o) => {
+          if (done) return router.push(`/tracks/${done.trackId}`); // any way of closing leaves the deleted application
           if (o) {
             setDelError(null);
             loadImpact();
@@ -78,22 +82,24 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
           setOpen(o);
         }}
         trigger={<Button type="button" variant="outline" disabled={pending} className="border-destructive text-destructive hover:text-destructive">Delete…</Button>}
-        title="Delete this application?"
+        title={done ? "Application deleted" : "Delete this application?"}
         description={
-          impact === null ? (
+          done ? (
+            done.warning
+          ) : impact === null ? (
             "Counting values…"
           ) : impact.ok ? (
-            <>This permanently deletes <strong>{impact.title}</strong>, its {plural(impact.cellCount, "filled cell value")}, {plural(impact.fileCount, "file")} and {plural(impact.submissionCount, "submission")}. This cannot be undone.</>
+            <>This permanently deletes <strong>{impact.title}</strong>, its {plural(impact.cellCount, "filled cell value")}, {plural(impact.fileCount, "file")} and {plural(impact.submissionCount, "submission")}.{impact.fileCount > 0 && " The files are also removed from the files folder on disk."} This cannot be undone.</>
           ) : (
             <span role="alert" className="text-destructive">{impact.error}</span>
           )
         }
         error={delError}
-        confirmLabel="Delete permanently"
+        confirmLabel={done ? "Back to the track" : "Delete permanently"}
         busyLabel="Deleting…"
         confirmDisabled={!impact?.ok}
         busy={pending}
-        onConfirm={confirmDelete}
+        onConfirm={done ? () => router.push(`/tracks/${done.trackId}`) : confirmDelete}
       />
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     </div>

@@ -33,5 +33,6 @@ export function fileHeaders(storedName: string, sizeBytes: number): Headers {
     "X-Content-Type-Options": "nosniff",
     "Content-Security-Policy": type === "application/pdf" ? "default-src 'none'" : "sandbox; default-src 'none'",
     "Cache-Control": "no-store",
+    "Cross-Origin-Resource-Policy": "same-origin", // another site cannot embed the file (img, iframe, fetch)
   });
 }
