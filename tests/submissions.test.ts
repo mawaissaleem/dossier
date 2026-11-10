@@ -154,7 +154,7 @@ describe("delete impact", () => {
     await createSubmission(appId, [], "2026-11-10", null);
     await createSubmission(mkApp(), [], "2026-11-10", null); // not counted
     expect(await getDeleteImpact(appId)).toMatchObject({ submissionCount: 2 });
-    const shown = { cellCount: 0, fileCount: 0 };
+    const shown = { cellCount: 0, fileCount: 0, noteCount: 0 };
     expect(await deleteApplication(appId, { ...shown, submissionCount: 1 })).toMatchObject({ ok: false });
     expect(await deleteApplication(appId, { ...shown, submissionCount: 0 })).toMatchObject({ ok: false });
     expect(db.select().from(submissions).all()).toHaveLength(3);

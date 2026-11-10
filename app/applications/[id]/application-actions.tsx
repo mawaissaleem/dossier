@@ -45,7 +45,7 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
 
   function confirmDelete() {
     if (!impact?.ok) return;
-    const expected = { cellCount: impact.cellCount, fileCount: impact.fileCount, submissionCount: impact.submissionCount };
+    const expected = { cellCount: impact.cellCount, fileCount: impact.fileCount, submissionCount: impact.submissionCount, noteCount: impact.noteCount };
     setDelError(null);
     startTransition(async () => {
       try {
@@ -89,7 +89,7 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
           ) : impact === null ? (
             "Counting values…"
           ) : impact.ok ? (
-            <>This permanently deletes <strong>{impact.title}</strong>, its {plural(impact.cellCount, "filled cell value")}, {plural(impact.fileCount, "file")} and {plural(impact.submissionCount, "submission")}.{impact.fileCount > 0 && " The files are also removed from the files folder on disk."} This cannot be undone.</>
+            <>This permanently deletes <strong>{impact.title}</strong>, its {plural(impact.cellCount, "filled cell value")}, {plural(impact.fileCount, "file")}, {plural(impact.submissionCount, "submission")} and {plural(impact.noteCount, "note")}.{impact.fileCount > 0 && " The files are also removed from the files folder on disk."} This cannot be undone.</>
           ) : (
             <span role="alert" className="text-destructive">{impact.error}</span>
           )

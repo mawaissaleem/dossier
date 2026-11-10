@@ -129,8 +129,8 @@ describe("delete behaviour", () => {
     const otherApp = db.insert(applications).values({ userId: "local", trackId, title: "B" }).returning().get().id;
     mkFile({ applicationId: otherApp }); // not counted
     expect((await getDeleteImpact(appId))?.fileCount).toBe(2);
-    expect((await deleteApplication(appId, { cellCount: 0, fileCount: 0, submissionCount: 1 })).ok).toBe(false);
-    expect((await deleteApplication(appId, { cellCount: 0, fileCount: 2, submissionCount: 1 })).ok).toBe(true);
+    expect((await deleteApplication(appId, { cellCount: 0, fileCount: 0, submissionCount: 1, noteCount: 0 })).ok).toBe(false);
+    expect((await deleteApplication(appId, { cellCount: 0, fileCount: 2, submissionCount: 1, noteCount: 0 })).ok).toBe(true);
     expect(db.select().from(files).all().map((x) => x.applicationId)).toEqual([otherApp]);
   });
 });

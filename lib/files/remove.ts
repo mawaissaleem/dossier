@@ -19,7 +19,7 @@ import { getFilesRoot } from "../db/settings";
 import { resolveInRoot } from "./resolve";
 
 export type DeleteWithFilesResult = DeleteResult | { ok: true; trackId: number; warning: string };
-type Expected = { cellCount: number; fileCount: number; submissionCount: number };
+type Expected = { cellCount: number; fileCount: number; submissionCount: number; noteCount: number };
 const code = (e: unknown) => (e as NodeJS.ErrnoException).code;
 const plural = (n: number) => `${n} file${n === 1 ? "" : "s"}`;
 

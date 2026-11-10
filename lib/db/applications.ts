@@ -6,7 +6,7 @@ import { optionBelongs, writeCell } from "./cells";
 import { statusNeedsReview } from "./status-review";
 import { getDb } from "./client";
 import { listColumns, type ColumnItem } from "./columns";
-import { applications, cellValues, columnOptions, columns, files, submissions, tracks, type ColumnType } from "./schema";
+import { applications, cellValues, columnOptions, columns, files, notes, submissions, tracks, type ColumnType } from "./schema";
 import { getUserId } from "./user";
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
@@ -183,30 +183,37 @@ async function countApplicationFiles(applicationId: number): Promise<number> {
   return n;
 }
 
+// Notes of the application are the user's own text and go with it, so the confirmation states the number (NFR-4).
+// Activity events are not counted: they are automatic history of the application and go with it.
+async function countApplicationNotes(applicationId: number): Promise<number> {
+  const { n } = getDb().select({ n: count() }).from(notes).where(and(eq(notes.applicationId, applicationId), eq(notes.userId, getUserId()))).get()!;
+  return n;
+}
+
 // Submissions of the application: deleting it removes them and their file links, so the confirmation states the number (NFR-4).
 async function countApplicationSubmissions(applicationId: number): Promise<number> {
   const { n } = getDb().select({ n: count() }).from(submissions).where(and(eq(submissions.applicationId, applicationId), eq(submissions.userId, getUserId()))).get()!;
   return n;
 }
 
-export type DeleteImpact = { title: string; cellCount: number; fileCount: number; submissionCount: number };
+export type DeleteImpact = { title: string; cellCount: number; fileCount: number; submissionCount: number; noteCount: number };
 
-// What deleting would lose: stored cell values (a blank cell has no row, FR-1.4), files and submissions. Null if missing or not the current user's.
+// What deleting would lose: stored cell values (a blank cell has no row, FR-1.4), files, submissions and notes. Null if missing or not the current user's.
 export async function getDeleteImpact(id: number): Promise<DeleteImpact | null> {
   const db = getDb();
   const userId = getUserId();
   const app = db.select({ title: applications.title }).from(applications).where(and(eq(applications.id, id), eq(applications.userId, userId))).get();
   if (!app) return null;
   const { n } = db.select({ n: count() }).from(cellValues).where(and(eq(cellValues.applicationId, id), eq(cellValues.userId, userId))).get()!;
-  return { title: app.title, cellCount: n, fileCount: await countApplicationFiles(id), submissionCount: await countApplicationSubmissions(id) };
+  return { title: app.title, cellCount: n, fileCount: await countApplicationFiles(id), submissionCount: await countApplicationSubmissions(id), noteCount: await countApplicationNotes(id) };
 }
 
 export type DeleteResult = { ok: true; trackId: number } | { ok: false; error: string };
 const NO_APP = { ok: false, error: "Application not found." } as const;
 
-// Returns the application's track id (for the redirect). Cell values, file rows and submissions go with it via ON DELETE CASCADE (foreign_keys is on, see client.ts).
+// Returns the application's track id (for the redirect). Cell values, file rows, submissions, notes and activity events go with it via ON DELETE CASCADE (foreign_keys is on, see client.ts).
 // Callers must have confirmed with the user, and `expected` is the impact they were shown: if a count changed since, nothing is deleted (NFR-4).
-export async function deleteApplication(id: number, expected: { cellCount: number; fileCount: number; submissionCount: number }): Promise<DeleteResult> {
+export async function deleteApplication(id: number, expected: { cellCount: number; fileCount: number; submissionCount: number; noteCount: number }): Promise<DeleteResult> {
   const userId = getUserId();
   const stale = { ok: false, error: "This application changed since the count was shown. Check again." } as const;
   return getDb().transaction((tx) => {
@@ -219,6 +226,8 @@ export async function deleteApplication(id: number, expected: { cellCount: numbe
     if (f.n !== expected.fileCount) return stale;
     const s = tx.select({ n: count() }).from(submissions).where(and(eq(submissions.applicationId, id), eq(submissions.userId, userId))).get()!;
     if (s.n !== expected.submissionCount) return stale;
+    const nt = tx.select({ n: count() }).from(notes).where(and(eq(notes.applicationId, id), eq(notes.userId, userId))).get()!;
+    if (nt.n !== expected.noteCount) return stale;
     const { trackId } = tx.delete(applications).where(owned).returning({ trackId: applications.trackId }).get()!;
     return { ok: true, trackId } as const;
   });

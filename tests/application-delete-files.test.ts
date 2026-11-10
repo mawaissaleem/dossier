@@ -31,7 +31,7 @@ async function store(name: string, content: string, app = appId) {
 async function del(id = appId) {
   const i = await getDeleteImpact(id);
   if (!i) throw new Error("no impact");
-  return deleteAction(id, true, { cellCount: i.cellCount, fileCount: i.fileCount, submissionCount: i.submissionCount });
+  return deleteAction(id, true, { cellCount: i.cellCount, fileCount: i.fileCount, submissionCount: i.submissionCount, noteCount: i.noteCount });
 }
 const appRows = () => db.select().from(files).all();
 
@@ -208,7 +208,7 @@ describe("deleting an application removes its files from disk", () => {
   it("a refused delete (stale count) touches no file", async () => {
     const f = await store("a.pdf", "1");
     const i = (await getDeleteImpact(appId))!;
-    const r = await deleteAction(appId, true, { cellCount: i.cellCount, fileCount: i.fileCount + 1, submissionCount: i.submissionCount });
+    const r = await deleteAction(appId, true, { cellCount: i.cellCount, fileCount: i.fileCount + 1, submissionCount: i.submissionCount, noteCount: i.noteCount });
     expect(r.ok).toBe(false);
     expect(existsSync(join(root, f.relativePath))).toBe(true);
     expect(appRows()).toHaveLength(1);
