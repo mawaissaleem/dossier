@@ -1,6 +1,7 @@
 // Server-only. See lib/db/tracks.ts for the convention. Read helpers for the application folder rule (5.4).
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { dirname } from "node:path/posix";
+import { insertEvent } from "./activity";
 import { getDb } from "./client";
 import { applications, cellValues, columns, files, tracks } from "./schema";
 import { getUserId } from "./user";
@@ -56,8 +57,14 @@ export async function findFileByHash(applicationId: number, sha256: string): Pro
 export type NewFileRow = Omit<typeof files.$inferInsert, "id" | "userId" | "createdAt" | "updatedAt">;
 
 // Throws on a unique violation (counter or path taken: the caller picks the next seq) or a foreign key violation (application gone).
+// The file_uploaded event (7.3) is written in the same transaction. Its occurred_at is now: the upload date is user-editable and is kept in the details.
 export async function insertFileRow(row: NewFileRow): Promise<number> {
-  return getDb().insert(files).values({ ...row, userId: getUserId() }).returning({ id: files.id }).get().id;
+  const userId = getUserId();
+  return getDb().transaction((tx) => {
+    const id = tx.insert(files).values({ ...row, userId }).returning({ id: files.id }).get().id;
+    insertEvent(tx, userId, row.applicationId, new Date(), { kind: "file_uploaded", fileId: id, originalName: row.originalName, storedName: row.storedName, label: row.label, uploadDate: row.uploadDate }, { fileId: id });
+    return id;
+  });
 }
 
 export type FileListItem = { id: number; originalName: string; storedName: string; label: string; uploadDate: string; sizeBytes: number };

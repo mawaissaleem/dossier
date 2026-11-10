@@ -1,6 +1,8 @@
 // Server-only. See lib/db/tracks.ts for the convention. Submissions (FR-7): a dated, noted set of an application's files.
 import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { submissionOccurredAt } from "../activity";
 import { isValidDate } from "../filename";
+import { insertEvent } from "./activity";
 import { getDb } from "./client";
 import { optionBelongs, writeCell } from "./cells";
 import { applications, columns, files, submissionFiles, submissions } from "./schema";
@@ -29,13 +31,17 @@ function insertSubmission(tx: Tx, userId: string, applicationId: number, fileIds
   if (!tx.select({ id: applications.id }).from(applications).where(and(eq(applications.id, applicationId), eq(applications.userId, userId))).get()) {
     return { ok: false, error: "Application not found." };
   }
+  let names: string[] = [];
   if (ids.length) {
-    const own = tx.select({ id: files.id }).from(files)
+    const own = tx.select({ id: files.id, storedName: files.storedName }).from(files)
       .where(and(inArray(files.id, ids), eq(files.applicationId, applicationId), eq(files.userId, userId))).all();
     if (own.length !== ids.length) return { ok: false, error: "A file does not belong to this application. Reload the page and try again." };
+    names = ids.map((id) => own.find((f) => f.id === id)!.storedName);
   }
   const id = tx.insert(submissions).values({ userId, applicationId, date, note: trimmed || null }).returning({ id: submissions.id }).get().id;
   if (ids.length) tx.insert(submissionFiles).values(ids.map((fileId) => ({ userId, submissionId: id, fileId }))).run();
+  // The event sorts by the submission date (a backdated one lands in its place in the history); the details keep the file names as of now.
+  insertEvent(tx, userId, applicationId, submissionOccurredAt(date, new Date()), { kind: "submission_created", submissionId: id, date, fileCount: names.length, fileNames: names }, { submissionId: id });
   return { ok: true, id };
 }
 

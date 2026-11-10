@@ -2,6 +2,7 @@
 import { and, count, desc, eq, isNotNull } from "drizzle-orm";
 import { CELL_FIELD, decodeDefault, parseCell, readCell, type CellScalar } from "../cells";
 import { NEEDS_REVIEW_ERROR } from "../submission-review";
+import { insertStatusEvent } from "./activity";
 import { optionBelongs, writeCell } from "./cells";
 import { statusNeedsReview } from "./status-review";
 import { getDb } from "./client";
@@ -68,6 +69,13 @@ export async function createApplication({ title, trackId, values = [] }: { title
       ...[...v.submitted].filter(([, c]) => c.value !== null).map(([columnId, c]) => ({ columnId, [CELL_FIELD[c.type]]: c.value })),
       ...defaultCells(tx, trackId, userId).filter((c) => !v.submitted.has(c.columnId)),
     ];
+    // Initial status: one event "from blank to X" (the application starts with a status, which is a change from nothing).
+    const statusCol = tx.select({ id: columns.id }).from(columns).where(and(eq(columns.trackId, trackId), eq(columns.userId, userId), eq(columns.isStatus, true))).get();
+    const initial = cells.find((c) => c.columnId === statusCol?.id) as { valueOptionId?: number } | undefined;
+    if (statusCol && initial?.valueOptionId) {
+      const o = tx.select({ id: columnOptions.id, label: columnOptions.label }).from(columnOptions).where(eq(columnOptions.id, initial.valueOptionId)).get();
+      if (o) insertStatusEvent(tx, userId, id, statusCol.id, null, o);
+    }
     if (cells.length) tx.insert(cellValues).values(cells.map((c) => ({ userId, applicationId: id, ...c }))).run();
     return { ok: true, id };
   });

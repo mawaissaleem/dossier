@@ -2,6 +2,7 @@
 import { and, asc, count, eq } from "drizzle-orm";
 import { isPaletteToken, nextColor } from "../colors";
 import { checkOptionLabel, isSameIdSet, labelTaken } from "../options";
+import { insertStatusEvent } from "./activity";
 import { getDb } from "./client";
 import { isForeignKeyViolation, isUniqueViolation } from "./errors";
 import { applications, cellValues, columnOptions, columns } from "./schema";
@@ -131,6 +132,12 @@ export async function deleteOption(optionId: number, reassignTo: number | null, 
       if (reassignTo !== null && (reassignTo === optionId || !siblings.includes(reassignTo))) return { ok: false, error: "Choose another option of this column to reassign to." } as const;
       const held = holding(opt.columnId, optionId, userId);
       if (tx.select({ n: count() }).from(cellValues).where(held).get()!.n !== expectedUseCount) return STALE_COUNT;
+      if (col.isStatus) {
+        // One status_changed event per affected application, written before the cells move (labels are snapshots; the option row is deleted below).
+        const from = { id: optionId, label: tx.select({ label: columnOptions.label }).from(columnOptions).where(eq(columnOptions.id, optionId)).get()!.label };
+        const to = reassignTo === null ? null : { id: reassignTo, label: tx.select({ label: columnOptions.label }).from(columnOptions).where(eq(columnOptions.id, reassignTo)).get()!.label };
+        for (const { applicationId } of tx.select({ applicationId: cellValues.applicationId }).from(cellValues).where(held).all()) insertStatusEvent(tx, userId, applicationId, opt.columnId, from, to);
+      }
       if (reassignTo === null) tx.delete(cellValues).where(held).run();
       else tx.update(cellValues).set({ valueOptionId: reassignTo, updatedAt: new Date() }).where(held).run();
       if (col.defaultValue === String(optionId)) {

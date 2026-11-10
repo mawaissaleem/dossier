@@ -2,6 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { CELL_FIELD, parseCell, readCell, type CellScalar } from "../cells";
 import { NEEDS_REVIEW_ERROR } from "../submission-review";
+import { logStatusChange } from "./activity";
 import { getDb } from "./client";
 import { statusNeedsReview } from "./status-review";
 import { applications, cellValues, columnOptions, columns, type ColumnType } from "./schema";
@@ -34,13 +35,15 @@ export async function setCellValue(applicationId: number, columnId: number, raw:
   if (parsed.value !== null && col.type === "single_select" && !optionBelongs(db, userId, columnId, parsed.value as number)) return { ok: false, error: "Choose a valid option." };
   if (statusNeedsReview(db, userId, { applicationId, trackId: app.trackId, column: { id: columnId, isStatus: col.isStatus }, optionId: parsed.value as number | null }))
     return { ok: false, error: NEEDS_REVIEW_ERROR, needsReview: true };
-  writeCell(db, userId, applicationId, columnId, col.type, parsed.value);
+  db.transaction((tx) => writeCell(tx, userId, applicationId, columnId, col.type, parsed.value)); // the status event commits with the cell
   return parsed;
 }
 
 // Writes an already validated value: null deletes the row (blank), anything else upserts the one typed field (others null).
-// Shared by setCellValue and updateApplication, so inline and form edits store cells the same way. Callers check ownership and the option.
-export function writeCell(db: Pick<ReturnType<typeof getDb>, "insert" | "delete">, userId: string, applicationId: number, columnId: number, type: ColumnType, value: CellScalar | null) {
+// Shared by setCellValue, updateApplication and the submission writers, so every cell is stored the same way. Callers check ownership and the option,
+// and pass a transaction: a changed status cell writes its status_changed event here (7.3), so no path can change a status without logging it.
+export function writeCell(db: Pick<ReturnType<typeof getDb>, "insert" | "delete" | "select">, userId: string, applicationId: number, columnId: number, type: ColumnType, value: CellScalar | null) {
+  if (type === "single_select") logStatusChange(db, userId, applicationId, columnId, value as number | null);
   if (value === null) {
     db.delete(cellValues).where(and(eq(cellValues.applicationId, applicationId), eq(cellValues.columnId, columnId))).run();
     return;
