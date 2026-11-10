@@ -8,12 +8,13 @@
 // Limits: a crash (power loss, kill) mid-write leaves an unfinished zip that does not open; nothing sweeps it. The files root is read
 // with lstat and symlinks are skipped, so nothing outside the root is read; a file replaced by a symlink (or a folder) during the
 // backup fails it, so files/ only ever holds regular files.
+// turbopackIgnore comments on three fs calls: without them Next warns that the build traces the whole project (they take user-typed paths on purpose).
 // Errors name their source: an unwritable destination, an unreadable file or folder in the files root (with its relative path),
 // or a generic failure (e.g. the database copy).
 import { mkdtemp, lstat, open, readdir, realpath, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { once } from "node:events";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { ZipArchive } from "archiver";
 import { backupFileName, buildManifest, DB_ENTRY, FILES_PREFIX, MANIFEST_NAME } from "../backup";
 import { copyDatabaseTo, getSchemaVersion, recordBackup } from "../db/backup";
@@ -79,17 +80,22 @@ async function claimZip(dir: string, now: Date) {
   throw new Error("Too many backups with the same name.");
 }
 
-export async function createBackup(destination: unknown, now: Date = new Date()): Promise<BackupResult> {
-  if (typeof destination !== "string" || destination.trim() === "") return fail("Enter the full path of the folder for the backup.");
+type Checked = { ok: true; typed: string; dest: string; root: string | null; rootReal: string | null; skip: string[] } | { ok: false; error: string };
+
+const no = (error: string): Checked => ({ ok: false, error });
+
+// The destination checks, shared by "save the destination" (8.2) and createBackup. Writability is only found out when the zip is claimed.
+async function checkDestination(destination: unknown): Promise<Checked> {
+  if (typeof destination !== "string" || destination.trim() === "") return no("Enter the full path of the folder for the backup.");
   const typed = destination.trim();
-  if (typed.includes("\0") || !isFullyAbsolute(typed)) return fail("Use the full path of an existing folder, such as /home/you/Backups. Relative paths and ~ are not accepted.");
+  if (typed.includes("\0") || !isFullyAbsolute(typed)) return no("Use the full path of an existing folder, such as /home/you/Backups. Relative paths and ~ are not accepted.");
 
   let dest: string;
   try {
     dest = await realpath(typed);
-    if (!(await stat(dest)).isDirectory()) return fail("That path is a file, not a folder.");
+    if (!(await stat(dest)).isDirectory()) return no("That path is a file, not a folder.");
   } catch {
-    return fail("That folder does not exist. Create it first, then back up.");
+    return no("That folder does not exist. Create it first, then back up.");
   }
 
   const root = await getFilesRoot();
@@ -98,14 +104,27 @@ export async function createBackup(destination: unknown, now: Date = new Date())
   if (root) {
     try {
       rootReal = await realpath(root);
-      if (!(await stat(rootReal)).isDirectory()) throw new Error();
+      if (!(await stat(/*turbopackIgnore: true*/ rootReal)).isDirectory()) throw new Error();
     } catch {
-      return fail(`The files folder ${root} cannot be found, so its files cannot be backed up. Fix it in Settings first.`);
+      return no(`The files folder ${root} cannot be found, so its files cannot be backed up. Fix it in Settings first.`);
     }
-    if (skip.some((d) => isInside(rootReal!, d))) return fail("The files folder is inside the Dossier app folder, so it cannot be backed up. Choose another one in Settings.");
-    if (isInside(dest, rootReal)) return fail("Choose a backup folder outside your files folder, or the backup would contain itself.");
+    if (skip.some((d) => isInside(rootReal!, d))) return no("The files folder is inside the Dossier app folder, so it cannot be backed up. Choose another one in Settings.");
+    if (isInside(dest, rootReal)) return no("Choose a backup folder outside your files folder, or the backup would contain itself.");
   }
-  if (skip.some((d) => isInside(dest, d))) return fail("Choose a folder outside the Dossier app folder and its data folder, so the backup survives if the app data is lost.");
+  if (skip.some((d) => isInside(dest, d))) return no("Choose a folder outside the Dossier app folder and its data folder, so the backup survives if the app data is lost.");
+  return { ok: true, typed, dest, root, rootReal, skip };
+}
+
+// Validate a destination for saving; returns the path to store (as typed, normalised).
+export async function validateBackupDestination(destination: unknown): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  const c = await checkDestination(destination);
+  return c.ok ? { ok: true, path: resolve(/*turbopackIgnore: true*/ c.typed) } : c;
+}
+
+export async function createBackup(destination: unknown, now: Date = new Date()): Promise<BackupResult> {
+  const checked = await checkDestination(destination);
+  if (!checked.ok) return checked;
+  const { dest, root, rootReal, skip } = checked;
 
   let zipPath: string | undefined;
   const tmp = await mkdtemp(join(tmpdir(), "dossier-backup-"));
@@ -149,7 +168,7 @@ export async function createBackup(destination: unknown, now: Date = new Date())
       throw e;
     }
 
-    const sizeBytes = (await stat(path)).size;
+    const sizeBytes = (await stat(/*turbopackIgnore: true*/ path)).size;
     await recordBackup(now);
     return { ok: true, path, sizeBytes, fileCount: found.length, filesBytes, filesRoot: root, createdAt: manifest.createdAt };
   } catch (e) {

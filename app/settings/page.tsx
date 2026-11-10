@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { Page, PageHeader } from "@/components/page-header";
+import { getBackupDestination, getLastBackupAt } from "@/lib/db/backup";
 import { getFileLabels, getFilesRoot } from "@/lib/db/settings";
 import { getExpectedLabels, getSubmittedChoices } from "@/lib/db/track-settings";
 import { listTracks } from "@/lib/db/tracks";
 import { ThemeSwitcher } from "../theme-switcher";
 import { ExpectedLabelsForm } from "./expected-labels-form";
+import { BackupForm } from "./backup-form";
 import { FilesRootForm } from "./files-root-form";
 import { SubmittedForm } from "./submitted-form";
 
@@ -19,6 +21,17 @@ async function FilesSection() {
         Current files root: {root ? <code className="rounded bg-muted px-1.5 py-0.5 break-all">{root}</code> : <span className="text-muted-foreground">Not set yet</span>}
       </p>
       <FilesRootForm current={root} />
+    </>
+  );
+}
+
+async function BackupSection() {
+  await connection();
+  const [dest, last] = await Promise.all([getBackupDestination(), getLastBackupAt()]);
+  return (
+    <>
+      <p className="text-sm">{last ? <>Last backup: <time dateTime={last}>{new Date(last).toLocaleString()}</time></> : <span className="text-muted-foreground">Never backed up</span>}</p>
+      <BackupForm current={dest} />
     </>
   );
 }
@@ -56,6 +69,13 @@ export default function SettingsPage() {
           <FilesSection />
         </Suspense>
         <p className="mt-2 text-sm text-muted-foreground">Uploaded files are stored in this folder. It must be an existing, writable folder outside the Dossier app folder. Changing it does not move files already stored.</p>
+      </section>
+      <section aria-labelledby="backup" className="mb-8">
+        <h2 id="backup" className="mb-2 text-lg font-semibold">Backup</h2>
+        <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
+          <BackupSection />
+        </Suspense>
+        <p className="mt-2 text-sm text-muted-foreground">Back up now writes one zip with the database and every file in your files folder. Type the full path of an existing folder outside the Dossier app folder and your files folder: a browser cannot open a folder picker for a path on this computer. A backup never overwrites an earlier one.</p>
       </section>
       <section aria-labelledby="submissions" className="mb-8">
         <h2 id="submissions" className="mb-2 text-lg font-semibold">Submissions</h2>

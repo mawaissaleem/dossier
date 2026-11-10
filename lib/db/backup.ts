@@ -4,6 +4,7 @@ import { getDb } from "./client";
 import { getSetting, setSetting } from "./settings";
 
 export const LAST_BACKUP_KEY = "last_backup_at";
+export const BACKUP_DESTINATION_KEY = "backup_destination";
 
 // SQLite's online backup API: a consistent snapshot while the app keeps running, not a raw copy of the live file.
 export async function copyDatabaseTo(file: string): Promise<void> {
@@ -22,3 +23,10 @@ export async function getLastBackupAt(): Promise<string | null> {
 }
 
 export const recordBackup = (at: Date) => setSetting(LAST_BACKUP_KEY, at.toISOString());
+
+export async function getBackupDestination(): Promise<string | null> {
+  const v = await getSetting(BACKUP_DESTINATION_KEY);
+  return typeof v === "string" && v !== "" ? v : null;
+}
+
+export const setBackupDestination = (path: string) => setSetting(BACKUP_DESTINATION_KEY, path);
