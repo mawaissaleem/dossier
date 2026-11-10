@@ -8,11 +8,14 @@ import { CheckIcon } from "lucide-react";
 import { Page } from "@/components/page-header";
 import { ApplicationActions } from "./application-actions";
 import { EditApplication } from "./edit-application";
+import { AddNote } from "./add-note";
 import { FileList } from "./file-list";
 import { FileUpload } from "./file-upload";
 import { NewSubmission } from "./new-submission";
+import { NoteList } from "./note-list";
 import { SubmissionTimeline } from "./submission-timeline";
 import { EmptyState } from "@/components/empty-state";
+import { listNotes } from "@/lib/db/notes";
 import { listSubmissions } from "@/lib/db/submissions";
 import { linkLabel, safeHref } from "@/lib/cells";
 import { formatCell } from "@/lib/table";
@@ -29,7 +32,7 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
   const { id: raw } = await params;
   const detail = /^\d+$/.test(raw) ? await getApplicationDetail(Number(raw)) : null;
   if (!detail) notFound();
-  const [root, labels, files, subs] = await Promise.all([getFilesRoot(), getFileLabels(), listApplicationFiles(detail.id), listSubmissions(detail.id)]);
+  const [root, labels, files, subs, notes] = await Promise.all([getFilesRoot(), getFileLabels(), listApplicationFiles(detail.id), listSubmissions(detail.id), listNotes(detail.id)]);
   const statusCol = detail.columns.find((c) => c.isStatus);
   const status = statusCol ? { columnId: statusCol.id, name: statusCol.name, currentOptionId: (detail.values[statusCol.id] as number | null) ?? null, options: statusCol.options.map(({ id, label }) => ({ id, label })) } : null;
   return (
@@ -83,6 +86,12 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
         <h2 id="files" className="mb-2 text-lg font-semibold">Files</h2>
         <FileUpload applicationId={detail.id} labels={labels} rootSet={root !== null} />
         <FileList files={files} />
+      </section>
+      {/* Outside EditApplication, so notes stay usable while the Edit form is open. Below Files, so the latest submission stays on screen (AT-12). */}
+      <section aria-labelledby="notes" className="mt-8">
+        <h2 id="notes" className="mb-2 text-lg font-semibold">Notes</h2>
+        <AddNote applicationId={detail.id} />
+        {notes.length === 0 ? <EmptyState className="mt-3" title="No notes yet" description="Write a note above. It is listed here with the date and time." /> : <NoteList notes={notes} />}
       </section>
       <ApplicationActions id={detail.id} archived={detail.archived} />
     </Page>
