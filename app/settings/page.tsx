@@ -1,13 +1,15 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { Page, PageHeader } from "@/components/page-header";
-import { getBackupDestination, getLastBackupAt } from "@/lib/db/backup";
+import { getBackupDestination, getLastBackupAt, getReminderDays } from "@/lib/db/backup";
 import { getFileLabels, getFilesRoot } from "@/lib/db/settings";
 import { getExpectedLabels, getSubmittedChoices } from "@/lib/db/track-settings";
 import { listTracks } from "@/lib/db/tracks";
 import { ThemeSwitcher } from "../theme-switcher";
 import { ExpectedLabelsForm } from "./expected-labels-form";
 import { BackupForm } from "./backup-form";
+import { ReminderForm } from "./reminder-form";
+import { RestoreForm } from "./restore-form";
 import { FilesRootForm } from "./files-root-form";
 import { SubmittedForm } from "./submitted-form";
 
@@ -27,11 +29,13 @@ async function FilesSection() {
 
 async function BackupSection() {
   await connection();
-  const [dest, last] = await Promise.all([getBackupDestination(), getLastBackupAt()]);
+  const [dest, last, days] = await Promise.all([getBackupDestination(), getLastBackupAt(), getReminderDays()]);
   return (
     <>
       <p className="text-sm">{last ? <>Last backup: <time dateTime={last}>{new Date(last).toLocaleString()}</time></> : <span className="text-muted-foreground">Never backed up</span>}</p>
       <BackupForm current={dest} />
+      <ReminderForm current={days} />
+      <RestoreForm destination={dest} />
     </>
   );
 }
@@ -75,7 +79,7 @@ export default function SettingsPage() {
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
           <BackupSection />
         </Suspense>
-        <p className="mt-2 text-sm text-muted-foreground">Back up now writes one zip with the database and every file in your files folder. Type the full path of an existing folder outside the Dossier app folder and your files folder: a browser cannot open a folder picker for a path on this computer. A backup never overwrites an earlier one.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Back up now writes one zip with the database and every file in your files folder. Type the full path of an existing folder outside the Dossier app folder and your files folder: a browser cannot open a folder picker for a path on this computer. A backup never overwrites an earlier one. A banner on every page reminds you when the last backup is older than the number of days you set (or when you have applications and have never backed up). To restore, type the full path of a backup zip (it is not uploaded: a backup can be large and is already on this computer) and check it first: Dossier reads it, verifies every file and shows what it holds before anything changes. A restore replaces all current data, after a confirmation and a safety backup of the current data in the backup folder above.</p>
       </section>
       <section aria-labelledby="submissions" className="mb-8">
         <h2 id="submissions" className="mb-2 text-lg font-semibold">Submissions</h2>

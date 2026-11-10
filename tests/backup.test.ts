@@ -31,9 +31,13 @@ describe("backup naming and manifest (pure)", () => {
 });
 
 let work: string, root: string, dest: string, db: ReturnType<typeof useTestDb>;
+const sharedTmp = process.env.TMPDIR;
 beforeEach(() => {
   db = useTestDb();
   work = mkdtempSync(join(tmpdir(), "dossier-bk-"));
+  // a private temp folder, so the "no temp folder left" checks do not see other test files' backups running in parallel
+  mkdirSync(join(work, "tmp"));
+  process.env.TMPDIR = join(work, "tmp");
   root = join(work, "files");
   dest = join(work, "out");
   mkdirSync(join(root, "Acme-2026"), { recursive: true });
@@ -45,6 +49,8 @@ beforeEach(() => {
   chmodSync(join(root, "Acme-2026", "cv.pdf"), 0o444); // stored files are read-only
 });
 afterEach(() => {
+  if (sharedTmp === undefined) delete process.env.TMPDIR;
+  else process.env.TMPDIR = sharedTmp;
   vi.restoreAllMocks();
   dropTestDb();
   rmSync(work, { recursive: true, force: true });

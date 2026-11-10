@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { FileStackIcon, LayoutDashboardIcon, ListChecksIcon, SettingsIcon } from "lucide-react";
 import "./globals.css";
+import { BackupBanner } from "./backup-banner";
 import { NavLink } from "./nav-link";
 import { SearchPalette } from "./search-palette";
 import { ThemeSwitcher } from "./theme-switcher";
@@ -42,7 +43,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </Suspense>
           <ThemeSwitcher className="ml-auto flex items-center gap-2 px-3 lg:mt-auto lg:ml-0 lg:grid lg:gap-1" />
         </nav>
-        <main className="min-w-0 flex-1 p-4 lg:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 lg:p-6">
+          <Suspense>
+            <BackupBanner />
+          </Suspense>
+          {children}
+        </main>
       </body>
     </html>
   );

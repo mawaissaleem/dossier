@@ -19,6 +19,7 @@ import { ZipArchive } from "archiver";
 import { backupFileName, buildManifest, DB_ENTRY, FILES_PREFIX, MANIFEST_NAME } from "../backup";
 import { copyDatabaseTo, getSchemaVersion, recordBackup } from "../db/backup";
 import { getFilesRoot } from "../db/settings";
+import { STAGE_PREFIX } from "../restore";
 import { isFullyAbsolute } from "./relative";
 import { appDirs, isInside } from "./root";
 
@@ -51,14 +52,15 @@ function explain(e: unknown, rootReal: string | null): string {
 type Found = { abs: string; name: string; size: number };
 
 // Regular files only, depth first. Symlinks and other special entries are skipped; folders that are (or sit in) the app's own
-// folders are skipped, for a root that contains the app (the files root's own refusal covers a root placed inside it).
+// folders are skipped, for a root that contains the app (the files root's own refusal covers a root placed inside it), and so are
+// a restore's top-level staging/aside folders: the safety backup must hold the files as they were, not the incoming copy.
 async function listFiles(root: string, skip: string[]): Promise<Found[]> {
   const out: Found[] = [];
   const walk = async (dir: string, prefix: string): Promise<void> => {
     for (const e of await readdir(dir, { withFileTypes: true })) {
       const abs = join(dir, e.name);
       if (e.isDirectory()) {
-        if (!skip.some((d) => isInside(abs, d))) await walk(abs, `${prefix}${e.name}/`);
+        if (!(prefix === "" && e.name.startsWith(STAGE_PREFIX)) && !skip.some((d) => isInside(abs, d))) await walk(abs, `${prefix}${e.name}/`);
       } else if (e.isFile()) {
         out.push({ abs, name: prefix + e.name, size: (await lstat(abs)).size });
       }
