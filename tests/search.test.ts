@@ -46,6 +46,29 @@ describe("tiers", () => {
   });
 });
 
+describe("notes", () => {
+  const cells = [{ column: "City", text: "Berlin" }];
+  it("match as kind note, with a snippet, and rank below title and cell matches", () => {
+    const m = matchApplication(["zurich"], "Acme", cells, ["Call about Zürich"])!;
+    expect(m).toEqual({ tier: TIER.note, matched: { kind: "note", column: null, snippet: "Call about Zürich" } });
+    expect(matchApplication(["berlin"], "Acme", cells, ["berlin too"])!.tier).toBe(TIER.cell);
+    expect(matchApplication(["acme"], "Acme", cells, ["acme too"])!.tier).toBe(TIER.exact);
+    expect(TIER.cell).toBeLessThan(TIER.note);
+  });
+  it("count towards every word: a query may split across title, cells and notes", () => {
+    expect(matchApplication(["acme", "berlin", "visa"], "Acme", cells, ["visa pending"])).not.toBeNull();
+    expect(matchApplication(["acme", "visa"], "Acme", cells, ["visa pending"])!.tier).toBe(TIER.note); // the note was needed
+    expect(matchApplication(["acme", "paris"], "Acme", cells, ["visa pending"])).toBeNull();
+  });
+  it("pick the note with most words, the first given on a tie, and cut the snippet from it", () => {
+    const m = matchApplication(["visa", "pending"], "Acme", [], ["visa only", "visa pending", "pending visa"])!;
+    expect(m.matched.snippet).toBe("visa pending");
+    expect(matchApplication(["visa"], "Acme", [], ["visa one", "visa two"])!.matched.snippet).toBe("visa one");
+    const long = matchApplication(["zurich"], "Acme", [], ["x".repeat(60) + " Zürich " + "y".repeat(60)])!.matched.snippet;
+    expect(long.startsWith("…") && long.endsWith("…") && long.includes("Zürich")).toBe(true);
+  });
+});
+
 describe("matchApplication", () => {
   it("needs every word, across the title and different cells", () => {
     const cells = [{ column: "City", text: "Berlin" }, { column: "Notes", text: "referral from Dana" }];

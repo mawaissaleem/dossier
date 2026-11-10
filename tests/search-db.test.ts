@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { searchApplications } from "@/lib/db/search";
-import { applications, cellValues, columns, tracks } from "@/lib/db/schema";
+import { applications, cellValues, columns, notes, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
 let db: ReturnType<typeof useTestDb>;
@@ -14,6 +14,8 @@ const app = (title: string, over: Partial<typeof applications.$inferInsert> = {}
   db.insert(applications).values({ userId: "local", trackId: job, title, ...over }).returning().get().id;
 const cell = (applicationId: number, columnId: number, valueText: string, userId = "local") =>
   db.insert(cellValues).values({ userId, applicationId, columnId, valueText }).run();
+const note = (applicationId: number, body: string, userId = "local", createdAt = new Date()) =>
+  db.insert(notes).values({ userId, applicationId, body, createdAt }).run();
 const titles = async (q: string, limit?: number) => (await searchApplications(q, { limit })).map((h) => h.title);
 
 beforeEach(() => {
@@ -114,6 +116,36 @@ describe("searchApplications", () => {
     expect(await titles("acme")).toEqual(["Acme", "Acme Labs", "Acme Co", "The Acme Co", "Beacme Co", "Zed"]);
   });
 
+  it("finds note text, labelled as a note, once per application, ranked below title and cell matches", async () => {
+    const a = app("Zed");
+    note(a, "Call back about the Zürich relocation", "local", new Date(1000));
+    note(a, "Zürich again, newer note", "local", new Date(2000));
+    const viaCell = app("Other");
+    cell(viaCell, city, "Zürich");
+    app("Zürich Labs");
+    const hits = await searchApplications("zurich");
+    expect(hits.map((h) => h.title)).toEqual(["Zürich Labs", "Other", "Zed"]); // title, cell, note; Zed once despite two notes
+    expect(hits[2].matched).toEqual({ kind: "note", column: null, snippet: "Zürich again, newer note" }); // equal match: newest note
+    expect(await titles("relocation")).toEqual(["Zed"]);
+    expect(await titles("zed relocation")).toEqual(["Zed"]); // split across title and note
+    expect(await titles("relocation paris")).toEqual([]);
+  });
+
+  it("includes notes of archived applications, and ignores another user's notes and deleted applications' notes", async () => {
+    const mine = app("Mine", { archived: true });
+    note(mine, "wombat");
+    note(mine, "secretword", "someone"); // a foreign note attached to my application
+    const other = db.insert(tracks).values({ userId: "someone", name: "Theirs", position: 0 }).returning().get().id;
+    note(app("Theirs", { userId: "someone", trackId: other }), "wombat", "someone");
+    const gone = app("Gone");
+    note(gone, "quokka");
+    expect(await searchApplications("wombat")).toMatchObject([{ title: "Mine", archived: true, matched: { kind: "note" } }]);
+    expect(await titles("secretword")).toEqual([]);
+    expect(await titles("quokka")).toEqual(["Gone"]);
+    db.delete(applications).where(eq(applications.id, gone)).run();
+    expect(await titles("quokka")).toEqual([]);
+  });
+
   it("limits to 20 by default and 50 at most", async () => {
     for (let i = 0; i < 60; i++) app(`Acme ${i}`);
     expect(await titles("acme")).toHaveLength(20);
@@ -129,7 +161,7 @@ describe("searchApplications", () => {
     expect(await searchApplications("a".repeat(201))).toEqual([]);
   });
 
-  it("runs a fixed 2 queries and stays fast at 2000 applications", async () => {
+  it("runs a fixed 3 queries and stays fast at 2000 applications", async () => {
     const ids = db.insert(applications).values(Array.from({ length: 2000 }, (_, i) => ({ userId: "local", trackId: job, title: `Company ${i}` }))).returning({ id: applications.id }).all();
     for (let at = 0; at < ids.length; at += 200)
       db.insert(cellValues).values(ids.slice(at, at + 200).map(({ id }) => ({ userId: "local", applicationId: id, columnId: city, valueText: `City of ${id} Zürich` }))).run();
@@ -138,7 +170,7 @@ describe("searchApplications", () => {
     const hits = await searchApplications("zurich company 1999");
     const ms = performance.now() - started;
     expect(hits.map((h) => h.title)).toEqual(["Company 1999", "Company 1998"]); // the title hit, then the app whose city cell says 1999
-    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(prepare).toHaveBeenCalledTimes(3);
     expect(ms).toBeLessThan(500); // about 20 ms on the dev machine; NFR-1 allows 500
   });
 });

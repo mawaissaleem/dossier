@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { chordLabel, highlightSegments, isMacPlatform, isSearchChord, wrapIndex } from "@/lib/search-palette";
 
 // Shape of GET /api/search (task 4.6).
-type Hit = { id: number; title: string; archived: boolean; track: { id: number; name: string }; matched: { kind: "title" | "cell"; column: string | null; snippet: string } };
+type Hit = { id: number; title: string; archived: boolean; track: { id: number; name: string }; matched: { kind: "title" | "cell" | "note"; column: string | null; snippet: string } };
 // The newest answer: for `query`, either hits or an error. Anything for another query is stale.
 type Answer = { query: string; hits: Hit[]; error?: string };
 
@@ -137,7 +137,7 @@ export function SearchPalette({ className }: { className?: string }) {
           onCloseAutoFocus={(e) => (navigated.current ? e.preventDefault() : returnFocus.onCloseAutoFocus(e))}
         >
           <DialogTitle className="sr-only">Search applications</DialogTitle>
-          <DialogDescription className="sr-only">Type to search titles and text fields. Arrow keys choose a result, Enter opens it, Escape closes.</DialogDescription>
+          <DialogDescription className="sr-only">Type to search titles, text fields and notes. Arrow keys choose a result, Enter opens it, Escape closes.</DialogDescription>
           <Input
             role="combobox"
             aria-label="Search applications"
@@ -148,7 +148,7 @@ export function SearchPalette({ className }: { className?: string }) {
             autoComplete="off"
             spellCheck={false}
             maxLength={200}
-            placeholder="Search by company, title or any text field"
+            placeholder="Search by company, title, text field or note"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActive(0); openWhenReady.current = false; }}
             onKeyDown={onKeyDown}
@@ -170,8 +170,8 @@ export function SearchPalette({ className }: { className?: string }) {
                     {h.archived && <span className="inline-flex h-5 shrink-0 items-center rounded-sm border border-border bg-muted px-2 text-xs font-medium text-muted-foreground">Archived</span>}
                     <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground">{h.track.name}</span>
                   </span>
-                  {h.matched.kind === "cell" && (
-                    <span className="truncate text-xs text-muted-foreground">{h.matched.column}: <Highlight text={h.matched.snippet} query={q} /></span>
+                  {h.matched.kind !== "title" && (
+                    <span className="truncate text-xs text-muted-foreground">{h.matched.kind === "note" ? "Note" : h.matched.column}: <Highlight text={h.matched.snippet} query={q} /></span>
                   )}
                 </li>
               ))}
