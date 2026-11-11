@@ -4,7 +4,8 @@ import { connection } from "next/server";
 import { getApplicationDetail } from "@/lib/db/applications";
 import { listApplicationFiles } from "@/lib/db/files";
 import { getFileLabels, getFilesRoot } from "@/lib/db/settings";
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, DownloadIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Page } from "@/components/page-header";
 import { ApplicationActions } from "./application-actions";
 import { EditApplication } from "./edit-application";
@@ -88,8 +89,15 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
       </EditApplication>
       <section aria-labelledby="files" className="mt-8">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-          <h2 id="files" className="text-lg font-semibold">Files</h2>
-          {files.length > 0 && <CheckFiles applicationId={detail.id} />}
+          <h2 id="files" tabIndex={-1} className="text-lg font-semibold outline-none">Files</h2>
+          {files.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              <CheckFiles applicationId={detail.id} />
+              <Button asChild variant="outline" size="sm">
+                <a href={`/api/applications/${detail.id}/zip`}><DownloadIcon aria-hidden /> Download all (zip)</a>
+              </Button>
+            </div>
+          )}
         </div>
         <FileUpload applicationId={detail.id} labels={labels} rootSet={root !== null} />
         <FileList files={files} />

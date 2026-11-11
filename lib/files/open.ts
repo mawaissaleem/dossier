@@ -10,7 +10,7 @@ import { getFilesRoot } from "../db/settings";
 import { MAX_UPLOAD_BYTES } from "../upload-form";
 import { resolveInRoot } from "./resolve";
 
-type Failure = "not-found" | "setup" | "refused" | "missing" | "error";
+type Failure = "not-found" | "deleted" | "setup" | "refused" | "missing" | "error";
 // ok/mismatch: the file exists; bytes are null only when it is too large to read (never for ok). found is null in that case too.
 export type VerifyResult =
   | { ok: true; integrity: "ok" | "mismatch"; storedName: string; expected: string; found: string | null; bytes: Buffer | null }
@@ -21,6 +21,7 @@ const fail = (kind: Failure, error: string) => ({ ok: false, kind, error }) as c
 export async function verifyStoredFile(id: number): Promise<VerifyResult> {
   const row = await getFileForOpen(id);
   if (!row) return fail("not-found", "File not found.");
+  if (row.deleted) return fail("deleted", "This file was deleted. Only its record is kept in the submissions that listed it.");
   const root = await getFilesRoot();
   if (!root) return fail("setup", "Choose the files folder in Settings before opening files.");
   const target = await resolveInRoot(root, row.relativePath);

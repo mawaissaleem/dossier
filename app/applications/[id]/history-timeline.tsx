@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightLeftIcon, CircleDotIcon, SendIcon, UploadIcon } from "lucide-react";
+import { ArrowRightLeftIcon, CircleDotIcon, FileXIcon, SendIcon, UploadIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { HistoryItem, HistoryType } from "@/lib/history";
@@ -8,7 +8,7 @@ import { NoteItem } from "./note-item";
 import { NoteTime } from "./note-time";
 
 const SHOWN = 20; // the latest items shown before "Show all"; a long history stays short to scroll
-const ICON = { status: ArrowRightLeftIcon, upload: UploadIcon, submission: SendIcon, other: CircleDotIcon } satisfies Record<Exclude<HistoryType, "note">, unknown>;
+const ICON = { status: ArrowRightLeftIcon, upload: UploadIcon, delete: FileXIcon, submission: SendIcon, other: CircleDotIcon } satisfies Record<Exclude<HistoryType, "note">, unknown>;
 
 // The merged history, newest first (lib/history.ts). Notes are cards; log events are lighter: icon, one line, time.
 export function HistoryTimeline({ items }: { items: HistoryItem[] }) {

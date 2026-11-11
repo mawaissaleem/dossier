@@ -26,11 +26,16 @@ const TABLE_FOR: Record<keyof Counts, string> = { applications: "applications", 
 const livePath = () => resolve(/*turbopackIgnore: true*/ process.env.DATABASE_PATH ?? "");
 export const stagedDatabasePath = () => join(dirname(livePath()), `${STAGE_PREFIX}${randomBytes(6).toString("hex")}.db`);
 
-// All rows: this is a single-user database and the question is "what would be replaced".
+// Files that still have bytes (8.8: a deleted file keeps only a row). A backup made before the deleted_at column has none of those.
+function liveFiles(sqlite: Database.Database): string {
+  return (sqlite.pragma("table_info(files)") as { name: string }[]).some((c) => c.name === "deleted_at") ? "files WHERE deleted_at IS NULL" : "files";
+}
+
+// All rows: this is a single-user database and the question is "what would be replaced". Files counts live files only, so it matches the zip.
 function countsOf(sqlite: Database.Database): Counts {
   const tables = new Set((sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((r) => r.name));
   const out = {} as Counts;
-  for (const k of COUNT_KEYS) out[k] = tables.has(TABLE_FOR[k]) ? (sqlite.prepare(`SELECT count(*) AS n FROM ${TABLE_FOR[k]}`).get() as { n: number }).n : 0;
+  for (const k of COUNT_KEYS) out[k] = tables.has(TABLE_FOR[k]) ? (sqlite.prepare(`SELECT count(*) AS n FROM ${k === "files" ? liveFiles(sqlite) : TABLE_FOR[k]}`).get() as { n: number }).n : 0;
   return out;
 }
 
@@ -69,7 +74,7 @@ export function inspectBackupDb(file: string): { ok: true; info: BackupDbInfo } 
     const latest = (sqlite.prepare("SELECT max(created_at) AS latest FROM __drizzle_migrations").get() as { latest: number | null }).latest;
     const appLatest = appLatestMigration();
     if (schemaIsNewer(latest, appLatest)) return { ok: false, error: "This backup was made by a newer version of Dossier than this one. Update Dossier, then restore it." };
-    const rows = tables.has("files") ? (sqlite.prepare("SELECT relative_path, sha256 FROM files").all() as { relative_path: string; sha256: string }[]) : [];
+    const rows = tables.has("files") ? (sqlite.prepare(`SELECT relative_path, sha256 FROM ${liveFiles(sqlite)}`).all() as { relative_path: string; sha256: string }[]) : [];
     for (const r of rows) {
       const c = checkRelativePath(r.relative_path);
       if (!c.ok) return { ok: false, error: `The backup's database has a file with an unsafe path (${JSON.stringify(r.relative_path.slice(0, 80))}): ${c.error}` };

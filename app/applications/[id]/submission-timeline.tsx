@@ -5,13 +5,16 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { SubmissionItem } from "@/lib/db/submissions";
 import { IntegrityBadge } from "./integrity-badge";
+import { NoteTime } from "./note-time";
 import { SubmissionNote } from "./submission-note";
 import { fileCountLabel } from "@/lib/submission-timeline";
+import { formatBytes } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
 // Submissions, newest first (FR-7.9). The latest starts expanded; the page keys this component by the latest id, so a new submission
 // remounts it expanded. Open is the 5.10 route in a new tab. Download is the same route with the `download` attribute: the server's safe
 // headers (nosniff, CSP, sanitised filename) are unchanged, and the attribute only makes the browser save instead of render.
+// A file deleted after it was submitted (8.8) is shown as a record only: name, label, size, checksum and the date, no Open or Download.
 // A file flagged changed or missing (8.7) gets a Download link without the attribute, in a new tab: the 409 mismatch page (or the 404 error) is
 // shown instead of being saved as the file. A file edited since its last check still gets `download`; the browser then shows a failed download.
 export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
@@ -53,9 +56,19 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                           <p className="flex min-w-0 flex-wrap items-center gap-x-2">
                             <span title={f.originalName} className="truncate font-medium">{f.originalName}</span>
                             <span title={f.label} className="max-w-32 shrink-0 truncate rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">{f.label}</span>
-                            <IntegrityBadge state={f.integrity} checkedAt={f.checkedAt} />
+                            {f.deletedAt ? (
+                              <span className="shrink-0 rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">Deleted <NoteTime iso={f.deletedAt.toISOString()} dateOnly /></span>
+                            ) : (
+                              <IntegrityBadge state={f.integrity} checkedAt={f.checkedAt} />
+                            )}
                           </p>
+                          {f.deletedAt && (
+                            <p className="truncate text-xs text-muted-foreground">
+                              <span title={f.storedName}>{f.storedName}</span> · {formatBytes(f.sizeBytes)} · checksum <span title={f.sha256}>{f.sha256.slice(0, 12)}</span> · the file itself is gone
+                            </p>
+                          )}
                         </div>
+                        {f.deletedAt ? null : <>
                         <Button asChild variant="outline" size="sm">
                           <a href={`/api/files/${f.id}`} target="_blank" rel="noopener" aria-label={`Open ${f.originalName}`}>
                             Open <ExternalLinkIcon aria-hidden />
@@ -67,6 +80,7 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                             Download <DownloadIcon aria-hidden />
                           </a>
                         </Button>
+                        </>}
                       </li>
                     ))}
                   </ul>

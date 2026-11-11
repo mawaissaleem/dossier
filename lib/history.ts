@@ -2,7 +2,7 @@
 // event's stored snapshot only, so nothing is looked up and a renamed status or file never rewrites the past.
 import type { ActivityDetails } from "./activity";
 
-export type HistoryType = "note" | "status" | "upload" | "submission" | "other";
+export type HistoryType = "note" | "status" | "upload" | "delete" | "submission" | "other";
 // `text` is the note body (type "note") or the one-line summary of an event. `future` marks an event dated after `now` (a scheduled submission).
 export type HistoryItem = { key: string; type: HistoryType; at: Date; text: string; future: boolean };
 
@@ -16,8 +16,8 @@ export function formatYmd(s: string): string {
   return m && Number(m[2]) >= 1 && Number(m[2]) <= 12 ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : s;
 }
 
-const TYPE: Record<string, HistoryType> = { status_changed: "status", file_uploaded: "upload", submission_created: "submission" };
-const FALLBACK: Record<HistoryType, string> = { note: "Note", status: "Status changed", upload: "File uploaded", submission: "Submission recorded", other: "Activity recorded" };
+const TYPE: Record<string, HistoryType> = { status_changed: "status", file_uploaded: "upload", file_deleted: "delete", submission_created: "submission" };
+const FALLBACK: Record<HistoryType, string> = { note: "Note", status: "Status changed", upload: "File uploaded", delete: "File deleted", submission: "Submission recorded", other: "Activity recorded" };
 
 // Garbled or unknown details give a neutral line for the kind; never throws.
 export function eventLine(kind: string, d: ActivityDetails): string {
@@ -26,6 +26,8 @@ export function eventLine(kind: string, d: ActivityDetails): string {
       return `Status: ${d.fromLabel || "(blank)"} → ${d.toLabel || "(blank)"}`;
     case "file_uploaded":
       return `Uploaded ${d.originalName} as ${d.storedName} (${d.label})`;
+    case "file_deleted":
+      return `Deleted ${d.originalName} (${d.storedName}, ${d.label})${d.submissionCount > 0 ? `; ${d.submissionCount === 1 ? "1 submission keeps" : `${d.submissionCount} submissions keep`} its name` : ""}`;
     case "submission_created":
       return `Submission dated ${formatYmd(d.date)} with ${d.fileCount === 0 ? "no files" : d.fileCount === 1 ? "1 file" : `${d.fileCount} files`}`;
     default:

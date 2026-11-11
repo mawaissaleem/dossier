@@ -1,5 +1,5 @@
 // Server-only. See lib/db/tracks.ts for the convention.
-import { and, count, desc, eq, isNotNull } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { CELL_FIELD, decodeDefault, parseCell, readCell, type CellScalar } from "../cells";
 import { NEEDS_REVIEW_ERROR } from "../submission-review";
 import { insertStatusEvent } from "./activity";
@@ -185,9 +185,9 @@ export async function archiveApplication(id: number, archived: boolean): Promise
   return getDb().update(applications).set({ archived }).where(and(eq(applications.id, id), eq(applications.userId, getUserId()))).run().changes > 0;
 }
 
-// Stored file rows of the application, so the delete confirmation states the real number (NFR-4).
+// Live stored files of the application (deleted ones, 8.8, have no bytes: their rows only go with the cascade), so the delete confirmation states the real number (NFR-4).
 async function countApplicationFiles(applicationId: number): Promise<number> {
-  const { n } = getDb().select({ n: count() }).from(files).where(and(eq(files.applicationId, applicationId), eq(files.userId, getUserId()))).get()!;
+  const { n } = getDb().select({ n: count() }).from(files).where(and(eq(files.applicationId, applicationId), eq(files.userId, getUserId()), isNull(files.deletedAt))).get()!;
   return n;
 }
 
@@ -230,7 +230,7 @@ export async function deleteApplication(id: number, expected: { cellCount: numbe
     const { n } = tx.select({ n: count() }).from(cellValues).where(and(eq(cellValues.applicationId, id), eq(cellValues.userId, userId))).get()!;
     if (n !== expected.cellCount) return stale;
     // Files can be uploaded at any moment (5.7), so the count is checked here, in the same transaction as the delete.
-    const f = tx.select({ n: count() }).from(files).where(and(eq(files.applicationId, id), eq(files.userId, userId))).get()!;
+    const f = tx.select({ n: count() }).from(files).where(and(eq(files.applicationId, id), eq(files.userId, userId), isNull(files.deletedAt))).get()!;
     if (f.n !== expected.fileCount) return stale;
     const s = tx.select({ n: count() }).from(submissions).where(and(eq(submissions.applicationId, id), eq(submissions.userId, userId))).get()!;
     if (s.n !== expected.submissionCount) return stale;

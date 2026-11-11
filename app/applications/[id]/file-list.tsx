@@ -2,6 +2,7 @@ import { ExternalLinkIcon } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import type { FileListItem } from "@/lib/db/files";
+import { DeleteFile } from "./delete-file";
 import { IntegrityBadge } from "./integrity-badge";
 import { formatBytes } from "@/lib/upload-client";
 
@@ -28,6 +29,7 @@ export function FileList({ files }: { files: FileListItem[] }) {
               Open <ExternalLinkIcon aria-hidden />
             </a>
           </Button>
+          <DeleteFile id={f.id} name={f.originalName} />
         </li>
       ))}
     </ul>

@@ -22,6 +22,7 @@ import { findFileByHash, getApplicationFolder, getCounterEntries, insertFileRow 
 import { getFilesRoot } from "../db/settings";
 import { buildStoredName, type CounterEntry } from "../filename";
 import { ensureApplicationFolder } from "./folder";
+import { beginUpload, MOVING_MESSAGE } from "./lock";
 import { toRelativePath } from "./relative";
 import { resolveInRoot } from "./resolve";
 
@@ -51,7 +52,16 @@ function serialise<T>(applicationId: number, fn: () => Promise<T>): Promise<T> {
 }
 
 // Uploads for one application run one at a time: otherwise two concurrent FIRST uploads would each create a folder.
-export const storeUploadedFile = (input: StoreInput) => serialise(input.applicationId, () => storeFileUnlocked(input));
+// While the files root is being moved or changed (8.10) uploads are refused, and a move waits for running uploads: see lock.ts.
+export async function storeUploadedFile(input: StoreInput): Promise<StoreResult> {
+  const end = beginUpload();
+  if (!end) return fail("error", MOVING_MESSAGE);
+  try {
+    return await serialise(input.applicationId, () => storeFileUnlocked(input));
+  } finally {
+    end();
+  }
+}
 
 export type StoreInput = { applicationId: number; file: UploadSource; label: string; uploadDate: string };
 

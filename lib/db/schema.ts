@@ -6,7 +6,7 @@ export const COLUMN_TYPES = ["text", "number", "date", "link", "checkbox", "sing
 export type ColumnType = (typeof COLUMN_TYPES)[number];
 
 // Add a kind here and run db:generate: SQLite rebuilds the table to widen the CHECK, existing rows are copied unchanged.
-export const ACTIVITY_KINDS = ["status_changed", "file_uploaded", "submission_created"] as const;
+export const ACTIVITY_KINDS = ["status_changed", "file_uploaded", "submission_created", "file_deleted"] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
 export const INTEGRITY_STATES = ["ok", "mismatch", "missing"] as const;
@@ -144,6 +144,9 @@ export const files = sqliteTable(
     // Result of the last hash check (8.6, FR-5.5); an upload is ok by definition. checked_at is null until a check re-reads the file.
     integrity: text("integrity", { enum: INTEGRITY_STATES }).notNull().default("ok"),
     checkedAt: integer("checked_at", { mode: "timestamp_ms" }),
+    // Set when the file was deleted (8.8, FR-5.8). A file that no submission lists loses its row; a submitted one keeps it as a record (name, label,
+    // size, hash) with the bytes gone. Every reader of live files must filter deleted_at IS NULL.
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
   },
   (t) => [
     index("files_user_id_idx").on(t.userId),
@@ -175,8 +178,9 @@ export const submissions = sqliteTable(
 );
 
 // Many to many (FR-7.5). Deleting a submission removes its links. file_id is NO ACTION (the default, like cell_values.value_option_id):
-// deleting a file that is still in a submission fails (FR-5.8), but deleting the application works because the check runs at end of
-// statement, after the cascades have removed its submissions and links.
+// deleting the row of a file that is still in a submission fails, so deleting such a file (8.8, FR-5.8) only sets files.deleted_at and the
+// submission keeps its record. Deleting the application works because the check runs at end of statement, after the cascades have
+// removed its submissions and links.
 export const submissionFiles = sqliteTable(
   "submission_files",
   {

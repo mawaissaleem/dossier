@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { Page, PageHeader } from "@/components/page-header";
 import { getBackupDestination, getLastBackupAt, getReminderDays } from "@/lib/db/backup";
+import { listLiveFiles } from "@/lib/db/files";
 import { getFileLabels, getFilesRoot } from "@/lib/db/settings";
 import { getExpectedLabels, getSubmittedChoices } from "@/lib/db/track-settings";
 import { listTracks } from "@/lib/db/tracks";
@@ -16,13 +17,13 @@ import { SubmittedForm } from "./submitted-form";
 // The DB is request-time under cacheComponents, so this section sits inside a Suspense boundary.
 async function FilesSection() {
   await connection();
-  const root = await getFilesRoot();
+  const [root, live] = await Promise.all([getFilesRoot(), listLiveFiles()]);
   return (
     <>
       <p className="text-sm">
         Current files root: {root ? <code className="rounded bg-muted px-1.5 py-0.5 break-all">{root}</code> : <span className="text-muted-foreground">Not set yet</span>}
       </p>
-      <FilesRootForm current={root} />
+      <FilesRootForm current={root} liveFiles={live.length} />
     </>
   );
 }
@@ -72,7 +73,7 @@ export default function SettingsPage() {
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
           <FilesSection />
         </Suspense>
-        <p className="mt-2 text-sm text-muted-foreground">Uploaded files are stored in this folder. It must be an existing, writable folder outside the Dossier app folder. Changing it does not move files already stored.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Uploaded files are stored in this folder. It must be an existing, writable folder outside the Dossier app folder. Once files are stored you can move them to a new empty folder from here, or re-point Dossier at a folder you already moved yourself; a plain save of a different folder is refused so no file is lost track of.</p>
       </section>
       <section aria-labelledby="backup" className="mb-8">
         <h2 id="backup" className="mb-2 text-lg font-semibold">Backup</h2>

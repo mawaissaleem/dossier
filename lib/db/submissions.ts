@@ -1,5 +1,5 @@
 // Server-only. See lib/db/tracks.ts for the convention. Submissions (FR-7): a dated, noted set of an application's files.
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { submissionOccurredAt } from "../activity";
 import { isValidDate } from "../filename";
 import { insertEvent } from "./activity";
@@ -16,7 +16,7 @@ export type CreateSubmissionResult = { ok: true; id: number } | { ok: false; err
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 
 // Everything is checked and written in one transaction: a refusal writes nothing. Zero files is allowed here (6.5 warns, FR-7.3).
-// Every file must belong to this application and user: the DB only checks that the file exists (see schema.ts).
+// Every file must belong to this application and user and still be live (a deleted file, 8.8, cannot join a new submission): the DB only checks that the file exists (see schema.ts).
 export async function createSubmission(applicationId: number, fileIds: number[], date: string, note: string | null | undefined): Promise<CreateSubmissionResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => insertSubmission(tx, userId, applicationId, fileIds, date, note));
@@ -34,7 +34,7 @@ function insertSubmission(tx: Tx, userId: string, applicationId: number, fileIds
   let names: string[] = [];
   if (ids.length) {
     const own = tx.select({ id: files.id, storedName: files.storedName }).from(files)
-      .where(and(inArray(files.id, ids), eq(files.applicationId, applicationId), eq(files.userId, userId))).all();
+      .where(and(inArray(files.id, ids), eq(files.applicationId, applicationId), eq(files.userId, userId), isNull(files.deletedAt))).all();
     if (own.length !== ids.length) return { ok: false, error: "A file does not belong to this application. Reload the page and try again." };
     names = ids.map((id) => own.find((f) => f.id === id)!.storedName);
   }
@@ -104,7 +104,8 @@ export async function createManualSubmission(
   });
 }
 
-export type SubmissionFileItem = { id: number; originalName: string; storedName: string; label: string; uploadDate: string; integrity: IntegrityState; checkedAt: Date | null };
+// deletedAt (8.8): the file was deleted after it was submitted; the row is the record (name, label, size, hash), the bytes are gone.
+export type SubmissionFileItem = { id: number; originalName: string; storedName: string; label: string; uploadDate: string; sizeBytes: number; sha256: string; integrity: IntegrityState; checkedAt: Date | null; deletedAt: Date | null };
 export type SubmissionItem = { id: number; date: string; note: string | null; files: SubmissionFileItem[] };
 
 // Newest first (date, then id), each with its files in the order they were linked. Two queries, grouped in JS.
@@ -115,7 +116,7 @@ export async function listSubmissions(applicationId: number): Promise<Submission
     .where(and(eq(submissions.applicationId, applicationId), eq(submissions.userId, userId))).orderBy(desc(submissions.date), desc(submissions.id)).all();
   if (subs.length === 0) return [];
   const links = db.select({
-    submissionId: submissionFiles.submissionId, id: files.id, originalName: files.originalName, storedName: files.storedName, label: files.label, uploadDate: files.uploadDate, integrity: files.integrity, checkedAt: files.checkedAt,
+    submissionId: submissionFiles.submissionId, id: files.id, originalName: files.originalName, storedName: files.storedName, label: files.label, uploadDate: files.uploadDate, sizeBytes: files.sizeBytes, sha256: files.sha256, integrity: files.integrity, checkedAt: files.checkedAt, deletedAt: files.deletedAt,
   }).from(submissionFiles).innerJoin(files, eq(files.id, submissionFiles.fileId))
     .where(and(inArray(submissionFiles.submissionId, subs.map((s) => s.id)), eq(submissionFiles.userId, userId))).orderBy(submissionFiles.id).all();
   const byId = new Map(subs.map((s) => [s.id, { ...s, files: [] as SubmissionFileItem[] }]));
