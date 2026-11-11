@@ -4,6 +4,7 @@ import { ChevronRightIcon, DownloadIcon, ExternalLinkIcon } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { SubmissionItem } from "@/lib/db/submissions";
+import { IntegrityBadge } from "./integrity-badge";
 import { SubmissionNote } from "./submission-note";
 import { fileCountLabel } from "@/lib/submission-timeline";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,8 @@ import { cn } from "@/lib/utils";
 // Submissions, newest first (FR-7.9). The latest starts expanded; the page keys this component by the latest id, so a new submission
 // remounts it expanded. Open is the 5.10 route in a new tab. Download is the same route with the `download` attribute: the server's safe
 // headers (nosniff, CSP, sanitised filename) are unchanged, and the attribute only makes the browser save instead of render.
+// A file flagged changed or missing (8.7) gets a Download link without the attribute, in a new tab: the 409 mismatch page (or the 404 error) is
+// shown instead of being saved as the file. A file edited since its last check still gets `download`; the browser then shows a failed download.
 export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
   const uid = useId();
   const [open, setOpen] = useState<Set<number>>(() => new Set(items.length ? [items[0].id] : []));
@@ -47,9 +50,10 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                     {s.files.map((f) => (
                       <li key={f.id} className="flex items-center gap-3 px-3 py-2 pl-9">
                         <div className="min-w-0 flex-1">
-                          <p className="flex min-w-0 items-center gap-2">
+                          <p className="flex min-w-0 flex-wrap items-center gap-x-2">
                             <span title={f.originalName} className="truncate font-medium">{f.originalName}</span>
                             <span title={f.label} className="max-w-32 shrink-0 truncate rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">{f.label}</span>
+                            <IntegrityBadge state={f.integrity} checkedAt={f.checkedAt} />
                           </p>
                         </div>
                         <Button asChild variant="outline" size="sm">
@@ -58,7 +62,8 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                           </a>
                         </Button>
                         <Button asChild variant="ghost" size="sm">
-                          <a href={`/api/files/${f.id}`} download aria-label={`Download ${f.originalName}`}>
+                          {/* A flagged file: no `download`, so the 409 "file changed" page opens (with "Open anyway") instead of being saved as the file. */}
+                          <a href={`/api/files/${f.id}`} {...(f.integrity === "ok" ? { download: true } : { target: "_blank", rel: "noopener" })} aria-label={`Download ${f.originalName}`}>
                             Download <DownloadIcon aria-hidden />
                           </a>
                         </Button>

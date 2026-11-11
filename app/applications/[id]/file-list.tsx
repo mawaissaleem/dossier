@@ -2,6 +2,7 @@ import { ExternalLinkIcon } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import type { FileListItem } from "@/lib/db/files";
+import { IntegrityBadge } from "./integrity-badge";
 import { formatBytes } from "@/lib/upload-client";
 
 // The application's uploaded files (5.10). Open is a plain link to the GET route in a new tab: the server decides inline or download.
@@ -13,9 +14,10 @@ export function FileList({ files }: { files: FileListItem[] }) {
       {files.map((f) => (
         <li key={f.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted">
           <div className="min-w-0 flex-1">
-            <p className="flex min-w-0 items-center gap-2">
+            <p className="flex min-w-0 flex-wrap items-center gap-x-2">
               <span title={f.originalName} className="truncate font-medium">{f.originalName}</span>
               <span title={f.label} className="max-w-32 shrink-0 truncate rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">{f.label}</span>
+              <IntegrityBadge state={f.integrity} checkedAt={f.checkedAt} />
             </p>
             <p className="truncate text-xs text-muted-foreground">
               <time dateTime={f.uploadDate}>{f.uploadDate}</time> · <span title={f.storedName}>{f.storedName}</span> · {formatBytes(f.sizeBytes)}

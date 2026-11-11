@@ -3,7 +3,7 @@ import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { dirname } from "node:path/posix";
 import { insertEvent } from "./activity";
 import { getDb } from "./client";
-import { applications, cellValues, columns, files, tracks } from "./schema";
+import { applications, cellValues, columns, files, tracks, type IntegrityState } from "./schema";
 import { getUserId } from "./user";
 
 // The folder of an application's existing files (stored paths are relative, forward slashes), or null before its first upload.
@@ -67,19 +67,30 @@ export async function insertFileRow(row: NewFileRow): Promise<number> {
   });
 }
 
-export type FileListItem = { id: number; originalName: string; storedName: string; label: string; uploadDate: string; sizeBytes: number };
+export type FileListItem = { id: number; originalName: string; storedName: string; label: string; uploadDate: string; sizeBytes: number; integrity: IntegrityState; checkedAt: Date | null };
 
 // The application's uploaded files for the detail page: DB rows only (FR-5.11), newest upload date first, then the counter.
 export async function listApplicationFiles(applicationId: number): Promise<FileListItem[]> {
-  return getDb().select({ id: files.id, originalName: files.originalName, storedName: files.storedName, label: files.label, uploadDate: files.uploadDate, sizeBytes: files.sizeBytes }).from(files)
+  return getDb().select({ id: files.id, originalName: files.originalName, storedName: files.storedName, label: files.label, uploadDate: files.uploadDate, sizeBytes: files.sizeBytes, integrity: files.integrity, checkedAt: files.checkedAt }).from(files)
     .where(and(eq(files.applicationId, applicationId), eq(files.userId, getUserId())))
     .orderBy(desc(files.uploadDate), asc(files.seq), asc(files.id)).all();
 }
 
 // The row behind Open, by id and user. The path comes from here, never from the request.
-export async function getFileForOpen(id: number): Promise<{ storedName: string; relativePath: string } | null> {
-  return getDb().select({ storedName: files.storedName, relativePath: files.relativePath }).from(files)
+export async function getFileForOpen(id: number): Promise<{ storedName: string; relativePath: string; sha256: string; sizeBytes: number } | null> {
+  return getDb().select({ storedName: files.storedName, relativePath: files.relativePath, sha256: files.sha256, sizeBytes: files.sizeBytes }).from(files)
     .where(and(eq(files.id, id), eq(files.userId, getUserId()))).get() ?? null;
+}
+
+// Records the result of a hash check (8.6) so the file list can show it without re-hashing (8.7). A file that matches again goes back to ok.
+export async function recordIntegrity(id: number, integrity: IntegrityState): Promise<void> {
+  getDb().update(files).set({ integrity, checkedAt: new Date() }).where(and(eq(files.id, id), eq(files.userId, getUserId()))).run();
+}
+
+// Ids of the application's files (this user's), for the on-demand check (8.7).
+export async function listApplicationFileIds(applicationId: number): Promise<number[]> {
+  return getDb().select({ id: files.id }).from(files)
+    .where(and(eq(files.applicationId, applicationId), eq(files.userId, getUserId()))).orderBy(files.id).all().map((r) => r.id);
 }
 
 // Relative paths of every stored file of the application. Read before deleting it: the rows (and these paths) go with the delete.

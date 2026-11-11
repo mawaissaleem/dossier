@@ -81,14 +81,14 @@ describe("createBackup", () => {
     expect(zip.get("files/Acme-2026/cv.pdf")!.toString()).toBe("cv bytes");
 
     const parsed = parseManifest(JSON.parse(zip.get("manifest.json")!.toString()));
-    expect(parsed.ok && parsed.manifest).toMatchObject({ filesRoot: root, fileCount: 3, filesBytes: 14, createdAt: NOW.toISOString(), schema: { migrations: 3 } });
+    expect(parsed.ok && parsed.manifest).toMatchObject({ filesRoot: root, fileCount: 3, filesBytes: 14, createdAt: NOW.toISOString(), schema: { migrations: 4 } });
 
     // the database entry is a whole database with the same rows; open it from a file the test extracts
     const copy = join(work, "copy.db");
     writeFileSync(copy, zip.get("database/dossier.db")!);
     const c = new Database(copy, { readonly: true });
     expect(c.prepare("SELECT name FROM tracks").all()).toEqual([{ name: "Job" }]);
-    expect(c.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: 3 });
+    expect(c.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: 4 });
     c.close();
   });
 

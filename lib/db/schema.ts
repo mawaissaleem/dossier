@@ -9,6 +9,9 @@ export type ColumnType = (typeof COLUMN_TYPES)[number];
 export const ACTIVITY_KINDS = ["status_changed", "file_uploaded", "submission_created"] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
+export const INTEGRITY_STATES = ["ok", "mismatch", "missing"] as const;
+export type IntegrityState = (typeof INTEGRITY_STATES)[number];
+
 // Shared by every table ( every table has user_id and timestamps).
 const base = {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -138,6 +141,9 @@ export const files = sqliteTable(
     baseName: text("base_name").notNull(),
     extension: text("extension").notNull(),
     seq: integer("seq").notNull(),
+    // Result of the last hash check (8.6, FR-5.5); an upload is ok by definition. checked_at is null until a check re-reads the file.
+    integrity: text("integrity", { enum: INTEGRITY_STATES }).notNull().default("ok"),
+    checkedAt: integer("checked_at", { mode: "timestamp_ms" }),
   },
   (t) => [
     index("files_user_id_idx").on(t.userId),

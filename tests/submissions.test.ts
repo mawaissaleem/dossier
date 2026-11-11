@@ -105,7 +105,7 @@ describe("listSubmissions", () => {
     const list = await listSubmissions(appId);
     expect(list.map((s) => s.id)).toEqual([s2.id, s1.id, s3.id]);
     expect(list[0].files.map((f) => f.id)).toEqual([f1, f2]);
-    expect(list[0].files[1]).toEqual({ id: f2, originalName: expect.any(String), storedName: expect.any(String), label: "Cover letter", uploadDate: expect.any(String) });
+    expect(list[0].files[1]).toEqual({ id: f2, originalName: expect.any(String), storedName: expect.any(String), label: "Cover letter", uploadDate: expect.any(String), integrity: "ok", checkedAt: null });
     expect(list[1]).toMatchObject({ note: "first", date: "2026-11-09" });
     expect(list[2]).toMatchObject({ note: "older, added later", files: [] });
   });

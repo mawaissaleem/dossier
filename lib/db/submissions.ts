@@ -5,7 +5,7 @@ import { isValidDate } from "../filename";
 import { insertEvent } from "./activity";
 import { getDb } from "./client";
 import { optionBelongs, writeCell } from "./cells";
-import { applications, columns, files, submissionFiles, submissions } from "./schema";
+import { applications, columns, files, submissionFiles, submissions, type IntegrityState } from "./schema";
 import { submittedStatusIds } from "./track-settings";
 import { getUserId } from "./user";
 
@@ -104,7 +104,7 @@ export async function createManualSubmission(
   });
 }
 
-export type SubmissionFileItem = { id: number; originalName: string; storedName: string; label: string; uploadDate: string };
+export type SubmissionFileItem = { id: number; originalName: string; storedName: string; label: string; uploadDate: string; integrity: IntegrityState; checkedAt: Date | null };
 export type SubmissionItem = { id: number; date: string; note: string | null; files: SubmissionFileItem[] };
 
 // Newest first (date, then id), each with its files in the order they were linked. Two queries, grouped in JS.
@@ -115,7 +115,7 @@ export async function listSubmissions(applicationId: number): Promise<Submission
     .where(and(eq(submissions.applicationId, applicationId), eq(submissions.userId, userId))).orderBy(desc(submissions.date), desc(submissions.id)).all();
   if (subs.length === 0) return [];
   const links = db.select({
-    submissionId: submissionFiles.submissionId, id: files.id, originalName: files.originalName, storedName: files.storedName, label: files.label, uploadDate: files.uploadDate,
+    submissionId: submissionFiles.submissionId, id: files.id, originalName: files.originalName, storedName: files.storedName, label: files.label, uploadDate: files.uploadDate, integrity: files.integrity, checkedAt: files.checkedAt,
   }).from(submissionFiles).innerJoin(files, eq(files.id, submissionFiles.fileId))
     .where(and(inArray(submissionFiles.submissionId, subs.map((s) => s.id)), eq(submissionFiles.userId, userId))).orderBy(submissionFiles.id).all();
   const byId = new Map(subs.map((s) => [s.id, { ...s, files: [] as SubmissionFileItem[] }]));

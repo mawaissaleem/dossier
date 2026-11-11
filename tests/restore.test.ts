@@ -217,7 +217,8 @@ describe("AT-13: back up, wipe, restore", () => {
       const r = await restore(zip);
       expect(r.ok).toBe(true);
       expect(getDb().select().from(applications).all().map((a) => a.title)).toEqual(["Old app"]);
-      expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: 3 });
+      expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: 4 });
+      expect((getDb().$client.prepare("PRAGMA table_info(files)").all() as { name: string }[]).map((c) => c.name)).toEqual(expect.arrayContaining(["integrity", "checked_at"]));
       expect(getDb().$client.prepare("SELECT name FROM sqlite_master WHERE name = 'activity_events'").all()).toHaveLength(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });

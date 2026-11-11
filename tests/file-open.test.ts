@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
@@ -9,6 +9,8 @@ import { createApplication } from "@/lib/db/applications";
 import { listApplicationFiles } from "@/lib/db/files";
 import { files, settings, tracks } from "@/lib/db/schema";
 import { setFilesRoot } from "@/lib/db/settings";
+import { verifyStoredFile } from "@/lib/files/open";
+import { MAX_UPLOAD_BYTES } from "@/lib/upload-form";
 import { storeUploadedFile } from "@/lib/files/store";
 import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
 
@@ -53,7 +55,7 @@ describe("listApplicationFiles", () => {
     await store("z.pdf", "5", "2026-11-09", "CV", other);
     const list = await listApplicationFiles(appId);
     expect(list.map((f) => f.id)).toEqual([b.id, c.id, d.id, a.id]);
-    expect(list[0]).toEqual({ id: b.id, originalName: "b.pdf", storedName: b.storedName, label: "Cover letter", uploadDate: "2026-11-05", sizeBytes: 1 });
+    expect(list[0]).toEqual({ id: b.id, originalName: "b.pdf", storedName: b.storedName, label: "Cover letter", uploadDate: "2026-11-05", sizeBytes: 1, integrity: "ok", checkedAt: null });
     db.update(files).set({ userId: "someone-else" }).where(eq(files.id, a.id)).run();
     expect((await listApplicationFiles(appId)).map((f) => f.id)).toEqual([b.id, c.id, d.id]);
   });
@@ -171,5 +173,84 @@ describe("GET /api/files/:id", () => {
     const res = await get(f.id);
     expect(res.status).toBe(404);
     expect(await res.text()).not.toContain("secret");
+  });
+});
+
+describe("hash verification on open (8.6)", () => {
+  const row = (id: number) => db.select().from(files).where(eq(files.id, id)).get()!;
+  const edit = (relativePath: string, content: string) => {
+    chmodSync(join(root, relativePath), 0o644);
+    writeFileSync(join(root, relativePath), content);
+  };
+  it("an unchanged file is served and recorded ok", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    expect(row(f.id).checkedAt).toBeNull();
+    const res = await get(f.id);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("original");
+    expect(row(f.id).integrity).toBe("ok");
+    expect(row(f.id).checkedAt).toBeInstanceOf(Date);
+  });
+  it("an edited file gets 409 with the expected and found hashes and none of its bytes; the state is mismatch", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    edit(f.relativePath, "tampered same length!!");
+    const res = await get(f.id);
+    expect(res.status).toBe(409);
+    expect(res.headers.get("cross-origin-resource-policy")).toBe("same-origin");
+    expect(res.headers.get("content-disposition")).toBeNull();
+    const html = await res.text();
+    expect(html).not.toContain("tampered");
+    expect(html).toContain(f.storedName);
+    expect(html).toContain(row(f.id).sha256.slice(0, 12));
+    expect(html).toContain(`/api/files/${f.id}?anyway=1`);
+    expect(row(f.id).integrity).toBe("mismatch");
+  });
+  it("open anyway serves the changed bytes with the usual safe headers", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    edit(f.relativePath, "tampered");
+    const res = await GET(new NextRequest(`http://localhost:3000/api/files/${f.id}?anyway=1`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(f.id) }) } as never);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("tampered");
+    expect(res.headers.get("content-length")).toBe("8");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'");
+    expect(row(f.id).integrity).toBe("mismatch");
+  });
+  it("a file deleted outside the app is missing (404) and recorded; put back with its original bytes it is ok again", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    const abs = join(root, f.relativePath);
+    chmodSync(abs, 0o666);
+    rmSync(abs);
+    expect((await get(f.id)).status).toBe(404);
+    expect(row(f.id).integrity).toBe("missing");
+    writeFileSync(abs, "original");
+    expect((await get(f.id)).status).toBe(200);
+    expect(row(f.id).integrity).toBe("ok");
+  });
+  it("an edited file restored to its original bytes goes back to ok", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    edit(f.relativePath, "tampered");
+    expect((await get(f.id)).status).toBe(409);
+    edit(f.relativePath, "original");
+    expect((await get(f.id)).status).toBe(200);
+    expect(row(f.id).integrity).toBe("ok");
+  });
+  it("another user's file is 404 and its state is not touched", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    edit(f.relativePath, "tampered");
+    db.update(files).set({ userId: "someone-else" }).where(eq(files.id, f.id)).run();
+    expect((await get(f.id)).status).toBe(404);
+    expect(row(f.id).integrity).toBe("ok");
+  });
+  it("verifyStoredFile reports without a Response and a file over the upload cap is a mismatch that is not read", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    const r = await verifyStoredFile(f.id);
+    expect(r).toMatchObject({ ok: true, integrity: "ok", expected: row(f.id).sha256 });
+    expect((await verifyStoredFile(f.id + 100)).ok).toBe(false);
+    edit(f.relativePath, "x");
+    truncateSync(join(root, f.relativePath), MAX_UPLOAD_BYTES + 1); // sparse: no real 50 MB written
+    const big = await verifyStoredFile(f.id);
+    expect(big).toMatchObject({ ok: true, integrity: "mismatch", found: null, bytes: null });
+    expect((await get(f.id)).status).toBe(409);
   });
 });

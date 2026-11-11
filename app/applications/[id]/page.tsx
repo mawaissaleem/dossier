@@ -9,6 +9,7 @@ import { Page } from "@/components/page-header";
 import { ApplicationActions } from "./application-actions";
 import { EditApplication } from "./edit-application";
 import { AddNote } from "./add-note";
+import { CheckFiles } from "./check-files";
 import { FileList } from "./file-list";
 import { FileUpload } from "./file-upload";
 import { NewSubmission } from "./new-submission";
@@ -86,7 +87,10 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
         </dl>
       </EditApplication>
       <section aria-labelledby="files" className="mt-8">
-        <h2 id="files" className="mb-2 text-lg font-semibold">Files</h2>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+          <h2 id="files" className="text-lg font-semibold">Files</h2>
+          {files.length > 0 && <CheckFiles applicationId={detail.id} />}
+        </div>
         <FileUpload applicationId={detail.id} labels={labels} rootSet={root !== null} />
         <FileList files={files} />
       </section>
