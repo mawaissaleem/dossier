@@ -1,4 +1,5 @@
 // Server-only. Planner settings (FR-8) stored in the settings table; 10.1: the engine slot mapping per track.
+import { cache } from "react";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { checkSubmittedIds } from "../submitted-statuses";
 import {
@@ -6,6 +7,7 @@ import {
   reasoning, slotChoices, SLOTS, undatedScore, followUpsDue, type FollowUpInput,
   type BufferOption as ScoreOption, type NoDeadlinePolicy, type OverduePolicy, type PlannerApp, type Scored, type Slot, type SlotColumn, type SlotMapping, type UndatedScore,
 } from "../planner";
+import { overdueAlerts, streak, upcomingDeadlines, weeklyProgress, type OverdueAlert, type UpcomingDeadline, type WeeklyProgress } from "../dashboard";
 import { localToday } from "../deadline";
 import { getDb } from "./client";
 import { activityEvents, applications, cellValues, columnOptions, columns, notes, settings, submissions, tracks } from "./schema";
@@ -156,16 +158,14 @@ function scoreOptions(columnId: number | null): (ScoreOption & { label: string }
     .all();
 }
 
-// FR-8: every track's non-archived applications in a still-to-do status (no status = never ranked), scored per track with that track's own
-// Priority/Effort options (FR-8.7 fallback), then merged and ordered by the overdue and no-deadline rules (FR-8.5, FR-8.6).
-// `undated` = no usable deadline, after every dated one, or empty when the rule says to leave them out.
-export async function getPlannerRanking(today: string): Promise<{ ranked: RankedItem[]; undated: UndatedItem[] }> {
+type TodoTrack = { id: number; name: string; slots: SlotMapping; apps: PlannerApp[]; titles: Map<number, string> };
+
+// The gathering below the policy step, shared by the ranking and the overdue alerts: per track, its non-archived applications in a
+// still-to-do status (no status = never), with each one's slot values (FR-8.7). No overdue or no-deadline rule is applied here.
+function gatherStillToDo(): TodoTrack[] {
   const db = getDb();
   const userId = getUserId();
-  const touched = lastTouchedMs();
-  const rules = await getRankingRules();
-  const ranked: (Scored & PlannerItem & { reasoning: string })[] = [];
-  const undated: UndatedItem[] = [];
+  const out: TodoTrack[] = [];
   for (const t of db.select({ id: tracks.id, name: tracks.name }).from(tracks).where(eq(tracks.userId, userId)).orderBy(asc(tracks.position), asc(tracks.id)).all()) {
     const statusCol = db.select({ id: columns.id }).from(columns).where(and(eq(columns.trackId, t.id), eq(columns.isStatus, true), eq(columns.userId, userId))).get()?.id;
     const todo = new Set(stillToDoIds(t.id));
@@ -190,6 +190,21 @@ export async function getPlannerRanking(today: string): Promise<{ ranked: Ranked
       titles.set(a.id, a.title);
       apps.push({ id: a.id, deadline: at(slots.deadline)?.date ?? null, priority: at(slots.priority)?.option ?? null, effort: at(slots.effort)?.option ?? null });
     }
+    out.push({ ...t, slots, apps, titles });
+  }
+  return out;
+}
+
+// FR-8: the still-to-do applications of every track, scored per track with that track's own Priority/Effort options (FR-8.7 fallback),
+// then merged and ordered by the overdue and no-deadline rules (FR-8.5, FR-8.6).
+// `undated` = no usable deadline, after every dated one, or empty when the rule says to leave them out.
+export async function getPlannerRanking(today: string): Promise<{ ranked: RankedItem[]; undated: UndatedItem[] }> {
+  const touched = lastTouchedMs();
+  const rules = await getRankingRules();
+  const ranked: (Scored & PlannerItem & { reasoning: string })[] = [];
+  const undated: UndatedItem[] = [];
+  for (const t of gatherStillToDo()) {
+    const { slots, apps, titles } = t;
     const [po, eo] = [scoreOptions(slots.priority), scoreOptions(slots.effort)];
     const r = rankApplications(apps, today, po, eo);
     const who = (id: number) => ({ id, title: titles.get(id)!, trackId: t.id, trackName: t.name });
@@ -206,6 +221,33 @@ export async function getPlannerRanking(today: string): Promise<{ ranked: Ranked
   }
   return orderRanking(ranked, undated, rules.overdue, rules.noDeadline);
 }
+
+// The still-to-do applications of every track with their Deadline slot value, from the ranking's own gathering (below its policy step, so the
+// overdue and no-deadline rules never change it). React `cache` = once per request: the cards and the summary line share one pass, not one each.
+const datedStillToDo = cache(() => gatherStillToDo().flatMap((t) => t.apps.map((a) => ({ id: a.id, title: t.titles.get(a.id)!, trackId: t.id, trackName: t.name, deadline: a.deadline }))));
+
+// FR-9.5: those whose deadline is before today, most overdue first. The planner's overdue rule (pin, hide or normal) never changes it.
+export const getOverdueAlerts = cache(async (today: string): Promise<OverdueAlert[]> => overdueAlerts(datedStillToDo(), today));
+
+// FR-9.3: the nearest deadlines (today or later) across every track, from the same gathering as /planner (still-to-do, non-archived, each
+// track's Deadline slot), so it can never disagree with it. No ranking is computed. Overdue is never in it.
+export const getUpcomingDeadlines = cache(async (today: string, limit: number): Promise<UpcomingDeadline[]> => upcomingDeadlines(datedStillToDo(), today, limit));
+
+// FR-9.4: submitted this week against capacity. The first-submission date of each non-archived application (one grouped
+// query, MIN(date)) gives both this week's count and the streak (FR-9.4, `streak` in lib/dashboard.ts). Deleted files do not matter; the submission row stays.
+export const getWeeklyProgress = cache(async (today: string): Promise<WeeklyProgress & { streak: number }> => {
+  const userId = getUserId();
+  const firstDates = getDb()
+    .select({ first: sql<string>`min(${submissions.date})` })
+    .from(submissions)
+    .innerJoin(applications, eq(applications.id, submissions.applicationId))
+    .where(and(eq(submissions.userId, userId), eq(applications.userId, userId), eq(applications.archived, false)))
+    .groupBy(submissions.applicationId)
+    .all()
+    .map((r) => r.first);
+  const capacity = await getCapacity();
+  return { ...weeklyProgress(firstDates, capacity, today), streak: streak(firstDates, capacity, today).weeks };
+});
 
 export const CAPACITY_KEY = "planner.capacity";
 

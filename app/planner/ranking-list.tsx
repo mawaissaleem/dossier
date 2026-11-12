@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { CircleAlertIcon } from "lucide-react";
 import type { getPlannerList } from "@/lib/db/planner";
+import { cn } from "@/lib/utils";
 
 export type RankingItems = Awaited<ReturnType<typeof getPlannerList>>;
 
-// `start` = the rank of the first item, so a list that continues another keeps counting. Shared by /planner and the live preview in /planner/settings.
-export function RankingList({ items, start = 1 }: { items: RankingItems; start?: number }) {
+// `start` = the rank of the first item, so a list that continues another keeps counting. Shared by /planner, the live preview in /planner/settings and the dashboard.
+// `compact` = rows without their own card, divided by hairlines, for use inside a card.
+export function RankingList({ items, start = 1, compact }: { items: RankingItems; start?: number; compact?: boolean }) {
   return (
-    <ol start={start} className="flex flex-col gap-2">
+    <ol start={start} className={cn("flex flex-col", !compact && "gap-2")}>
       {items.map((it, i) => (
-        <li key={it.id} className="flex items-start gap-3 rounded-lg border border-border bg-card p-3">
+        <li key={it.id} className={cn("flex items-start gap-3", compact ? "border-t border-border py-3 first:border-t-0 first:pt-0 last:pb-0" : "rounded-lg border border-border bg-card p-3")}>
           <span className="w-6 shrink-0 pt-px text-right text-sm font-medium tabular-nums text-muted-foreground">
             <span className="sr-only">Rank </span>{i + start}
           </span>

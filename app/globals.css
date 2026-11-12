@@ -217,6 +217,9 @@
   --text-xl--line-height: 1.75rem;
   --text-2xl: 1.625rem;
   --text-2xl--line-height: 2rem;
+  /* One extra step, only for the dashboard's countdown number: 48 px. */
+  --text-display: 3rem;
+  --text-display--line-height: 1;
 
   /* 4 px spacing grid (Tailwind's default step, pinned here on purpose). */
   --spacing: 0.25rem;

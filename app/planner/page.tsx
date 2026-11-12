@@ -23,7 +23,7 @@ async function Ranking() {
         <EmptyState title="Nothing to rank" description={<>Mark statuses as still to do in <Link href="/planner/settings" className="rounded-sm text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-ring">Planner settings</Link>.</>} />
       ) : (
       <section aria-labelledby="weeks-plan">
-        <h2 id="weeks-plan" className="mb-1 text-lg font-semibold">This week&apos;s plan · {capacity}</h2>
+        <h2 id="weeks-plan" className="mb-1 text-lg font-semibold">This week&apos;s plan · {plan.length}</h2>
         <p className="mb-3 text-sm text-muted-foreground">
           {plan.length < capacity ? `${plan.length} of ${capacity}: that is everything ranked.` : `The top ${capacity}.`}{" "}
           Change the weekly capacity in <Link href="/planner/settings#capacity" className="rounded-sm text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-ring">Planner settings</Link>.
