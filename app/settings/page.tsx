@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { Page, PageHeader } from "@/components/page-header";
@@ -68,6 +69,7 @@ export default function SettingsPage() {
   return (
     <Page narrow>
       <PageHeader title="Settings" />
+      <p className="mb-6 text-sm text-muted-foreground">Rules for the planner are in <Link href="/planner/settings" className="rounded-sm text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-ring">Planner settings</Link>.</p>
       <section aria-labelledby="files" className="mb-8">
         <h2 id="files" className="mb-2 text-lg font-semibold">Files</h2>
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>

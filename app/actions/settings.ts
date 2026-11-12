@@ -3,6 +3,7 @@
 import { refresh, revalidatePath } from "next/cache";
 import { listLiveFiles, switchFilesRoot } from "@/lib/db/files";
 import { getFilesRoot } from "@/lib/db/settings";
+import { resetPlannerSettings, setCapacity, setOptionBuffer, setPlannerSlots, setRankingRules, setStillToDo } from "@/lib/db/planner";
 import { setExpectedLabels, setSubmittedStatuses } from "@/lib/db/track-settings";
 import { tryLock } from "@/lib/files/lock";
 import { moveStoredFiles, repointStoredFiles, type MoveResult, type RepointResult } from "@/lib/files/relocate";
@@ -95,5 +96,73 @@ export async function saveExpectedLabels(trackId: number, labels: string[]): Pro
     return r;
   } catch {
     return { ok: false, error: "Could not save. Try again." };
+  }
+}
+
+// Planner engine slots for a track (FR-8.1). Validated in the data layer: this runs on any POST.
+export async function savePlannerSlots(trackId: number, slots: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!Number.isInteger(trackId)) return { ok: false, error: "Track not found." };
+  try {
+    const r = await setPlannerSlots(trackId, slots);
+    if (r.ok) refresh();
+    return r;
+  } catch {
+    return { ok: false, error: "Could not save. Try again." };
+  }
+}
+
+// One option's buffer days (FR-8.2). Validated in the data layer: this runs on any POST.
+export async function saveOptionBuffer(optionId: unknown, days: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const r = await setOptionBuffer(optionId, days);
+    if (r.ok) refresh();
+    return r;
+  } catch {
+    return { ok: false, error: "Could not save. Try again." };
+  }
+}
+
+// Which status options are "still to do" for a track (FR-8.4). Validated in the data layer: this runs on any POST.
+export async function saveStillToDo(trackId: number, ids: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!Number.isInteger(trackId)) return { ok: false, error: "Track not found." };
+  try {
+    const r = await setStillToDo(trackId, ids);
+    if (r.ok) refresh();
+    return r;
+  } catch {
+    return { ok: false, error: "Could not save. Try again." };
+  }
+}
+
+// The overdue and no-deadline ranking rules (FR-8.5, FR-8.6). Validated in the data layer: this runs on any POST.
+export async function saveRankingRules(overdue: unknown, noDeadline: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const r = await setRankingRules(overdue, noDeadline);
+    if (r.ok) refresh();
+    return r;
+  } catch {
+    return { ok: false, error: "Could not save. Try again." };
+  }
+}
+
+// The weekly capacity (FR-8.8). Validated in the data layer: this runs on any POST.
+export async function saveCapacity(capacity: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const r = await setCapacity(capacity);
+    if (r.ok) refresh();
+    return r;
+  } catch {
+    return { ok: false, error: "Could not save. Try again." };
+  }
+}
+
+// Restores every planner rule to the shipped defaults (FR-8.11). Touches nothing outside the planner settings and buffers.
+export async function resetPlanner(): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await resetPlannerSettings();
+    refresh();
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not reset. Nothing was changed." };
   }
 }

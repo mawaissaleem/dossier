@@ -35,7 +35,11 @@ export async function setCellValue(applicationId: number, columnId: number, raw:
   if (parsed.value !== null && col.type === "single_select" && !optionBelongs(db, userId, columnId, parsed.value as number)) return { ok: false, error: "Choose a valid option." };
   if (statusNeedsReview(db, userId, { applicationId, trackId: app.trackId, column: { id: columnId, isStatus: col.isStatus }, optionId: parsed.value as number | null }))
     return { ok: false, error: NEEDS_REVIEW_ERROR, needsReview: true };
-  db.transaction((tx) => writeCell(tx, userId, applicationId, columnId, col.type, parsed.value)); // the status event commits with the cell
+  db.transaction((tx) => {
+    writeCell(tx, userId, applicationId, columnId, col.type, parsed.value); // the status event commits with the cell
+    // A table/board edit touches the application like an edit-form save does ("last touched", FR-8.6).
+    tx.update(applications).set({ updatedAt: new Date() }).where(and(eq(applications.id, applicationId), eq(applications.userId, userId))).run();
+  });
   return parsed;
 }
 

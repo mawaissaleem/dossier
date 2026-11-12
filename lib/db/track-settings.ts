@@ -13,7 +13,7 @@ export const submittedKey = (trackId: number) => `track.${trackId}.submitted_sta
 export const expectedLabelsKey = (trackId: number) => `track.${trackId}.expected_labels`;
 
 // Options of the track's current status column, in order. Empty when the track is not the user's or has no status column.
-function statusOptions(trackId: number) {
+export function statusOptions(trackId: number) {
   const userId = getUserId();
   return getDb()
     .select({ id: columnOptions.id, label: columnOptions.label, color: columnOptions.color })

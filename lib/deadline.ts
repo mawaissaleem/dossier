@@ -3,7 +3,7 @@
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Whole days since 1970-01-01 of a valid YYYY-MM-DD, or null (wrong shape, or a day that does not exist such as 2026-02-30).
-function dayNumber(s: unknown): number | null {
+export function dayNumber(s: unknown): number | null {
   const m = typeof s === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(s) : null;
   if (!m) return null;
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
