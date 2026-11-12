@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { listTracks } from "@/lib/db/tracks";
 import { listApplicationRows } from "@/lib/db/applications";
 import { listColumns } from "@/lib/db/columns";
-import { ApplicationsTable } from "./applications-table";
+import { TrackViews } from "./track-views";
 import { NewApplicationForm } from "./new-application-form";
 import { Page, PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ async function TrackView({ params }: { params: Promise<{ id: string }> }) {
       <div className="mb-4 rounded-lg border border-border bg-card p-3">
         <NewApplicationForm key={track.id} trackId={track.id} columns={cols} />
       </div>
-      <ApplicationsTable trackId={track.id} columns={cols} rows={rows} />
+      <TrackViews trackId={track.id} columns={cols} rows={rows} />
     </Page>
   );
 }

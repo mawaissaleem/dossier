@@ -16,6 +16,7 @@ import { dirname } from "node:path/posix";
 import { deleteApplication, type DeleteResult } from "../db/applications";
 import { abortFileDelete, beginFileDelete, finishFileDelete, listApplicationFilePaths } from "../db/files";
 import { getFilesRoot } from "../db/settings";
+import { beginWrite } from "./lock";
 import { resolveInRoot } from "./resolve";
 
 export type DeleteWithFilesResult = DeleteResult | { ok: true; trackId: number; warning: string };
@@ -43,7 +44,20 @@ async function unlinkStored(root: string, realRoot: string, rel: string): Promis
   });
 }
 
-export async function deleteApplicationWithFiles(id: number, expected: Expected): Promise<DeleteWithFilesResult> {
+// Both deletes register with the shared lock (lock.ts): refused while a move or restore runs, and those wait for them.
+const asWrite = async <T>(fn: () => Promise<T>): Promise<T | { ok: false; error: string }> => {
+  const write = beginWrite();
+  if (!write.ok) return write;
+  try {
+    return await fn();
+  } finally {
+    write.end();
+  }
+};
+
+export const deleteApplicationWithFiles = (id: number, expected: Expected): Promise<DeleteWithFilesResult> => asWrite(() => deleteApplicationUnlocked(id, expected));
+
+async function deleteApplicationUnlocked(id: number, expected: Expected): Promise<DeleteWithFilesResult> {
   const paths = await listApplicationFilePaths(id);
   const r = await deleteApplication(id, expected);
   if (!r.ok || paths.length === 0) return r;
@@ -109,7 +123,9 @@ export async function deleteApplicationWithFiles(id: number, expected: Expected)
 // except through the "missing" state the integrity check already reports, and never bytes without a row.
 export type DeleteFileResult = { ok: true; kept: boolean } | { ok: false; error: string };
 
-export async function deleteStoredFile(id: number, expectedSubmissions: number): Promise<DeleteFileResult> {
+export const deleteStoredFile = (id: number, expectedSubmissions: number): Promise<DeleteFileResult> => asWrite(() => deleteStoredFileUnlocked(id, expectedSubmissions));
+
+async function deleteStoredFileUnlocked(id: number, expectedSubmissions: number): Promise<DeleteFileResult> {
   const begin = await beginFileDelete(id, expectedSubmissions);
   if (!begin.ok) return begin;
   const undo = async (error: string): Promise<DeleteFileResult> => {

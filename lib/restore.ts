@@ -119,14 +119,6 @@ export function checkListing(entries: ZipEntryInfo[], limits: Limits = LIMITS): 
 // A backup whose database is from a newer version of the app cannot be read by this one: refuse rather than guess.
 export const schemaIsNewer = (backupLatest: number | null, appLatest: number | null) => backupLatest !== null && (appLatest === null || backupLatest > appLatest);
 
-// What the user is told about files that are missing from the zip or whose bytes differ from the recorded SHA-256.
-export function describeFileProblems(kind: "missing" | "changed", paths: string[]): string {
-  const list = paths.slice(0, 3).join(", ") + (paths.length > 3 ? ` and ${paths.length - 3} more` : "");
-  return kind === "missing"
-    ? `${paths.length} file${paths.length === 1 ? "" : "s"} the backup's database lists ${paths.length === 1 ? "is" : "are"} missing from the zip: ${list}. The backup is incomplete, so it was not restored.`
-    : `${paths.length} file${paths.length === 1 ? "" : "s"} in the backup ${paths.length === 1 ? "does" : "do"} not match the checksum recorded in the database: ${list}. The backup is damaged, so it was not restored.`;
-}
-
 export type Counts = { applications: number; columns: number; files: number; submissions: number; notes: number };
 export const COUNT_KEYS = ["applications", "columns", "files", "submissions", "notes"] as const;
 export const sameCounts = (a: Counts, b: Counts) => COUNT_KEYS.every((k) => a[k] === b[k]);

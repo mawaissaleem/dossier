@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkListing, describeFileProblems, entryKind, parseExpected, schemaIsNewer, type Limits, type ZipEntryInfo } from "@/lib/restore";
+import { checkListing, entryKind, parseExpected, schemaIsNewer, type Limits, type ZipEntryInfo } from "@/lib/restore";
 
 const e = (name: string, over: Partial<ZipEntryInfo> = {}): ZipEntryInfo => ({ name, flags: 0x800, method: 8, compressedSize: 5, uncompressedSize: 10, versionMadeBy: 3 << 8 | 20, externalAttributes: (0o100644 << 16) >>> 0, ...over });
 const good = [e("manifest.json"), e("database/dossier.db"), e("files/Acme/cv.pdf"), e("files/top.txt")];
@@ -86,11 +86,6 @@ describe("small helpers", () => {
     expect(schemaIsNewer(50, 100)).toBe(false);
     expect(schemaIsNewer(null, 100)).toBe(false);
     expect(schemaIsNewer(5, null)).toBe(true);
-  });
-
-  it("describeFileProblems names up to three files", () => {
-    expect(describeFileProblems("missing", ["a"])).toMatch(/^1 file the backup's database lists is missing from the zip: a\./);
-    expect(describeFileProblems("changed", ["a", "b", "c", "d", "e"])).toMatch(/5 files .* do not match .*: a, b, c and 2 more\./);
   });
 
   it("parseExpected takes only a date and five counts", () => {

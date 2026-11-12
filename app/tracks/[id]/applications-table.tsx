@@ -7,62 +7,39 @@ import type { ApplicationRow } from "@/lib/db/applications";
 import type { ColumnItem } from "@/lib/db/columns";
 import { columnId } from "@/lib/column-id";
 import { buildColumns, features, getRowId } from "@/lib/table";
-import { filterRows, parseFilters, withFilters, type Filter } from "@/lib/filter";
 import { nextSort, parseSort, sortRows, withSort, type Sort } from "@/lib/sort";
 import { addColumn, deleteColumn, fetchColumnDeleteImpact, moveColumn, renameColumn, setColumnHidden, setStatusColumn, setColumnDefault } from "@/app/actions/columns";
 import { addOption, deleteOption, fetchOptionDeleteImpact, reorderOptions, updateOption } from "@/app/actions/options";
 import { AddColumnDialog } from "./add-column-dialog";
 import { ArrowDownIcon, ArrowUpIcon, CalendarIcon, ChevronsUpDownIcon, HashIcon, LinkIcon, SquareCheckIcon, TypeIcon } from "lucide-react";
-import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
 import type { ColumnType } from "@/lib/db/schema";
-import { ColumnMenu, HiddenColumns } from "./column-menu";
-import { FilterBar } from "./filter-bar";
-import { QuickFilters } from "./quick-filters";
-import { quickColumns } from "@/lib/quick-filter";
+import { ColumnMenu } from "./column-menu";
 import { columnWidth } from "@/lib/virtual-rows";
 import { VirtualRows } from "./virtual-rows";
-import { Button } from "@/components/ui/button";
 
 const TYPE_ICONS: Record<ColumnType, typeof TypeIcon> = { text: TypeIcon, number: HashIcon, date: CalendarIcon, link: LinkIcon, checkbox: SquareCheckIcon, single_select: ChevronsUpDownIcon };
 const headCell = "sticky top-0 z-20 h-9 border-b border-r border-border bg-card px-2 text-left text-xs font-medium text-muted-foreground";
 
-// Props are plain data from the server page. The body only mounts the rows near the viewport (virtual-rows.tsx, task 4.5); sort and filter still run on all rows here.
+// `rows` are the rows left after the filters, which track-views.tsx owns (one filter state for table and board, with the empty states).
+// The body only mounts the rows near the viewport (virtual-rows.tsx, task 4.5); the sort still runs on all `rows` here.
 export function ApplicationsTable({ trackId, columns, rows }: { trackId: number; columns: ColumnItem[]; rows: ApplicationRow[] }) {
   const defs = useMemo(() => buildColumns(columns), [columns]);
   const byId = useMemo(() => new Map(columns.map((c) => [columnId(c), c])), [columns]);
   const visible = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
-  const hidden = columns.filter((c) => c.hidden);
   // Sort lives in the URL (?sort=col-3&dir=asc) and runs here on the rows the server sent; a hidden or unknown column means default order.
   const params = useSearchParams();
   const sort = useMemo(() => parseSort(params.get("sort"), params.get("dir"), visible), [params, visible]);
-  // Filters live in the URL too (?f=<columnId>:<optId>.<optId>&f=..., see lib/filter.ts), may use hidden columns, and run before the sort.
-  // Keyed on the f params as a string, so sorting does not re-filter.
-  const selects = useMemo(() => columns.filter((c) => c.type === "single_select"), [columns]);
-  const quick = useMemo(() => quickColumns(selects), [selects]);
-  const fKey = params.getAll("f").join("\n");
-  const filters = useMemo(() => parseFilters(fKey ? fKey.split("\n") : [], selects), [fKey, selects]);
-  const filtered = useMemo(() => filterRows(rows, selects, filters), [rows, selects, filters]);
-  const sorted = useMemo(() => sortRows(filtered, visible, sort), [filtered, visible, sort]);
+  const sorted = useMemo(() => sortRows(rows, visible, sort), [rows, visible, sort]);
   // replaceState (synced with useSearchParams by Next) keeps the click instant: no server round trip, no history entry per click.
   const setQuery = (q: string) => window.history.replaceState(null, "", q ? `?${q}` : window.location.pathname);
   const setSort = (s: Sort | null) => setQuery(withSort(params.toString(), s));
-  const setFilters = (f: Filter[]) => setQuery(withFilters(params.toString(), f));
   const table = useTable({ features, columns: defs, data: sorted, getRowId });
   const [box, setBox] = useState<HTMLDivElement | null>(null); // the scroll area, which the body's virtualizer watches
   const widths = [columnWidth("title"), ...visible.map((c) => columnWidth(c.type)), columnWidth("add")];
 
   return (
     <>
-    <FilterBar
-      columns={selects}
-      filters={filters}
-      onChange={setFilters}
-      shown={sorted.length}
-      total={rows.length}
-      trailing={hidden.length > 0 && <HiddenColumns columns={hidden} onShow={(id) => setColumnHidden(trackId, id, false)} />}
-    />
-    {quick.length > 0 && <QuickFilters quick={quick} columns={selects} rows={rows} filters={filters} onChange={setFilters} />}
     {/* The table scrolls inside its own area (both ways, so the sticky header and Title column work); the page never scrolls sideways. */}
     <div ref={setBox} className="max-h-[75vh] scroll-pt-10 overflow-auto rounded-lg border border-border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring">
     {/* Fixed layout with a colgroup: widths do not depend on which rows are mounted. Rows are 1-based in ARIA and the header is row 1. */}
@@ -132,12 +109,6 @@ export function ApplicationsTable({ trackId, columns, rows }: { trackId: number;
       <VirtualRows box={box} rows={sorted} columns={visible} />
     </table>
     </div>
-    {rows.length === 0 && <EmptyState title="No applications yet" description="Add one with a title in the form above." className="mt-4" />}
-    {rows.length > 0 && sorted.length === 0 && (
-      <EmptyState title="No applications match these filters" description="Change a filter or clear them to see all applications." className="mt-4">
-        <Button type="button" variant="outline" size="sm" onClick={() => setFilters([])}>Clear filters</Button>
-      </EmptyState>
-    )}
     </>
   );
 }

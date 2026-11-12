@@ -13,9 +13,10 @@ import { createApplication } from "@/lib/db/applications";
 import { listLiveFiles, switchFilesRoot } from "@/lib/db/files";
 import { files, tracks } from "@/lib/db/schema";
 import { getFilesRoot, setFilesRoot } from "@/lib/db/settings";
-import { beginUpload, tryLock } from "@/lib/files/lock";
+import { beginWrite, tryLock } from "@/lib/files/lock";
 import { verifyStoredFile } from "@/lib/files/open";
 import { moveStoredFiles } from "@/lib/files/relocate";
+import { deleteApplicationWithFiles, deleteStoredFile } from "@/lib/files/remove";
 import { storeUploadedFile } from "@/lib/files/store";
 import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
 import { readZip } from "./helpers/zip";
@@ -97,17 +98,28 @@ describe("Move (AT-14, first way)", () => {
     expect(await getFilesRoot()).toBe(to);
   });
 
-  it("a copy that fails its checksum rolls back: no partial copies, the old root and files stay in use", async () => {
+  it("a copy that differs from its source rolls back: no partial copies, the old root and files stay in use", async () => {
+    const to = sub("new");
+    const badCopy = (async (_src: string, dst: string) => writeFileSync(dst, "garbled")) as never;
+    const r = await moveStoredFiles(to, await impact(), { rename: exdev as never, copyFile: badCopy });
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.error).toMatch(/did not copy correctly: the copy differs from the original.*Your files folder was not changed/);
+    expect(readdirSync(to)).toEqual([]);
+    expect(await getFilesRoot()).toBe(root);
+    expect(readFileSync(join(root, f1.relativePath), "utf8")).toBe("alpha");
+  });
+
+  it("across file systems, a file already changed since upload (AT-8) moves as it is and stays flagged, as a rename would", async () => {
     const to = sub("new");
     chmodSync(join(root, f2.relativePath), 0o644);
     writeFileSync(join(root, f2.relativePath), "tampered"); // no longer matches the recorded hash
     const r = await moveStoredFiles(to, await impact(), { rename: exdev as never });
-    expect(r.ok).toBe(false);
-    expect(!r.ok && r.error).toMatch(/did not copy correctly.*Your files folder was not changed/);
-    expect(readdirSync(to)).toEqual([]);
-    expect(await getFilesRoot()).toBe(root);
-    expect(readFileSync(join(root, f1.relativePath), "utf8")).toBe("alpha");
-    expect(readFileSync(join(root, f2.relativePath), "utf8")).toBe("tampered");
+    expect(r).toMatchObject({ ok: true, copied: 2 });
+    expect(await getFilesRoot()).toBe(to);
+    expect(readFileSync(join(to, f2.relativePath), "utf8")).toBe("tampered");
+    expect(statSync(join(to, f2.relativePath)).mode & 0o222).toBe(0);
+    expect(rows().find((x) => x.id === f2.id)?.integrity).toBe("mismatch");
+    expect(rows().find((x) => x.id === f1.id)?.integrity).toBe("ok");
   });
 
   it("a rename that fails half way puts the first file back and leaves the old root in use", async () => {
@@ -278,12 +290,35 @@ describe("the shared lock", () => {
     expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/being changed/) });
     mv.release();
 
-    const end = beginUpload();
-    expect(end).not.toBeNull();
+    const w = beginWrite();
+    if (!w.ok) throw new Error("write");
     const to = sub("new");
-    expect(await moveFilesRoot(to, await impact())).toMatchObject({ ok: false, error: expect.stringMatching(/upload is in progress/) });
-    end!();
+    expect(await moveFilesRoot(to, await impact())).toMatchObject({ ok: false, error: expect.stringMatching(/upload or delete is in progress/) });
+    w.end();
     expect((await moveFilesRoot(to, await impact())).ok).toBe(true);
     expect(rows().length).toBe(2); // the refused upload left no row
+  });
+
+  it("uploads and deletes are refused during a restore or a move, and a restore or move does not start while one runs", async () => {
+    for (const job of ["restore", "move"] as const) {
+      const held = tryLock(job);
+      if (!held.ok) throw new Error("lock");
+      const up = await storeUploadedFile({ applicationId: appA, file: new File(["z"], "z.pdf"), label: "CV", uploadDate: "2026-11-08" });
+      expect(up).toMatchObject({ ok: false, error: expect.stringMatching(job === "restore" ? /restore is running/ : /being changed/) });
+      expect(await deleteStoredFile(f1.id, 0)).toMatchObject({ ok: false });
+      expect(await deleteApplicationWithFiles(appB, { cellCount: 0, fileCount: 1, submissionCount: 0, noteCount: 0 })).toMatchObject({ ok: false });
+      held.release();
+    }
+    expect(rows().length).toBe(2); // nothing was stored or deleted
+    expect(readFileSync(join(root, f1.relativePath), "utf8")).toBe("alpha");
+
+    const w = beginWrite(); // a running upload or delete
+    if (!w.ok) throw new Error("write");
+    for (const job of ["restore", "move"] as const) expect(tryLock(job)).toMatchObject({ ok: false, error: expect.stringMatching(/upload or delete is in progress/) });
+    const b = tryLock("backup"); // a backup does not wait for writes
+    expect(b.ok).toBe(true);
+    if (b.ok) b.release();
+    w.end();
+    expect(await deleteStoredFile(f1.id, 0)).toEqual({ ok: true, kept: false });
   });
 });

@@ -14,6 +14,12 @@ const fmtSize = (n: number) => (n < 1024 ? `${n} B` : n < 1024 ** 2 ? `${(n / 10
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 const summary = (c: Counts) => `${plural(c.applications, "application")}, ${plural(c.columns, "column")}, ${plural(c.files, "file")}, ${plural(c.submissions, "submission")} and ${plural(c.notes, "note")}`;
 const when = (iso: string) => new Date(iso).toLocaleString();
+const names = (p: string[]) => p.slice(0, 3).join(", ") + (p.length > 3 ? ` and ${p.length - 3} more` : "");
+// Files the backup's database lists that are changed or absent in the zip: restored flagged, as Open would find them (not refused).
+const flagged = (i: BackupInfo) => [
+  ...(i.changed.length ? [`${plural(i.changed.length, "file")} will be restored flagged as changed (${names(i.changed)}): the backup holds ${i.changed.length === 1 ? "it" : "them"} as ${i.changed.length === 1 ? "it was" : "they were"}, not as uploaded.`] : []),
+  ...(i.missing.length ? [`${plural(i.missing.length, "file")} will be restored flagged as missing (${names(i.missing)}): ${i.missing.length === 1 ? "it is" : "they are"} not in the backup.`] : []),
+].join(" ");
 
 type Impact = { ok: true; counts: Counts; destination: string | null } | { ok: false; error: string };
 type Done = { safetyBackupPath: string; createdAt: string; counts: Counts; warnings: string[] };
@@ -107,7 +113,8 @@ export function RestoreForm({ destination }: { destination: string | null }) {
       {info && (
         <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 text-sm">
           <p role="status">
-            Backup made <time dateTime={info.createdAt}>{when(info.createdAt)}</time>: {summary(info.counts)}. The zip holds {plural(info.fileCount, "file")} ({fmtSize(info.filesBytes)}) and every one matches its checksum.
+            Backup made <time dateTime={info.createdAt}>{when(info.createdAt)}</time>: {summary(info.counts)}. The zip holds {plural(info.fileCount, "file")} ({fmtSize(info.filesBytes)}).
+            {flagged(info) ? ` ${flagged(info)}` : " Every file the backup's database lists is in it and matches its checksum."}
             {info.extraFiles > 0 && ` ${plural(info.extraFiles, "file")} in it ${info.extraFiles === 1 ? "is" : "are"} not listed in the database; they are restored as they are.`}
             {info.schemaOlder && " It is from an older version of Dossier and is upgraded while restoring."}
           </p>
@@ -129,6 +136,7 @@ export function RestoreForm({ destination }: { destination: string | null }) {
                 ) : impact.ok ? (
                   <>
                     This replaces <strong>all</strong> of Dossier with the backup made on {when(info.createdAt)}. You will lose what is in Dossier now: {summary(impact.counts)}. They are replaced by the backup&apos;s {summary(info.counts)}.{" "}
+                    {flagged(info) && <>{flagged(info)}{" "}</>}
                     {info.fileCount > 0 ? "Everything in your files folder is replaced by the backup's files." : "The backup holds no files, so your files folder is left as it is."}{" "}
                     {impact.destination
                       ? <>Before anything is replaced, Dossier saves a safety backup of your current data to <code className="break-all">{impact.destination}</code>; if that fails, nothing changes.</>

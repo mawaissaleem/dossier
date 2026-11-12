@@ -2,20 +2,21 @@
 // synchronous renames, so no request can run between them.
 //  - stagedDatabasePath: where the backup's database copy is unpacked, next to the live file (same file system, so the final move is a rename)
 //  - inspectBackupDb: opens the unpacked copy read-only and judges it (integrity, tables, schema version, counts, its file rows)
-//  - finalizeStagedDb: on the copy only: run pending migrations (older backup), put this computer's own settings back, re-check
+//  - finalizeStagedDb: on the copy only: run pending migrations (older backup), put this computer's own settings back, record what the
+//    reader found for each live file (ok / mismatch / missing, so a restored changed or missing file is flagged at once), re-check
 //  - swapDatabase: closeDb(), the live file (and a stale -wal/-shm) moves aside, the copy takes its place; undo() puts everything back
 // The migrations folder is the app's own ./drizzle (the same one scripts/migrate.ts and the tests use), not user data.
 import { randomBytes } from "node:crypto";
 import { existsSync, renameSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import Database from "better-sqlite3";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { checkRelativePath } from "../files/relative";
 import { COUNT_KEYS, KEPT_SETTING_KEYS, schemaIsNewer, STAGE_PREFIX, type Counts } from "../restore";
 import { closeDb, getDb } from "./client";
-import { settings } from "./schema";
+import { files, settings, type IntegrityState } from "./schema";
 import { getUserId } from "./user";
 
 const MIGRATIONS = "./drizzle";
@@ -90,8 +91,13 @@ export function inspectBackupDb(file: string): { ok: true; info: BackupDbInfo } 
 // Reads this computer's own settings from the live database (call it after the safety backup, which updates last_backup_at).
 const keptRows = () => getDb().select().from(settings).where(and(eq(settings.userId, getUserId()), inArray(settings.key, [...KEPT_SETTING_KEYS]))).all();
 
-// On the staged copy only: migrate, put the kept settings back (a key unset here is removed from the copy), check again.
-export function finalizeStagedDb(file: string): void {
+// Relative paths of the backup's live files, by what the reader found in the zip.
+export type FileFlags = { ok: string[]; changed: string[]; missing: string[] };
+const FLAG_STATE: Record<keyof FileFlags, IntegrityState> = { ok: "ok", changed: "mismatch", missing: "missing" };
+
+// On the staged copy only: migrate, put the kept settings back (a key unset here is removed from the copy), flag the files, check again.
+// Only rows whose state changes are written, so a clean backup restores byte-identical rows (and stale flags from backup time are cleared).
+export function finalizeStagedDb(file: string, flags: FileFlags): void {
   const sqlite = new Database(file);
   try {
     sqlite.pragma("foreign_keys = ON");
@@ -100,6 +106,12 @@ export function finalizeStagedDb(file: string): void {
     db.delete(settings).where(and(eq(settings.userId, getUserId()), inArray(settings.key, [...KEPT_SETTING_KEYS]))).run();
     const kept = keptRows();
     if (kept.length) db.insert(settings).values(kept.map((r) => ({ userId: r.userId, key: r.key, value: r.value, createdAt: r.createdAt, updatedAt: r.updatedAt }))).run();
+    const now = new Date();
+    db.transaction((tx) => {
+      for (const k of Object.keys(FLAG_STATE) as (keyof FileFlags)[]) {
+        for (const p of flags[k]) tx.update(files).set({ integrity: FLAG_STATE[k], checkedAt: now }).where(and(eq(files.relativePath, p), isNull(files.deletedAt), ne(files.integrity, FLAG_STATE[k]))).run();
+      }
+    });
     const problem = integrityProblem(sqlite);
     if (problem) throw new Error(problem);
   } finally {

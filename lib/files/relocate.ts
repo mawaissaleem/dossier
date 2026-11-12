@@ -5,7 +5,8 @@
 // moveStoredFiles: the new folder must exist (as for any files root), be empty, and not contain, sit inside or equal the current root or the backup folder.
 //  1. every live file, in id order: lstat the source (must be a plain file), then rename it into the same relative path in the new folder (same file
 //     system: nothing is read or written). If the rename says EXDEV (another file system) the file is COPIED instead (COPYFILE_EXCL), its SHA-256 is
-//     checked against the database, and the copy is made read-only (0444, as store.ts does).
+//     checked against the database, and the copy is made read-only (0444, as store.ts does). A copy that differs from the record but matches its
+//     source is a file already changed since upload: it moves as it is and is flagged 'mismatch' (a rename would carry it the same way).
 //  2. switchFilesRoot.  3. only after the switch: remove the sources of copied files, then the old application folders that are now empty (rmdir only).
 // Any failure in 1-2 puts everything back (renames reversed, copies removed, the folders made removed) and the old root stays in use. A failure in
 // 3 is a warning: the setting has switched and the data is safe in the new folder. Files Dossier did not store (dropped in by hand, FR-5.11) are never
@@ -21,7 +22,7 @@ import { constants, createReadStream } from "node:fs";
 import { chmod, copyFile, lstat, mkdir, readdir, realpath, rename, rmdir, rm, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { getBackupDestination } from "../db/backup";
-import { listLiveFiles, switchFilesRoot } from "../db/files";
+import { listLiveFiles, recordIntegrity, switchFilesRoot } from "../db/files";
 import { getFilesRoot } from "../db/settings";
 import { parseExpected, problemsMessage, sumBytes, targetRefusal, type LiveFile } from "../relocate";
 import { resolveInRoot } from "./resolve";
@@ -52,8 +53,9 @@ function foldersBelow(top: string, abs: string[]): string[] {
 
 type Step = { src: string; dst: string; copied: boolean };
 
-export async function moveStoredFiles(input: unknown, expected: unknown, deps: { rename?: typeof rename } = {}): Promise<MoveResult> {
+export async function moveStoredFiles(input: unknown, expected: unknown, deps: { rename?: typeof rename; copyFile?: typeof copyFile } = {}): Promise<MoveResult> {
   const move = deps.rename ?? rename;
+  const copy = deps.copyFile ?? copyFile;
   const exp = parseExpected(expected);
   if (!exp) return fail("Moving must be confirmed.");
   const v = await validateFilesRoot(input);
@@ -91,9 +93,14 @@ export async function moveStoredFiles(input: unknown, expected: unknown, deps: {
         done.push({ src, dst, copied: false });
       } catch (e) {
         if (code(e) !== "EXDEV") throw e;
-        await copyFile(src, dst, constants.COPYFILE_EXCL);
+        await copy(src, dst, constants.COPYFILE_EXCL);
         done.push({ src, dst, copied: true }); // registered before the check, so a bad copy is removed by the rollback
-        if ((await sha256Of(dst)) !== f.sha256) throw new Shown(`"${f.relativePath}" did not copy correctly: its checksum does not match the one recorded when it was uploaded. Run Check files on that application.`);
+        const got = await sha256Of(dst);
+        if (got !== f.sha256) {
+          // A file already changed since upload (AT-8) is copied as it is and stays flagged, as a same-drive rename would carry it.
+          if (got !== (await sha256Of(src))) throw new Shown(`"${f.relativePath}" did not copy correctly: the copy differs from the original. Check the new drive and try again.`);
+          await recordIntegrity(f.id, "mismatch");
+        }
         await chmod(dst, 0o444);
       }
     }

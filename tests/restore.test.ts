@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
@@ -16,6 +16,7 @@ import * as dbRestore from "@/lib/db/restore";
 import { applications, columns, tracks } from "@/lib/db/schema";
 import { getFilesRoot, getSetting, setFilesRoot } from "@/lib/db/settings";
 import { createBackup } from "@/lib/files/backup";
+import { verifyStoredFile } from "@/lib/files/open";
 import { checkBackup, restoreFromBackup } from "@/lib/files/restore";
 import { storeUploadedFile } from "@/lib/files/store";
 import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
@@ -92,6 +93,7 @@ afterEach(() => {
 });
 
 const createdAt = () => new Date(2026, 10, 9, 10, 0).toISOString();
+const integrity = () => Object.fromEntries((getDb().$client.prepare("SELECT relative_path, integrity FROM files").all() as { relative_path: string; integrity: string }[]).map((r) => [r.relative_path, r.integrity]));
 const restore = (zip = good) => restoreFromBackup(zip, { createdAt: createdAt(), counts: dbRestore.currentCounts() });
 const wipe = () => {
   getDb().delete(applications).run();
@@ -252,6 +254,67 @@ describe("AT-13: back up, wipe, restore", () => {
   });
 });
 
+describe("a backup of files the app flags (changed or missing) restores, flagged (NFR-5)", () => {
+  const fileRows = () => getDb().$client.prepare("SELECT id, relative_path AS rel, sha256 FROM files ORDER BY id").all() as { id: number; rel: string; sha256: string }[];
+  const backUp = async (minute: number) => {
+    const b = await createBackup(dest, new Date(2026, 10, 9, 13, minute));
+    if (!b.ok) throw new Error(b.error);
+    return b;
+  };
+  const restoreZip = (b: { path: string; createdAt: string }) => restoreFromBackup(b.path, { createdAt: b.createdAt, counts: dbRestore.currentCounts() });
+
+  it("AT-8 state: a file edited outside the app is backed up, checked, restored as it is and flagged mismatch; the others are intact", async () => {
+    const [cv, ...others] = fileRows();
+    chmodSync(join(root, cv.rel), 0o644);
+    writeFileSync(join(root, cv.rel), "edited outside Dossier");
+    const b = await backUp(0);
+    wipe();
+    expect(await checkBackup(b.path)).toMatchObject({ ok: true, info: { changed: [cv.rel], missing: [] } });
+    expect((await restoreZip(b)).ok).toBe(true);
+    expect(integrity()[cv.rel]).toBe("mismatch");
+    expect(await verifyStoredFile(cv.id)).toMatchObject({ ok: true, integrity: "mismatch" });
+    for (const o of others) {
+      expect(sha(join(root, o.rel))).toBe(o.sha256);
+      expect(integrity()[o.rel]).toBe("ok");
+    }
+  });
+
+  it("a stored file deleted outside the app before the backup is restored as a missing row, and Open says missing", async () => {
+    const [, letter] = fileRows();
+    rmSync(join(root, letter.rel));
+    const b = await backUp(1);
+    wipe();
+    expect(await checkBackup(b.path)).toMatchObject({ ok: true, info: { changed: [], missing: [letter.rel] } });
+    expect((await restoreZip(b)).ok).toBe(true);
+    expect(integrity()[letter.rel]).toBe("missing");
+    expect(await verifyStoredFile(letter.id)).toMatchObject({ ok: false, kind: "missing" });
+  });
+
+  it("a safety backup taken while a file is flagged can itself be restored, and a clean restore clears the flag", async () => {
+    const [cv] = fileRows();
+    chmodSync(join(root, cv.rel), 0o644);
+    writeFileSync(join(root, cv.rel), "edited outside Dossier");
+    expect(await verifyStoredFile(cv.id)).toMatchObject({ integrity: "mismatch" });
+    const r = await restore(); // the clean backup; the safety backup holds the edited file
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(integrity()[cv.rel]).toBe("ok");
+    const safety = await checkBackup(r.safetyBackupPath);
+    expect(safety).toMatchObject({ ok: true, info: { changed: [cv.rel], missing: [] } });
+    if (!safety.ok) return;
+    expect((await restoreZip({ path: r.safetyBackupPath, createdAt: safety.info.createdAt })).ok).toBe(true);
+    expect(integrity()[cv.rel]).toBe("mismatch");
+    expect(readFileSync(join(root, cv.rel), "utf8")).toBe("edited outside Dossier");
+  });
+
+  it("a clean backup restores byte-identical file rows (no flag is rewritten)", async () => {
+    const before = getDb().$client.prepare("SELECT * FROM files ORDER BY id").all();
+    wipe();
+    expect((await restore()).ok).toBe(true);
+    expect(getDb().$client.prepare("SELECT * FROM files ORDER BY id").all()).toEqual(before);
+  });
+});
+
 describe("validation refuses before anything is changed", () => {
   const firstFile = () => [...readZip(good).keys()].find((n) => n.startsWith("files/") && n.endsWith("CV.pdf"))!;
   const letter = () => [...readZip(good).keys()].find((n) => n.endsWith("Letter.txt"))!;
@@ -328,9 +391,14 @@ describe("validation refuses before anything is changed", () => {
     await refused(craft("c3.zip", (m) => m.set("database/dossier.db", readFileSync(other))), /not a Dossier database/);
   });
 
-  it("refuses a file whose bytes do not match the recorded SHA-256, and a listed file that is missing", async () => {
-    await refused(craft("h1.zip", (m) => m.set(firstFile(), Buffer.from("cv version X"))), /not match the checksum.*CV\.pdf/);
-    await refused(craft("h2.zip", (m) => m.delete(letter())), /missing from the zip.*Letter\.txt/);
+  it("does not refuse a file whose bytes differ from the recorded SHA-256, or a listed file that is missing: it lists and flags them", async () => {
+    const cv = firstFile().slice("files/".length), lt = letter().slice("files/".length);
+    const zip = craft("h1.zip", (m) => { m.set(firstFile(), Buffer.from("cv version X")); m.delete(letter()); });
+    expect(await checkBackup(zip)).toMatchObject({ ok: true, info: { changed: [cv], missing: [lt], fileCount: 2 } });
+    expect((await restore(zip)).ok).toBe(true);
+    expect(integrity()).toMatchObject({ [cv]: "mismatch", [lt]: "missing" });
+    expect(readFileSync(join(root, cv), "utf8")).toBe("cv version X"); // restored as it is in the backup
+    expect(existsSync(join(root, lt))).toBe(false);
   });
 
   it("refuses a zip that sits inside the files folder (a restore would delete it)", async () => {

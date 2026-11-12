@@ -4,10 +4,13 @@
 //   1. the path (a full path to a regular file, not inside the files folder: a restore replaces that folder and would delete the zip)
 //   2. the entry list from the central directory (checkListing), the manifest (format and version), then the database copy unpacked
 //      and opened read-only (integrity, tables, schema not newer than this app, its file rows with safe paths)
-//   3. every file the database lists is in the zip, and its bytes hash to the recorded SHA-256. Stricter than a warning on purpose: a
-//      backup that cannot reproduce a recorded file is not a full backup (NFR-3, NFR-5). Files in the zip the database does not list
-//      (stray files in the folder when the backup was made) are NOT refused: they are restored as they were, and counted in the check.
-//      They are not hash-verified, since nothing records a hash for them.
+//   3. every file the database lists is looked up in the zip and hashed. One that is absent or whose bytes differ from the recorded SHA-256
+//      does NOT refuse the backup: since 8.6/8.7 a changed or missing file is a normal, flagged state of the app, and Back up now copies
+//      what is on disk, so refusing would make every backup of that state unrestorable (NFR-5). Such files are listed in the result
+//      (`changed`, `missing`, shown in the check and the confirm), a changed one is restored as it is, and the restored rows are flagged
+//      'mismatch' / 'missing' (finalizeStagedDb), exactly as Open would find them. Files in the zip the database does not list (stray files
+//      in the folder when the backup was made) are restored as they were and counted in the check; nothing records a hash for them.
+//      Structural problems still refuse: the entry rules, the manifest, the database's integrity, a newer schema, unsafe paths.
 //   4. the manifest's file count and size match the zip, and there is room on disk for what will be unpacked
 // With `files.out` it also unpacks every file into a staging folder (mode 0444 as stored files are), hashing as it writes.
 //
@@ -17,7 +20,7 @@
 //   b. the data counts the dialog showed must still match (else refuse: "check again")
 //   c. SAFETY BACKUP of the current state with createBackup into the saved backup folder. No saved folder, or the backup fails: stop,
 //      nothing changed. (Its path is in the result.)
-//   d. finalize the staged database (migrate an older backup, put this computer's settings back, re-check)
+//   d. finalize the staged database (migrate an older backup, put this computer's settings back, flag changed/missing files, re-check)
 //   e. swap the files (only when the backup holds files), then the database; verify the restored counts; any failure rolls both back
 //   f. the old database and the old files are deleted; a failure only becomes a warning (the restore already worked)
 // Files swap: a files folder can be a mount point or a user's own folder, so it is not renamed. Its CONTENTS move into a hidden
@@ -37,14 +40,15 @@ import { pipeline } from "node:stream/promises";
 import { openPromise, type Entry, type ZipFile } from "yauzl";
 import { DB_ENTRY, FILES_PREFIX, MANIFEST_NAME, parseManifest } from "../backup";
 import { getBackupDestination } from "../db/backup";
-import { currentCounts, finalizeStagedDb, inspectBackupDb, removeStaged, stagedDatabasePath, swapDatabase } from "../db/restore";
+import { currentCounts, finalizeStagedDb, inspectBackupDb, type FileFlags, removeStaged, stagedDatabasePath, swapDatabase } from "../db/restore";
 import { getFilesRoot } from "../db/settings";
-import { checkListing, describeFileProblems, LIMITS, parseExpected, sameCounts, STAGE_PREFIX, type Counts, type ZipEntryInfo } from "../restore";
+import { checkListing, LIMITS, parseExpected, sameCounts, STAGE_PREFIX, type Counts, type ZipEntryInfo } from "../restore";
 import { createBackup } from "./backup";
 import { isFullyAbsolute } from "./relative";
 import { isInside, validateFilesRoot } from "./root";
 
-export type BackupInfo = { createdAt: string; counts: Counts; fileCount: number; filesBytes: number; extraFiles: number; schemaOlder: boolean };
+// `changed` / `missing`: relative paths of files the backup's database lists whose bytes differ from the record / that are not in the zip.
+export type BackupInfo = { createdAt: string; counts: Counts; fileCount: number; filesBytes: number; extraFiles: number; schemaOlder: boolean; changed: string[]; missing: string[] };
 export type CheckResult = { ok: true; info: BackupInfo } | { ok: false; error: string };
 export type RestoreResult = { ok: true; safetyBackupPath: string; createdAt: string; counts: Counts; warnings: string[] } | { ok: false; error: string };
 
@@ -117,7 +121,7 @@ async function checkSpace(needs: { dir: string; bytes: number }[]): Promise<void
 }
 
 type FilesTarget = { out: string } | { refuse: string };
-type Read = { info: BackupInfo; counts: Counts };
+type Read = { info: BackupInfo; counts: Counts; flags: FileFlags };
 
 // `dbOut`: where the database copy is unpacked (a path that does not exist yet, in a folder that does). `files`: absent = only
 // hash the files (the check); `out` = unpack them into that (not yet existing) folder; `refuse` = the message to give if the backup has files.
@@ -164,8 +168,6 @@ async function readBackup(zipPathInput: unknown, dbOut: string, files?: FilesTar
     if (!db.ok) return refuse(db.error);
 
     const listed = new Set(db.info.filePaths.map((r) => r.relativePath));
-    const missing = [...listed].filter((p) => !listing.files.has(p));
-    if (missing.length) return refuse(describeFileProblems("missing", missing));
 
     const outDir = files && "out" in files ? files.out : null;
     const unpack = async (rel: string) => {
@@ -176,13 +178,16 @@ async function readBackup(zipPathInput: unknown, dbOut: string, files?: FilesTar
       if (out) await chmod(out, 0o444); // stored files are read-only (FR-5.5); the zip's own modes are never applied
       return sha;
     };
-    const changed: string[] = [];
-    for (const r of db.info.filePaths) if ((await unpack(r.relativePath)) !== r.sha256) changed.push(r.relativePath);
-    if (changed.length) return refuse(describeFileProblems("changed", changed));
+    const flags: FileFlags = { ok: [], changed: [], missing: [] };
+    for (const r of db.info.filePaths) {
+      if (!listing.files.has(r.relativePath)) flags.missing.push(r.relativePath);
+      else flags[(await unpack(r.relativePath)) === r.sha256 ? "ok" : "changed"].push(r.relativePath);
+    }
     const extras = [...listing.files.keys()].filter((p) => !listed.has(p));
     if (outDir) for (const rel of extras) await unpack(rel);
 
-    return { info: { createdAt: manifest.manifest.createdAt, counts: db.info.counts, fileCount: listing.files.size, filesBytes, extraFiles: extras.length, schemaOlder: db.info.schemaOlder }, counts: db.info.counts };
+    const info = { createdAt: manifest.manifest.createdAt, counts: db.info.counts, fileCount: listing.files.size, filesBytes, extraFiles: extras.length, schemaOlder: db.info.schemaOlder, changed: flags.changed, missing: flags.missing };
+    return { info, counts: db.info.counts, flags };
   } finally {
     zip.close();
   }
@@ -266,7 +271,7 @@ export async function restoreFromBackup(zipPath: unknown, expectedInput: unknown
     const safety = await createBackup(destination);
     if (!safety.ok) return fail(`Nothing was changed: the safety backup of your current data failed. ${safety.error}`);
 
-    finalizeStagedDb(stagedDb);
+    finalizeStagedDb(stagedDb, read.flags);
     try {
       if (read.info.fileCount > 0) filesSwap = await swapFiles(rootPath!, stageDir!); // the backup has files, so a usable root was required above
       dbSwap = swapDatabase(stagedDb);
