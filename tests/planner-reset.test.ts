@@ -151,14 +151,25 @@ describe("resetPlannerSettings", () => {
     expect(await getCapacity()).toBe(9);
 
     vi.mocked(refresh).mockClear();
-    expect(await resetPlanner()).toEqual({ ok: false, error: "Could not reset. Nothing was changed." });
+    expect(await resetPlanner(true)).toEqual({ ok: false, error: "Could not reset. Nothing was changed." });
     expect(refresh).not.toHaveBeenCalled();
   });
 
   it("the action refreshes on success", async () => {
     runSeed();
-    expect(await resetPlanner()).toEqual({ ok: true });
+    expect(await resetPlanner(true)).toEqual({ ok: true });
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("the action refuses without a literal true confirm and changes nothing (NFR-4)", async () => {
+    runSeed();
+    await setCapacity(9);
+    vi.mocked(refresh).mockClear();
+    for (const bad of [false, undefined, "true", 1, null]) {
+      expect(await resetPlanner(bad as never), String(bad)).toMatchObject({ ok: false, error: expect.stringContaining("must be confirmed") });
+    }
+    expect(await getCapacity()).toBe(9);
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it("works with no tracks and with another user's rows untouched", async () => {

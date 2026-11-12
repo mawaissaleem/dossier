@@ -16,6 +16,7 @@ import type { ReadableStream as NodeWebStream } from "node:stream/web";
 import { ZipArchive } from "archiver";
 import { listApplicationFiles } from "../db/files";
 import { verifyStoredFile } from "./open";
+import { checkRelativePath } from "./relative";
 
 export type ZipProblem = { storedName: string; kind: "changed" | "missing" | "unreadable" | "too-large" };
 // includable: how many files ?anyway=1 would put in the zip (ok or changed, small enough to read).
@@ -23,12 +24,17 @@ export type ZipPlan =
   | { ok: true; names: { id: number; storedName: string }[]; problems: ZipProblem[]; includable: number }
   | { ok: false; kind: "none" | "setup"; error: string };
 
+// An entry name comes from a database row. A tampered "../x" or "/x" would be a zip-slip entry for whoever unzips the download (12.2), so only
+// a plain single-segment name is zipped; anything else is reported as unreadable.
+const plainName = (n: string) => checkRelativePath(n).ok && !n.includes("/");
+
 export async function planApplicationZip(applicationId: number): Promise<ZipPlan> {
   const list = await listApplicationFiles(applicationId);
   if (list.length === 0) return { ok: false, kind: "none", error: "This application has no files to download." };
   const problems: ZipProblem[] = [];
   let includable = 0;
   for (const f of list) {
+    if (!plainName(f.storedName)) { problems.push({ storedName: f.storedName, kind: "unreadable" }); continue; }
     const r = await verifyStoredFile(f.id);
     if (!r.ok && r.kind === "setup") return { ok: false, kind: "setup", error: r.error };
     if (!r.ok) { if (r.kind !== "deleted") problems.push({ storedName: f.storedName, kind: r.kind === "missing" ? "missing" : "unreadable" }); continue; }
@@ -36,7 +42,7 @@ export async function planApplicationZip(applicationId: number): Promise<ZipPlan
     includable++;
     if (r.integrity === "mismatch") problems.push({ storedName: f.storedName, kind: "changed" });
   }
-  return { ok: true, names: list.map((f) => ({ id: f.id, storedName: f.storedName })), problems, includable };
+  return { ok: true, names: list.filter((f) => plainName(f.storedName)).map((f) => ({ id: f.id, storedName: f.storedName })), problems, includable };
 }
 
 export function applicationZipStream(names: { id: number; storedName: string }[]): ReadableStream<Uint8Array> {
@@ -48,7 +54,7 @@ export function applicationZipStream(names: { id: number; storedName: string }[]
       for (const f of names) {
         const r = await verifyStoredFile(f.id);
         if (archive.destroyed) return; // the client went away
-        if (!r.ok || !r.bytes) continue; // missing, deleted meanwhile or unreadable: skipped; too large to read: skipped
+        if (!r.ok || !r.bytes || !plainName(r.storedName)) continue; // missing, deleted meanwhile or unreadable: skipped; too large to read: skipped
         const added = once(archive, "entry"); // wait for the entry so the next file is read only when this one has been taken (backpressure)
         archive.append(r.bytes, { name: r.storedName, mode: 0o644 });
         await Promise.race([added, closed]);

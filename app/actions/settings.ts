@@ -157,7 +157,9 @@ export async function saveCapacity(capacity: unknown): Promise<{ ok: true } | { 
 }
 
 // Restores every planner rule to the shipped defaults (FR-8.11). Touches nothing outside the planner settings and buffers.
-export async function resetPlanner(): Promise<{ ok: true } | { ok: false; error: string }> {
+// `confirm` must be literally true: the UI sets it only after the confirm dialog (NFR-4); this runs on any POST.
+export async function resetPlanner(confirm: boolean): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (confirm !== true) return { ok: false, error: "Resetting must be confirmed. Nothing was changed." };
   try {
     await resetPlannerSettings();
     refresh();

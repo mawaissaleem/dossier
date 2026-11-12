@@ -17,7 +17,7 @@ export function ResetForm() {
     setError(null);
     startTransition(async () => {
       try {
-        const r = await resetPlanner();
+        const r = await resetPlanner(true);
         if (r.ok) {
           bump(); // remount the forms with the refreshed defaults
           setDone(true);

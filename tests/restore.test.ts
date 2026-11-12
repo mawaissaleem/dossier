@@ -336,6 +336,18 @@ describe("validation refuses before anything is changed", () => {
     expect(existsSync(join(work, "evil.txt"))).toBe(false);
   });
 
+  it.each(["../evil.txt", "/etc/passwd", "a\\..\\b.txt", "x/../../y.txt", "C:\\y.txt"])("refuses a backup whose database lists an unsafe file path (%j)", async (bad) => {
+    const out = craft("tampered-row.zip", (m) => {
+      const f = join(work, "tampered-row.db");
+      writeFileSync(f, m.get("database/dossier.db")!);
+      const d = new Database(f);
+      d.prepare("UPDATE files SET relative_path = ? WHERE id = (SELECT min(id) FROM files)").run(bad);
+      d.close();
+      m.set("database/dossier.db", readFileSync(f));
+    });
+    await refused(out, /unsafe path/);
+  });
+
   it("refuses a duplicate name, a symlink, a folder with data, an unknown entry and an encrypted entry", async () => {
     await refused(withBackupEntries([{ name: firstFile(), data: "dup" }]), /twice/);
     await refused(withBackupEntries([{ name: "files/link", data: "/etc/passwd", mode: 0o120777 }]), /link or special/);
