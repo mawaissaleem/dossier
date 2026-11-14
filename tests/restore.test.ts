@@ -15,6 +15,7 @@ import { addNote } from "@/lib/db/notes";
 import * as dbRestore from "@/lib/db/restore";
 import { applications, columns, tracks } from "@/lib/db/schema";
 import { getFilesRoot, getSetting, setFilesRoot } from "@/lib/db/settings";
+import { setWinStatuses, winKey, winStatusIds } from "@/lib/db/track-settings";
 import { createBackup } from "@/lib/files/backup";
 import { verifyStoredFile } from "@/lib/files/open";
 import { checkBackup, restoreFromBackup } from "@/lib/files/restore";
@@ -177,6 +178,16 @@ describe("AT-13: back up, wipe, restore", () => {
     expect(await getReminderDays()).toBe(3);
     expect(await getLastBackupAt()).not.toBeNull(); // the safety backup's time, kept
     expect(Object.keys(walk(other))).toHaveLength(3); // the files went to the configured folder
+  });
+
+  it("brings back the win statuses saved in the backup (FR-9.7), not the ones saved since", async () => {
+    const job = db.select().from(tracks).all().find((t) => t.name === "Job")!.id;
+    const saved = winStatusIds(job);
+    expect(saved).toHaveLength(2); // seeded: Interview and Offer
+    expect(await setWinStatuses(job, [])).toEqual({ ok: true });
+    expect(await getSetting(winKey(job))).toEqual([]);
+    expect((await restore()).ok).toBe(true);
+    expect(await getSetting(winKey(job))).toEqual(saved);
   });
 
   it("a setting that is unset here stays unset: the backup's value is not brought in", async () => {

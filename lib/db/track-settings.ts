@@ -2,6 +2,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { checkExpectedLabels, resolveExpectedLabels } from "../expected-labels";
 import { checkSubmittedIds, resolveSubmittedStatuses } from "../submitted-statuses";
+import { resolveWinStatuses } from "../wins";
 import { getDb } from "./client";
 import { applications, columnOptions, columns, tracks } from "./schema";
 import { getUserId } from "./user";
@@ -10,6 +11,7 @@ import { getSetting, readSetting, setSetting } from "./settings";
 export type SubmittedResult = { ok: true } | { ok: false; error: string };
 
 export const submittedKey = (trackId: number) => `track.${trackId}.submitted_statuses`;
+export const winKey = (trackId: number) => `track.${trackId}.win_statuses`;
 export const expectedLabelsKey = (trackId: number) => `track.${trackId}.expected_labels`;
 
 // Options of the track's current status column, in order. Empty when the track is not the user's or has no status column.
@@ -54,6 +56,27 @@ export async function setSubmittedStatuses(trackId: number, ids: unknown): Promi
   const checked = checkSubmittedIds(ids, options);
   if ("error" in checked) return { ok: false, error: checked.error };
   await setSetting(submittedKey(trackId), checked.ids);
+  return { ok: true };
+}
+
+// Option ids that count as wins (FR-9.7). Never saved: options labelled Interview / Offer; once saved the saved list wins, even if empty. Deleted options are dropped.
+export function winStatusIds(trackId: number): number[] {
+  return resolveWinStatuses(readSetting(winKey(trackId)), statusOptions(trackId));
+}
+
+export async function getWinChoices(trackId: number) {
+  const options = statusOptions(trackId);
+  const on = new Set(resolveWinStatuses(await getSetting(winKey(trackId)), options));
+  return options.map((o) => ({ ...o, on: on.has(o.id) }));
+}
+
+// Replaces the set; same validation as setSubmittedStatuses (every id must be an option of this track's status column; empty is allowed).
+export async function setWinStatuses(trackId: number, ids: unknown): Promise<SubmittedResult> {
+  const options = statusOptions(trackId);
+  if (!options.length) return { ok: false, error: "This track has no status options." };
+  const checked = checkSubmittedIds(ids, options);
+  if ("error" in checked) return { ok: false, error: checked.error };
+  await setSetting(winKey(trackId), checked.ids);
   return { ok: true };
 }
 

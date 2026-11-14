@@ -5,7 +5,7 @@ import { Page, PageHeader } from "@/components/page-header";
 import { getBackupDestination, getLastBackupAt, getReminderDays } from "@/lib/db/backup";
 import { listLiveFiles } from "@/lib/db/files";
 import { getFileLabels, getFilesRoot } from "@/lib/db/settings";
-import { getExpectedLabels, getSubmittedChoices } from "@/lib/db/track-settings";
+import { getExpectedLabels, getSubmittedChoices, getWinChoices } from "@/lib/db/track-settings";
 import { listTracks } from "@/lib/db/tracks";
 import { ThemeSwitcher } from "../theme-switcher";
 import { ExpectedLabelsForm } from "./expected-labels-form";
@@ -49,7 +49,19 @@ async function SubmissionsSection() {
   const forms = await Promise.all(tracks.map(async (t) => ({ t, choices: await getSubmittedChoices(t.id) })));
   return (
     <div className="flex flex-col gap-3">
-      {forms.map(({ t, choices }) => <SubmittedForm key={t.id} trackId={t.id} trackName={t.name} choices={choices} />)}
+      {forms.map(({ t, choices }) => <SubmittedForm key={t.id} trackId={t.id} trackName={t.name} choices={choices.map(({ submitted, ...c }) => ({ ...c, on: submitted }))} />)}
+    </div>
+  );
+}
+
+async function WinsSection() {
+  await connection();
+  const tracks = await listTracks();
+  if (!tracks.length) return <p className="text-sm text-muted-foreground">No tracks yet.</p>;
+  const forms = await Promise.all(tracks.map(async (t) => ({ t, choices: await getWinChoices(t.id) })));
+  return (
+    <div className="flex flex-col gap-3">
+      {forms.map(({ t, choices }) => <SubmittedForm key={t.id} kind="win" trackId={t.id} trackName={t.name} choices={choices} />)}
     </div>
   );
 }
@@ -94,6 +106,13 @@ export default function SettingsPage() {
         <p className="mb-3 text-sm text-muted-foreground">Before a submission is created, Dossier warns if the application has no file with one of these labels. Type your own or pick one of the labels used for uploads. Leave the list empty for no warning.</p>
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
           <ExpectedLabelsSection />
+        </Suspense>
+      </section>
+      <section aria-labelledby="wins" className="mb-8">
+        <h2 id="wins" className="mb-2 text-lg font-semibold">Wins</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Tick the statuses that show on the dashboard as good news (Interview and Offer to begin with). Applications currently in one of them are listed, archived ones too. Leave all unticked and that track adds nothing to Wins.</p>
+        <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
+          <WinsSection />
         </Suspense>
       </section>
       <section aria-labelledby="appearance">

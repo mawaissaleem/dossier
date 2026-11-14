@@ -4,7 +4,7 @@ import { refresh, revalidatePath } from "next/cache";
 import { listLiveFiles, switchFilesRoot } from "@/lib/db/files";
 import { getFilesRoot } from "@/lib/db/settings";
 import { resetPlannerSettings, setCapacity, setOptionBuffer, setPlannerSlots, setRankingRules, setStillToDo } from "@/lib/db/planner";
-import { setExpectedLabels, setSubmittedStatuses } from "@/lib/db/track-settings";
+import { setExpectedLabels, setSubmittedStatuses, setWinStatuses } from "@/lib/db/track-settings";
 import { tryLock } from "@/lib/files/lock";
 import { moveStoredFiles, repointStoredFiles, type MoveResult, type RepointResult } from "@/lib/files/relocate";
 import { validateFilesRoot, type FilesRootResult } from "@/lib/files/root";
@@ -80,6 +80,18 @@ export async function saveSubmittedStatuses(trackId: number, ids: number[]): Pro
   if (!Number.isInteger(trackId)) return { ok: false, error: "Track not found." };
   try {
     const r = await setSubmittedStatuses(trackId, ids);
+    if (r.ok) refresh();
+    return r;
+  } catch {
+    return { ok: false, error: "Could not save. Try again." };
+  }
+}
+
+// Which status options count as wins on the dashboard for a track (FR-9.7). Validated in the data layer: this runs on any POST.
+export async function saveWinStatuses(trackId: number, ids: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!Number.isInteger(trackId)) return { ok: false, error: "Track not found." };
+  try {
+    const r = await setWinStatuses(trackId, ids);
     if (r.ok) refresh();
     return r;
   } catch {
