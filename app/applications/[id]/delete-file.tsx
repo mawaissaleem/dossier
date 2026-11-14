@@ -43,7 +43,7 @@ export function DeleteFile({ id, name }: { id: number; name: string }) {
     setError(null);
     startTransition(async () => {
       try {
-        const r = await deleteFile(id, true, subs.length);
+        const r = await deleteFile(id, true, subs.length, understood);
         if (r.ok) {
           gone.current = true;
           setOpen(false);

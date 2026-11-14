@@ -126,6 +126,7 @@ function SubmissionForm({ applicationId, status, busy, setBusy, onClose }: {
                   <span title={f.originalName} className="max-w-full min-w-0 truncate">{f.originalName}</span>
                   <span title={f.label} className="max-w-32 shrink-0 truncate rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">{f.label}</span>
                   <time dateTime={f.uploadDate} className="shrink-0 text-xs font-normal text-muted-foreground">{f.uploadDate}</time>
+                  <span title={f.storedName} className="w-full truncate text-xs font-normal text-muted-foreground">{f.storedName}</span>
                 </Label>
               </li>
             ))}

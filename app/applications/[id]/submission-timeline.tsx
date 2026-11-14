@@ -62,11 +62,10 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                               <IntegrityBadge state={f.integrity} checkedAt={f.checkedAt} />
                             )}
                           </p>
-                          {f.deletedAt && (
-                            <p className="truncate text-xs text-muted-foreground">
-                              <span title={f.storedName}>{f.storedName}</span> · {formatBytes(f.sizeBytes)} · checksum <span title={f.sha256}>{f.sha256.slice(0, 12)}</span> · the file itself is gone
-                            </p>
-                          )}
+                          <p className="truncate text-xs text-muted-foreground">
+                            <span title={f.storedName}>{f.storedName}</span>
+                            {f.deletedAt && <> · {formatBytes(f.sizeBytes)} · checksum <span title={f.sha256}>{f.sha256.slice(0, 12)}</span> · the file itself is gone</>}
+                          </p>
                         </div>
                         {f.deletedAt ? null : <>
                         <Button asChild variant="outline" size="sm">

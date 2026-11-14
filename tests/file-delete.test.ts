@@ -44,8 +44,8 @@ const submit = async (ids: number[], date = "2026-11-09") => expect(await addSub
 // Delete the way the dialog does: read the impact, then confirm with the count it showed.
 async function del(id: number) {
   const i = await fetchFileDeleteImpact(id);
-  if (!i.ok) return deleteFile(id, true, 0);
-  return deleteFile(id, true, i.submissions.length);
+  if (!i.ok) return deleteFile(id, true, 0, false);
+  return deleteFile(id, true, i.submissions.length, true);
 }
 const get = (id: number) => GET(new NextRequest(`http://localhost:3000/api/files/${id}`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(id) }) } as never);
 const row = (id: number) => getDb().select().from(files).all().find((f) => f.id === id);
@@ -73,7 +73,7 @@ describe("a file in no submission", () => {
     if (posix) expect(statSync(abs).mode & 0o222).toBe(0); // stored read-only
     expect(await fetchFileDeleteImpact(f.id)).toMatchObject({ ok: true, originalName: "CV.pdf", storedName: f.storedName, label: "CV", sizeBytes: 2, submissions: [] });
 
-    expect(await deleteFile(f.id, true, 0)).toEqual({ ok: true, kept: false });
+    expect(await deleteFile(f.id, true, 0, false)).toEqual({ ok: true, kept: false });
     expect(existsSync(abs)).toBe(false);
     expect(row(f.id)).toBeUndefined();
     expect(await listApplicationFiles(appId)).toEqual([]);
@@ -109,12 +109,22 @@ describe("a file in no submission", () => {
 });
 
 describe("a file in a submission", () => {
+  it("is not deleted by the server without the acknowledgement; an unsubmitted file needs none", async () => {
+    const f = await store("CV.pdf", "v1");
+    await submit([f.id]);
+    expect(await deleteFile(f.id, true, 1, false)).toMatchObject({ ok: false, error: expect.stringMatching(/I understand/) });
+    expect(await deleteFile(f.id, true, 1, "yes" as never)).toMatchObject({ ok: false });
+    expect(existsSync(join(root, f.relativePath))).toBe(true);
+    expect(row(f.id)!.deletedAt).toBeNull();
+    const plain = await store("other.pdf", "v2");
+    expect(await deleteFile(plain.id, true, 0, false)).toEqual({ ok: true, kept: false });
+  });
   it("is tombstoned: bytes gone, row kept as the submission's record, Open refuses with 410", async () => {
     const f = await store("CV.pdf", "v1");
     await submit([f.id]);
     expect(await fetchFileDeleteImpact(f.id)).toMatchObject({ ok: true, submissions: [{ date: "2026-11-09" }] });
 
-    expect(await deleteFile(f.id, true, 1)).toEqual({ ok: true, kept: true });
+    expect(await deleteFile(f.id, true, 1, true)).toEqual({ ok: true, kept: true });
     expect(existsSync(join(root, f.relativePath))).toBe(false);
     const r = row(f.id)!;
     expect(r).toMatchObject({ originalName: "CV.pdf", storedName: f.storedName, label: "CV", sizeBytes: 2, sha256: f.sha256 });
@@ -175,7 +185,7 @@ describe("refusals and edge cases", () => {
     const shown = await fetchFileDeleteImpact(f.id);
     expect(shown).toMatchObject({ ok: true, submissions: [] });
     await submit([f.id]);
-    const r = await deleteFile(f.id, true, 0);
+    const r = await deleteFile(f.id, true, 0, false);
     expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/changed since/) });
     expect(existsSync(join(root, f.relativePath))).toBe(true);
     expect(row(f.id)!.deletedAt).toBeNull();
@@ -184,17 +194,17 @@ describe("refusals and edge cases", () => {
 
   it("the reverse is stale too: the dialog said 1 submission, there are 0 now", async () => {
     const f = await store("CV.pdf", "v1");
-    expect(await deleteFile(f.id, true, 1)).toMatchObject({ ok: false, error: expect.stringMatching(/changed since/) });
+    expect(await deleteFile(f.id, true, 1, true)).toMatchObject({ ok: false, error: expect.stringMatching(/changed since/) });
     expect(existsSync(join(root, f.relativePath))).toBe(true);
   });
 
   it("is refused without a literal true confirm, with a bad count or a bad id", async () => {
     const f = await store("CV.pdf", "v1");
-    expect(await deleteFile(f.id, "yes" as never, 0)).toMatchObject({ ok: false });
-    expect(await deleteFile(f.id, true, -1)).toMatchObject({ ok: false });
-    expect(await deleteFile(f.id, true, 1.5)).toMatchObject({ ok: false });
-    expect(await deleteFile(0, true, 0)).toMatchObject({ ok: false });
-    expect(await deleteFile("1" as never, true, 0)).toMatchObject({ ok: false });
+    expect(await deleteFile(f.id, "yes" as never, 0, false)).toMatchObject({ ok: false });
+    expect(await deleteFile(f.id, true, -1, false)).toMatchObject({ ok: false });
+    expect(await deleteFile(f.id, true, 1.5, false)).toMatchObject({ ok: false });
+    expect(await deleteFile(0, true, 0, false)).toMatchObject({ ok: false });
+    expect(await deleteFile("1" as never, true, 0, false)).toMatchObject({ ok: false });
     expect(existsSync(join(root, f.relativePath))).toBe(true);
   });
 
@@ -214,8 +224,8 @@ describe("refusals and edge cases", () => {
     const f = await store("CV.pdf", "v1");
     getDb().$client.prepare("UPDATE files SET user_id = 'someone-else' WHERE id = ?").run(f.id);
     expect(await fetchFileDeleteImpact(f.id)).toMatchObject({ ok: false });
-    expect(await deleteFile(f.id, true, 0)).toEqual({ ok: false, error: "File not found." });
-    expect(await deleteFile(9999, true, 0)).toEqual({ ok: false, error: "File not found." });
+    expect(await deleteFile(f.id, true, 0, false)).toEqual({ ok: false, error: "File not found." });
+    expect(await deleteFile(9999, true, 0, false)).toEqual({ ok: false, error: "File not found." });
     expect(existsSync(join(root, f.relativePath))).toBe(true);
     expect(row(f.id)!.deletedAt).toBeNull();
   });
@@ -224,7 +234,7 @@ describe("refusals and edge cases", () => {
     const f = await store("CV.pdf", "v1");
     await submit([f.id]);
     expect(await del(f.id)).toMatchObject({ ok: true });
-    expect(await deleteFile(f.id, true, 1)).toEqual({ ok: false, error: "File not found." });
+    expect(await deleteFile(f.id, true, 1, true)).toEqual({ ok: false, error: "File not found." });
     expect((await listActivity(appId)).filter((e) => e.kind === "file_deleted")).toHaveLength(1);
   });
 
@@ -234,20 +244,20 @@ describe("refusals and edge cases", () => {
     const dir = join(root, f.relativePath, "..");
     chmodSync(dir, 0o555); // unlink needs write permission on the folder
     try {
-      expect(await deleteFile(f.id, true, 0)).toMatchObject({ ok: false, error: expect.stringMatching(/could not be removed/) });
+      expect(await deleteFile(f.id, true, 0, false)).toMatchObject({ ok: false, error: expect.stringMatching(/could not be removed/) });
     } finally {
       chmodSync(dir, 0o755);
     }
     expect(existsSync(join(root, f.relativePath))).toBe(true);
     expect(row(f.id)!.deletedAt).toBeNull();
     expect((await listActivity(appId)).filter((e) => e.kind === "file_deleted")).toEqual([]);
-    expect(await deleteFile(f.id, true, 0)).toEqual({ ok: true, kept: false }); // and it can be retried
+    expect(await deleteFile(f.id, true, 0, false)).toEqual({ ok: true, kept: false }); // and it can be retried
   });
 
   it("with no files folder set nothing is deleted", async () => {
     const f = await store("CV.pdf", "v1");
     getDb().$client.prepare("DELETE FROM settings WHERE key = 'files_root'").run();
-    expect(await deleteFile(f.id, true, 0)).toMatchObject({ ok: false });
+    expect(await deleteFile(f.id, true, 0, false)).toMatchObject({ ok: false });
     expect(row(f.id)!.deletedAt).toBeNull();
   });
 
@@ -259,7 +269,7 @@ describe("refusals and edge cases", () => {
     const abs = join(root, f.relativePath);
     rmSync(abs);
     symlinkSync(outside, abs);
-    expect(await deleteFile(f.id, true, 0)).toMatchObject({ ok: false });
+    expect(await deleteFile(f.id, true, 0, false)).toMatchObject({ ok: false });
     expect(existsSync(outside)).toBe(true);
     expect(row(f.id)!.deletedAt).toBeNull();
   });

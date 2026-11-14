@@ -8,12 +8,12 @@ import { open } from "node:fs/promises";
 import { getFileForOpen, recordIntegrity } from "../db/files";
 import { getFilesRoot } from "../db/settings";
 import { MAX_UPLOAD_BYTES } from "../upload-form";
-import { resolveInRoot } from "./resolve";
+import { ROOT_MISSING, resolveInRoot } from "./resolve";
 
 type Failure = "not-found" | "deleted" | "setup" | "refused" | "missing" | "error";
 // ok/mismatch: the file exists; bytes are null only when it is too large to read (never for ok). found is null in that case too.
 export type VerifyResult =
-  | { ok: true; integrity: "ok" | "mismatch"; storedName: string; expected: string; found: string | null; bytes: Buffer | null }
+  | { ok: true; integrity: "ok" | "mismatch"; applicationId: number; storedName: string; expected: string; found: string | null; bytes: Buffer | null }
   | { ok: false; kind: Failure; error: string };
 
 const fail = (kind: Failure, error: string) => ({ ok: false, kind, error }) as const;
@@ -25,6 +25,7 @@ export async function verifyStoredFile(id: number): Promise<VerifyResult> {
   const root = await getFilesRoot();
   if (!root) return fail("setup", "Choose the files folder in Settings before opening files.");
   const target = await resolveInRoot(root, row.relativePath);
+  if (!target.ok && target.error === ROOT_MISSING) return fail("setup", ROOT_MISSING);
   if (!target.ok) return fail("refused", "This file cannot be opened: its stored path is not allowed.");
   let handle;
   try {
@@ -36,7 +37,7 @@ export async function verifyStoredFile(id: number): Promise<VerifyResult> {
     const found = bytes && createHash("sha256").update(bytes).digest("hex");
     const integrity = found === row.sha256 ? "ok" : "mismatch";
     await recordIntegrity(id, integrity);
-    return { ok: true, integrity, storedName: row.storedName, expected: row.sha256, found, bytes };
+    return { ok: true, integrity, applicationId: row.applicationId, storedName: row.storedName, expected: row.sha256, found, bytes };
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code;
     if (code === "ENOENT" || code === "ENOTDIR") {

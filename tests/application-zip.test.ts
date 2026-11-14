@@ -111,6 +111,8 @@ describe("GET /api/applications/:id/zip", () => {
     expect(html).toContain(a.storedName);
     expect(html).not.toContain(b.storedName);
     expect(html).toContain(`/api/applications/${appId}/zip?anyway=1`);
+    expect(html).toContain(`<a href="/applications/${appId}">Back to the application</a>`);
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'");
     expect(integrityOf(a.id)).toBe("mismatch");
     const z = await unzip(await get(appId, "?anyway=1"));
     expect(z.get(a.storedName)!.toString()).toBe("tampered");
@@ -172,6 +174,13 @@ describe("GET /api/applications/:id/zip", () => {
     db.update(applications).set({ userId: "local" }).where(eq(applications.id, appId)).run();
     db.update(files).set({ userId: "someone-else" }).run(); // his application, but the files are another user's: nothing to zip
     expect((await get(appId)).status).toBe(404);
+  });
+  it("a files folder that no longer exists is a 409 message that points to Re-point, not a zip", async () => {
+    await store("a.pdf", "1");
+    rmSync(root, { recursive: true, force: true });
+    const r = await get(appId);
+    expect(r.status).toBe(409);
+    expect((await r.json()).error).toMatch(/Re-point in Settings/);
   });
   it("403 for a non-local Host or a cross-site fetch, and 409 when the files folder is unset; all carry CORP", async () => {
     await store("a.pdf", "1");

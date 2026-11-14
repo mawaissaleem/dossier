@@ -222,11 +222,11 @@ describe("AT-9: submitted status with no CV", () => {
 });
 
 describe("fetchReviewFiles", () => {
-  it("lists the application's files only, with name, label and date", async () => {
+  it("lists the application's files only, with names, label and date", async () => {
     const a = mkFile(appId, { label: "Cover letter", originalName: "cl.pdf" });
     mkFile(mkApp());
     const r = await fetchReviewFiles(appId);
-    expect(r).toEqual({ ok: true, files: [{ id: a, originalName: "cl.pdf", label: "Cover letter", uploadDate: "2026-11-05" }], expectedLabels: [] });
+    expect(r).toEqual({ ok: true, files: [{ id: a, originalName: "cl.pdf", storedName: db.select().from(files).all().find((f) => f.id === a)!.storedName, label: "Cover letter", uploadDate: "2026-11-05" }], expectedLabels: [] });
   });
   it("refuses a bad or unknown id", async () => {
     expect((await fetchReviewFiles(0)).ok).toBe(false);

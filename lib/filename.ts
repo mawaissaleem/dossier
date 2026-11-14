@@ -67,6 +67,16 @@ export function splitOriginalName(originalName: string): { base: string; ext: st
   return { base: name.slice(0, dot), ext: name.slice(dot + 1) };
 }
 
+// The name as the user sent it is kept for display, but bounded (12.5): at most `max` UTF-16 units, the extension (up to MAX_EXT characters) kept.
+export function capOriginalName(name: string, max = 255): string {
+  if (name.length <= max) return name;
+  const dot = name.lastIndexOf(".");
+  const ext = dot > 0 && name.length - dot <= MAX_EXT + 1 ? name.slice(dot) : "";
+  let base = name.slice(0, max - ext.length);
+  if (/[\ud800-\udbff]$/.test(base)) base = base.slice(0, -1); // never leave half a surrogate pair
+  return base + ext;
+}
+
 export function safeExtension(ext: string): string {
   return ext.normalize("NFC").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, MAX_EXT);
 }

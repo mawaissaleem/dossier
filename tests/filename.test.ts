@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildStoredName, formatStoredName, nextSeq, safeExtension, splitOriginalName, todayLocal, type CounterEntry } from "@/lib/filename";
+import { buildStoredName, capOriginalName, formatStoredName, nextSeq, safeExtension, splitOriginalName, todayLocal, type CounterEntry } from "@/lib/filename";
 
 const D = "2026-11-08";
 const E = (baseName: string, ext: string, seq: number, uploadDate = D): CounterEntry => ({ baseName, extension: ext, uploadDate, seq });
@@ -172,5 +172,23 @@ describe("todayLocal", () => {
   it("uses the local calendar date", () => {
     expect(todayLocal(new Date(2026, 10, 8, 23, 59))).toBe("2026-11-08");
     expect(todayLocal(new Date(2026, 0, 2, 0, 1))).toBe("2026-01-02");
+  });
+});
+
+describe("capOriginalName", () => {
+  it("leaves a name within the limit alone", () => expect(capOriginalName("CV.pdf")).toBe("CV.pdf"));
+  it("caps a 1000-character name at 255 and keeps the extension", () => {
+    const r = capOriginalName("a".repeat(996) + ".pdf");
+    expect(r).toHaveLength(255);
+    expect(r.endsWith(".pdf")).toBe(true);
+  });
+  it("caps a name with no extension, or a very long 'extension', to 255", () => {
+    expect(capOriginalName("b".repeat(1000))).toHaveLength(255);
+    expect(capOriginalName("x." + "c".repeat(999))).toHaveLength(255);
+  });
+  it("does not leave half a surrogate pair", () => {
+    const r = capOriginalName("a".repeat(254) + "\u{1F600}".repeat(5) + ".pdf");
+    expect(r.length).toBeLessThanOrEqual(255);
+    expect(r).not.toMatch(/[\ud800-\udbff]\.pdf$/);
   });
 });

@@ -90,10 +90,10 @@ export async function listApplicationFiles(applicationId: number): Promise<FileL
 }
 
 // The row behind Open, by id and user. The path comes from here, never from the request. `deleted` (8.8): the bytes are gone on purpose.
-export async function getFileForOpen(id: number): Promise<{ storedName: string; relativePath: string; sha256: string; sizeBytes: number; deleted: boolean } | null> {
-  const r = getDb().select({ storedName: files.storedName, relativePath: files.relativePath, sha256: files.sha256, sizeBytes: files.sizeBytes, deletedAt: files.deletedAt }).from(files)
+export async function getFileForOpen(id: number): Promise<{ applicationId: number; storedName: string; relativePath: string; sha256: string; sizeBytes: number; deleted: boolean } | null> {
+  const r = getDb().select({ applicationId: files.applicationId, storedName: files.storedName, relativePath: files.relativePath, sha256: files.sha256, sizeBytes: files.sizeBytes, deletedAt: files.deletedAt }).from(files)
     .where(and(eq(files.id, id), eq(files.userId, getUserId()))).get();
-  return r ? { storedName: r.storedName, relativePath: r.relativePath, sha256: r.sha256, sizeBytes: r.sizeBytes, deleted: r.deletedAt !== null } : null;
+  return r ? { applicationId: r.applicationId, storedName: r.storedName, relativePath: r.relativePath, sha256: r.sha256, sizeBytes: r.sizeBytes, deleted: r.deletedAt !== null } : null;
 }
 
 // Records the result of a hash check (8.6) so the file list can show it without re-hashing (8.7). A file that matches again goes back to ok.

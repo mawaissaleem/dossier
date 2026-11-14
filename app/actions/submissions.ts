@@ -6,13 +6,13 @@ import { isId } from "@/lib/ids";
 import { createManualSubmission, submitWithStatus, updateSubmissionNote } from "@/lib/db/submissions";
 import { getApplicationExpectedLabels } from "@/lib/db/track-settings";
 
-export type ReviewFile = { id: number; originalName: string; label: string; uploadDate: string };
+export type ReviewFile = { id: number; originalName: string; storedName: string; label: string; uploadDate: string };
 
 // The files the review dialog lists, plus the track's expected labels for its warnings (FR-7.3), read on each open so the list is never stale page data. Newest upload date first.
 export async function fetchReviewFiles(applicationId: number): Promise<{ ok: true; files: ReviewFile[]; expectedLabels: string[] } | { ok: false; error: string }> {
   if (!isId(applicationId) || !(await applicationExists(applicationId))) return { ok: false, error: "Application not found." };
   const list = await listApplicationFiles(applicationId);
-  return { ok: true, files: list.map(({ id, originalName, label, uploadDate }) => ({ id, originalName, label, uploadDate })), expectedLabels: await getApplicationExpectedLabels(applicationId) };
+  return { ok: true, files: list.map(({ id, originalName, storedName, label, uploadDate }) => ({ id, originalName, storedName, label, uploadDate })), expectedLabels: await getApplicationExpectedLabels(applicationId) };
 }
 
 const MAX_FILES = 1000; // bound on the payload, far above any real application

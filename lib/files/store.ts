@@ -20,7 +20,7 @@ import type { ReadableStream as NodeWebStream } from "node:stream/web";
 import { isForeignKeyViolation, isUniqueViolation } from "../db/errors";
 import { findFileByHash, getApplicationFolder, getCounterEntries, insertFileRow } from "../db/files";
 import { getFilesRoot } from "../db/settings";
-import { buildStoredName, type CounterEntry } from "../filename";
+import { buildStoredName, capOriginalName, type CounterEntry } from "../filename";
 import { ensureApplicationFolder } from "./folder";
 import { beginWrite } from "./lock";
 import { toRelativePath } from "./relative";
@@ -117,7 +117,7 @@ async function place(applicationId: number, file: UploadSource, label: string, u
       await rm(tmp); // before the chmod (see the header)
       await chmod(target.path, 0o444);
       const id = await insertFileRow({
-        applicationId, label, originalName: file.name, storedName: name.storedName, relativePath: rel.path, sha256, sizeBytes,
+        applicationId, label, originalName: capOriginalName(file.name), storedName: name.storedName, relativePath: rel.path, sha256, sizeBytes,
         uploadDate, baseName: name.baseName, extension: name.extension, seq: name.seq,
       });
       return { ok: true, file: { id, storedName: name.storedName, relativePath: rel.path, sizeBytes, sha256 } };

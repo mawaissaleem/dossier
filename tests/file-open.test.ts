@@ -45,6 +45,17 @@ afterEach(() => {
   rmSync(base, { recursive: true, force: true });
 });
 
+describe("original name length", () => {
+  it("a 1000-character name is stored capped at 255 with its extension; the stored name rule is unchanged", async () => {
+    const long = "n".repeat(996) + ".pdf";
+    const f = await store(long, "1", "2026-11-08");
+    const r = db.select().from(files).where(eq(files.id, f.id)).get()!;
+    expect(r.originalName).toHaveLength(255);
+    expect(r.originalName.endsWith(".pdf")).toBe(true);
+    expect(f.storedName).toMatch(/^01-20261108-n+\.pdf$/);
+  });
+});
+
 describe("listApplicationFiles", () => {
   it("lists newest upload date first, then seq, and only this application's files of this user", async () => {
     const a = await store("a.pdf", "1", "2026-11-01");
@@ -203,7 +214,24 @@ describe("hash verification on open (8.6)", () => {
     expect(html).toContain(f.storedName);
     expect(html).toContain(row(f.id).sha256.slice(0, 12));
     expect(html).toContain(`/api/files/${f.id}?anyway=1`);
+    expect(html).toContain(`<a href="/applications/${appId}">Back to the application</a>`);
+    expect(html).toContain("prefers-color-scheme:light");
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(row(f.id).integrity).toBe("mismatch");
+  });
+  it("a files folder that no longer exists says so and points to Re-point (409); a path that escapes the root is still refused (404)", async () => {
+    const f = await store("a.pdf", "1", "2026-11-08");
+    rmSync(root, { recursive: true, force: true });
+    const res = await get(f.id);
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/files folder was not found.*Re-point in Settings/);
+    expect(await verifyStoredFile(f.id)).toMatchObject({ ok: false, kind: "setup" });
+    mkdirSync(root);
+    db.update(files).set({ relativePath: "../outside.pdf" }).where(eq(files.id, f.id)).run();
+    const esc = await get(f.id);
+    expect(esc.status).toBe(404);
+    expect((await esc.json()).error).toMatch(/not allowed/);
   });
   it("open anyway serves the changed bytes with the usual safe headers", async () => {
     const f = await store("a.pdf", "original", "2026-11-08");

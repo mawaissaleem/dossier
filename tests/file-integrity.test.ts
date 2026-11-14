@@ -127,6 +127,11 @@ describe("Check files", () => {
     const r = await checkApplicationFiles(appId);
     expect(r).toMatchObject({ ok: false, error: expect.stringContaining("Settings") });
   });
+  it("a files folder that no longer exists stops with the Re-point message", async () => {
+    await store("a.pdf", "one");
+    rmSync(root, { recursive: true, force: true });
+    expect(await checkApplicationFiles(appId)).toEqual({ ok: false, error: expect.stringMatching(/Re-point in Settings/) });
+  });
   it("the server action checks its argument and returns the result", async () => {
     const a = await store("a.pdf", "one");
     edit(a.relativePath, "changed");
