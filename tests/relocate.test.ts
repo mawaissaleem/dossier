@@ -9,7 +9,7 @@ import { backUpNow, saveBackupDestination } from "@/app/actions/backup";
 import { fetchMoveImpact, moveFilesRoot, repointFilesRoot, saveFilesRoot } from "@/app/actions/settings";
 import { GET as getFile } from "@/app/api/files/[id]/route";
 import { GET as getZip } from "@/app/api/applications/[id]/zip/route";
-import { createApplication } from "@/lib/db/applications";
+import { createApplication, getDeleteImpact } from "@/lib/db/applications";
 import { listLiveFiles, switchFilesRoot } from "@/lib/db/files";
 import { files, tracks } from "@/lib/db/schema";
 import { getFilesRoot, setFilesRoot } from "@/lib/db/settings";
@@ -209,7 +209,7 @@ describe("Re-point (AT-14, second way)", () => {
     expect((await open(f2.id)).status).toBe(200);
   });
 
-  it("refuses when a file is missing or has another size, lists them, and leaves the setting alone", async () => {
+  it("refuses when a file is missing, lists it, flags nothing and leaves the setting alone", async () => {
     const to = join(base, "elsewhere");
     renameSync(root, to);
     rmSync(join(to, f1.relativePath));
@@ -217,9 +217,21 @@ describe("Re-point (AT-14, second way)", () => {
     writeFileSync(join(to, f2.relativePath), "x");
     const r = await repointFilesRoot(to);
     expect(!r.ok && r.error).toContain(`${f1.relativePath} (missing)`);
-    expect(!r.ok && r.error).toContain(`${f2.relativePath} (size differs)`);
+    expect(!r.ok && r.error).not.toContain(f2.relativePath);
     expect(!r.ok && r.error).toMatch(/Nothing was changed/);
     expect(await getFilesRoot()).toBe(root);
+    expect(rows().find((r) => r.id === f2.id)!.integrity).toBe("ok");
+  });
+
+  it("accepts a file whose size differs (edited outside Dossier) and flags it as changed, as Move does", async () => {
+    const to = join(base, "elsewhere");
+    renameSync(root, to);
+    chmodSync(join(to, f2.relativePath), 0o644);
+    writeFileSync(join(to, f2.relativePath), "x");
+    expect(await repointFilesRoot(to)).toMatchObject({ ok: true, path: to, checked: 2, changed: 1 });
+    expect(await getFilesRoot()).toBe(to);
+    expect(rows().map((r) => [r.id, r.integrity])).toEqual([[f1.id, "ok"], [f2.id, "mismatch"]]);
+    expect((await open(f2.id)).status).toBe(409); // Open shows the changed page
   });
 
   it("refuses an empty folder, and an invalid path", async () => {
@@ -305,11 +317,14 @@ describe("the shared lock", () => {
       if (!held.ok) throw new Error("lock");
       const up = await storeUploadedFile({ applicationId: appA, file: new File(["z"], "z.pdf"), label: "CV", uploadDate: "2026-11-08" });
       expect(up).toMatchObject({ ok: false, error: expect.stringMatching(job === "restore" ? /restore is running/ : /being changed/) });
-      expect(await deleteStoredFile(f1.id, 0)).toMatchObject({ ok: false });
-      expect(await deleteApplicationWithFiles(appB, { cellCount: 0, fileCount: 1, submissionCount: 0, noteCount: 0 })).toMatchObject({ ok: false });
+      const lockMessage = { ok: false, error: expect.stringMatching(job === "restore" ? /restore is running/ : /being changed/) };
+      expect(await deleteStoredFile(f1.id, 0)).toMatchObject(lockMessage);
+      // appB's real counts, so only the lock can be what refuses this (a wrong count would be refused as stale)
+      expect(await deleteApplicationWithFiles(appB, (await getDeleteImpact(appB))!)).toMatchObject(lockMessage);
       held.release();
     }
     expect(rows().length).toBe(2); // nothing was stored or deleted
+    expect(await getDeleteImpact(appB)).toMatchObject({ fileCount: 1 }); // appB still exists
     expect(readFileSync(join(root, f1.relativePath), "utf8")).toBe("alpha");
 
     const w = beginWrite(); // a running upload or delete

@@ -3,13 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getApplicationFolder, getFolderNameData } from "@/lib/db/files";
 import { contentDisposition } from "@/lib/file-serve";
 import { applicationZipStream, planApplicationZip, type ZipProblem } from "@/lib/files/zip";
+import { databaseUpdateResponse } from "@/lib/db/migrations";
 import { isCrossSiteFetch, isLocalHost } from "@/lib/local-request";
-import { esc, problemPage } from "@/lib/problem-page";
+import { esc, problemPage, setupPage } from "@/lib/problem-page";
 import { applicationZipName } from "@/lib/zip-name";
 
 // GET /api/applications/:id/zip  downloads every live file of the application as one zip (lib/files/zip.ts: flat, stored names, streamed).
 // 200 application/zip attachment <folder>-files-YYYYMMDD.zip (no-store, nosniff, CORP same-origin); 403 not local or Sec-Fetch-Site
-// cross-site/same-site; 404 unknown or another user's application, or no files; 409 files folder unset, or no file could be read (never an
+// cross-site/same-site; 404 unknown or another user's application, or no files; 409 files folder unset or gone (an HTML page with a Settings link), or no file could be read (never an
 // empty zip), or (without ?anyway=1) a small HTML page listing the changed, missing, unreadable or too-large files with a "Download anyway"
 // link when at least one file would be included (?anyway=1: changed files are included as they are on disk, the others skipped). Hashes are
 // verified and recorded before anything is sent and again as each file is added (FR-5.5).
@@ -28,12 +29,15 @@ const problems409 = (id: number, problems: ZipProblem[], anyway: boolean) =>
 
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/applications/[id]/zip">) {
   if (!isLocalHost(request.headers) || isCrossSiteFetch(request.headers)) return json("Local use only.", 403);
+  const behind = databaseUpdateResponse(); // 503 while migrations are pending, instead of a "no such table" crash
+  if (behind) return behind;
   const { id: raw } = await ctx.params;
   const id = /^\d{1,15}$/.test(raw) ? Number(raw) : NaN;
   const app = Number.isSafeInteger(id) ? await getFolderNameData(id) : null;
   if (!app) return json("Application not found.", 404);
   const anyway = request.nextUrl.searchParams.get("anyway") === "1";
   const plan = await planApplicationZip(id);
+  if (!plan.ok && plan.kind === "setup") return setupPage(plan.error, id, NO_STORE);
   if (!plan.ok) return json(plan.error, plan.kind === "none" ? 404 : 409);
   if (plan.problems.length > 0 && !anyway) return problems409(id, plan.problems, plan.includable > 0);
   if (plan.includable === 0) return json("None of this application's files could be read; there is nothing to zip.", 409);

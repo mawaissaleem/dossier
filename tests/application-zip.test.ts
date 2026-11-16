@@ -111,8 +111,8 @@ describe("GET /api/applications/:id/zip", () => {
     expect(html).toContain(a.storedName);
     expect(html).not.toContain(b.storedName);
     expect(html).toContain(`/api/applications/${appId}/zip?anyway=1`);
-    expect(html).toContain(`<a href="/applications/${appId}">Back to the application</a>`);
-    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'");
+    expect(html).toContain(`<a href="/applications/${appId}" target="_top">Back to the application</a>`);
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
     expect(integrityOf(a.id)).toBe("mismatch");
     const z = await unzip(await get(appId, "?anyway=1"));
     expect(z.get(a.storedName)!.toString()).toBe("tampered");
@@ -180,7 +180,11 @@ describe("GET /api/applications/:id/zip", () => {
     rmSync(root, { recursive: true, force: true });
     const r = await get(appId);
     expect(r.status).toBe(409);
-    expect((await r.json()).error).toMatch(/Re-point in Settings/);
+    expect(r.headers.get("content-type")).toContain("text/html");
+    expect(r.headers.get("cross-origin-resource-policy")).toBe("same-origin");
+    const html = await r.text();
+    expect(html).toMatch(/Re-point in Settings/);
+    expect(html).toContain(`<a href="/applications/${appId}" target="_top">Back to the application</a>`);
   });
   it("403 for a non-local Host or a cross-site fetch, and 409 when the files folder is unset; all carry CORP", async () => {
     await store("a.pdf", "1");
@@ -191,9 +195,10 @@ describe("GET /api/applications/:id/zip", () => {
     db.delete(settings).run();
     const r = await get(appId);
     expect(r.status).toBe(409);
+    expect(r.headers.get("content-type")).toContain("text/html");
     const any = await get(appId, "?anyway=1"); // round 1 streamed an empty zip here
     expect(any.status).toBe(409);
-    expect(any.headers.get("content-type")).toContain("application/json");
+    expect(any.headers.get("content-type")).toContain("text/html");
     expect(readFileSync(join(root, (await db.select().from(files).all())[0].relativePath)).toString()).toBe("1");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentDisposition, fileHeaders } from "@/lib/file-serve";
+import { contentDisposition, fileHeaders, isPdf, previewKind } from "@/lib/file-serve";
 
 describe("fileHeaders", () => {
   it.each([["pdf", "application/pdf"], ["PNG", "image/png"], ["jpg", "image/jpeg"], ["jpeg", "image/jpeg"], ["gif", "image/gif"], ["webp", "image/webp"], ["txt", "text/plain; charset=utf-8"]])("%s is shown inline", (ext, type) => {
@@ -16,8 +16,8 @@ describe("fileHeaders", () => {
     expect(fileHeaders("a.pdf.html", 1).get("content-disposition")).toMatch(/^attachment;/);
     expect(fileHeaders(".pdf", 1).get("content-disposition")).toMatch(/^attachment;/);
   });
-  it.each([["a.pdf", "default-src 'none'"], ["a.PDF", "default-src 'none'"], ["a.png", "sandbox; default-src 'none'"], ["a.jpg", "sandbox; default-src 'none'"],
-    ["a.txt", "sandbox; default-src 'none'"], ["a.html", "sandbox; default-src 'none'"], ["a.svg", "sandbox; default-src 'none'"], ["a.pdf.html", "sandbox; default-src 'none'"]])(
+  it.each([["a.pdf", "default-src 'none'; frame-ancestors 'self'"], ["a.PDF", "default-src 'none'; frame-ancestors 'self'"], ["a.png", "sandbox; default-src 'none'; frame-ancestors 'self'"], ["a.jpg", "sandbox; default-src 'none'; frame-ancestors 'self'"],
+    ["a.txt", "sandbox; default-src 'none'; frame-ancestors 'self'"], ["a.html", "sandbox; default-src 'none'; frame-ancestors 'self'"], ["a.svg", "sandbox; default-src 'none'; frame-ancestors 'self'"], ["a.pdf.html", "sandbox; default-src 'none'; frame-ancestors 'self'"]])(
     "%s gets CSP %j (only pdf drops sandbox, for Chrome's viewer)", (name, csp) => {
       expect(fileHeaders(name, 1).get("content-security-policy")).toBe(csp);
     });
@@ -28,6 +28,27 @@ describe("fileHeaders", () => {
       expect(h.get("cache-control")).toBe("no-store");
       expect(h.get("content-length")).toBe("42");
     }
+  });
+});
+
+describe("preview support (13.3)", () => {
+  it("previewKind: pdf and the inline image types are previewed; text, other types and odd names are not", () => {
+    expect(previewKind("a.PDF")).toBe("pdf");
+    for (const n of ["a.png", "a.JPG", "a.jpeg", "a.gif", "a.webp"]) expect(previewKind(n)).toBe("image");
+    for (const n of ["a.txt", "a.svg", "a.docx", "a.png.html", ".png", "png", ""]) expect(previewKind(n)).toBeNull();
+  });
+  it("isPdf matches exactly what is served as application/pdf", () => {
+    for (const n of ["a.pdf", "a.PDF", "01-20261108-My_CV.pdf"]) expect(isPdf(n)).toBe(true);
+    for (const n of ["a.png", "a.pdf.html", ".pdf", "pdf", "a.txt", ""]) expect(isPdf(n)).toBe(false);
+  });
+  it("every file, PDF or not, can only be framed by Dossier itself", () => {
+    for (const n of ["a.pdf", "a.png", "a.html", "a"]) expect(fileHeaders(n, 1).get("content-security-policy")).toMatch(/; frame-ancestors 'self'$/);
+  });
+  it("attachment forces a download of a PDF without changing its type or CSP", () => {
+    const h = fileHeaders("a.pdf", 1, true);
+    expect(h.get("content-disposition")).toMatch(/^attachment;/);
+    expect(h.get("content-type")).toBe("application/pdf");
+    expect(h.get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'self'");
   });
 });
 

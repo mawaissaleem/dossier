@@ -8,7 +8,7 @@ Everything stays on your computer. There are no accounts, no cloud and no teleme
 
 You need:
 
-- **Node.js 20 or newer** (CI uses Node 20) and npm.
+- **Node.js 20.9 or newer** (Next.js 16 needs at least 20.9) and npm. Use an even-numbered release, 20 LTS or 22 LTS: the database library (`better-sqlite3`) does not support odd-numbered Node versions. CI uses Node 20.
 - A normal install downloads a ready-made binary for the database library (`better-sqlite3`). If your platform has none, `npm ci` builds it, and that needs Python 3 and a C++ compiler.
 
 From a fresh clone, in the project folder:
@@ -104,13 +104,15 @@ On a new computer, set the files root and the backup folder in Settings first. T
 In **Settings → Files**, once files are stored, a new folder has two options:
 
 - **Move files…** Dossier moves the files into the new folder, which must be empty and exist already. You confirm first. Files on the same drive are renamed. Otherwise each is copied, checked against its checksum, and the old copy is removed.
-- **Re-point** is for a folder you already moved yourself. Dossier saves the new path only if every stored file is there with its recorded size.
+- **Re-point** is for a folder you already moved yourself. Dossier saves the new path only if every stored file is there. A file whose size differs from the record is accepted and flagged as changed. If any file is missing, nothing is saved.
 
 A plain **Save** of a different folder is refused, so no file is lost track of.
 
 If you moved the folder by hand and did not Re-point, opening a file shows `The files folder was not found. If you moved it, use Re-point in Settings.` Use Re-point with the new path.
 
 ## Updating
+
+First take a backup while the server is still running: use **Back up now** in Settings. Then stop the server. (Or stop the server first and copy the database file, `data/dossier.db` unless you changed `DATABASE_PATH`, and the files root somewhere safe.) Only then update:
 
 ```bash
 git pull
@@ -119,13 +121,14 @@ npm run db:migrate
 npm run build
 ```
 
-Then stop the running server and start it again with `npm run start`. Take a backup before you update.
+Then start the server again with `npm run start`. If you start a newer version before running `npm run db:migrate`, every page says "Your database needs updating" instead of failing; nothing is migrated by itself.
 
 ## Troubleshooting
 
 - **`Forbidden: Dossier answers on localhost only.`** You opened Dossier with a name other than `localhost`, `127.0.0.1` or `[::1]` (for example a computer name or a proxy). Use `http://127.0.0.1:3000`.
 - **`EADDRINUSE: address already in use`** Something already uses the port, often an old Dossier. Stop it, or start on another port: `npm run start -- -p 4000`.
 - **`DATABASE_PATH is not set`** The `.env` file is missing or you started the app from another folder. Run it from the project folder, or set `DATABASE_PATH` in `.env.local`.
+- **`Your database needs updating`** on every page. The database is behind this version of Dossier (a new version added migrations, or the database file is new and empty). Nothing was changed and nothing is lost. Stop the server, copy the database file somewhere safe, run `npm run db:migrate` (and `npm run db:seed` if the database is new), then start the server again. API requests answer `503` with the same message until then.
 - **`no such table: tracks`, or no tracks in the app.** The database is new or not migrated. Run `npm run db:migrate`, then `npm run db:seed`.
 - **`Choose the files folder in Settings before uploading.`** Set the files root in **Settings → Files**.
 - **A file shows `Changed since upload` or `Missing`.** The file on disk is not the one that was stored. It was edited, replaced or deleted outside Dossier. On the application page press **Check files** to recheck every file. A changed file can still be opened from the warning page with **Open anyway**.

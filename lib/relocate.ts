@@ -25,7 +25,7 @@ export function sameFiles(a: LiveFile[], b: LiveFile[]): boolean {
 export function problemsMessage(problems: string[], max = 5): string {
   const shown = problems.slice(0, max).join(", ");
   const more = problems.length - max;
-  return `${problems.length === 1 ? "1 file" : `${problems.length} files`} not found in that folder with the recorded size: ${shown}${more > 0 ? ` and ${more} more` : ""}. Nothing was changed. Move the whole folder (every file in its folder) there, then try again.`;
+  return `${problems.length === 1 ? "1 file" : `${problems.length} files`} not found in that folder: ${shown}${more > 0 ? ` and ${more} more` : ""}. Nothing was changed. Move the whole folder (every file in its folder) there, then try again.`;
 }
 
 export const parseExpected = (v: unknown): { fileCount: number; totalBytes: number } | null => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTable } from "@tanstack/react-table";
 import type { ApplicationRow } from "@/lib/db/applications";
@@ -36,6 +36,15 @@ export function ApplicationsTable({ trackId, columns, rows }: { trackId: number;
   const setSort = (s: Sort | null) => setQuery(withSort(params.toString(), s));
   const table = useTable({ features, columns: defs, data: sorted, getRowId });
   const [box, setBox] = useState<HTMLDivElement | null>(null); // the scroll area, which the body's virtualizer watches
+  // A deleted column takes its header, menu and dialog with it, so focus would fall to <body>: it goes to "Add column" once the column is gone.
+  const deleting = useRef<number | null>(null);
+  const addCell = useRef<HTMLTableCellElement>(null);
+  useEffect(() => {
+    if (deleting.current !== null && !columns.some((c) => c.id === deleting.current)) {
+      deleting.current = null;
+      addCell.current?.querySelector("button")?.focus();
+    }
+  }, [columns]);
   const widths = [columnWidth("title"), ...visible.map((c) => columnWidth(c.type)), columnWidth("add")];
 
   return (
@@ -86,7 +95,12 @@ export function ApplicationsTable({ trackId, columns, rows }: { trackId: number;
                         }}
                         onMove={(dir) => moveColumn(trackId, col.id, dir)}
                         onLoadImpact={() => fetchColumnDeleteImpact(col.id)}
-                        onDelete={(expected) => deleteColumn(col.id, true, expected)}
+                        onDelete={async (expected) => {
+                          deleting.current = col.id; // set before the call: the new column list can arrive before the action's promise settles
+                          const r = await deleteColumn(col.id, true, expected);
+                          if (!r.ok) deleting.current = null;
+                          return r;
+                        }}
                         onAddOption={(label) => addOption(col.id, label)}
                         onUpdateOption={(optionId, patch) => updateOption(col.id, optionId, patch)}
                         onReorderOptions={(ids) => reorderOptions(col.id, ids)}
@@ -100,7 +114,7 @@ export function ApplicationsTable({ trackId, columns, rows }: { trackId: number;
                 </th>
               );
             })}
-            <th className={cn(headCell, "w-10")}>
+            <th ref={addCell} className={cn(headCell, "w-10")}>
               <AddColumnDialog onSubmit={(name, type) => addColumn(trackId, name, type)} />
             </th>
           </tr>

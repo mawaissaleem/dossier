@@ -9,6 +9,7 @@ export type Job = "backup" | "restore" | "move";
 type State = { job: Job | null; writes: number };
 const g = globalThis as { __dossierLock?: State };
 const state = (g.__dossierLock ??= { job: null, writes: 0 });
+state.writes ??= 0; // a dev server hot-reloaded from an older version keeps `{ uploads }`, so `writes` would be NaN
 
 export const MOVING_MESSAGE = "The files folder is being changed. Try again when it is done.";
 const RESTORING_MESSAGE = "A restore is running. Try again when it is done.";

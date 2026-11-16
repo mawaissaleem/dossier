@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useOptimistic, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useOptimistic, useRef, useState, useTransition } from "react";
 import { CheckIcon, GripVerticalIcon, Trash2Icon } from "lucide-react";
 import { RadioGroup } from "radix-ui";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
@@ -47,11 +47,19 @@ function ColorPicker({ value, onChange, name }: { value: string; onChange: (toke
 
 // One option: grip handle, chip preview of the draft, label input, colour swatches, Save, Delete.
 // The parent keys the row by id+label+color, so after a save the draft resets to the stored values.
-function OptionRow({ option, locked, onSave, onDelete }: { option: OptionItem; locked: boolean; onSave: (patch: OptionPatch) => Promise<Result>; onDelete: () => void }) {
+// `savedRowRef` holds the id of the row just saved: a save that changes the label or colour re-keys (remounts) the row, so its new label input takes the focus.
+function OptionRow({ option, locked, savedRowRef, onSave, onDelete }: { option: OptionItem; locked: boolean; savedRowRef: { current: number | null }; onSave: (patch: OptionPatch) => Promise<Result>; onDelete: () => void }) {
   const [label, setLabel] = useState(option.label);
   const [color, setColor] = useState(option.color);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const labelInput = useRef<HTMLInputElement>(null);
+  // Only on mount (an effect, not an inline ref, which would also fire on the re-render while the save runs, before this row is replaced).
+  useEffect(() => {
+    if (savedRowRef.current !== option.id) return;
+    savedRowRef.current = null;
+    labelInput.current?.focus();
+  }, [option.id, savedRowRef]);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: option.id, disabled: locked });
   // No native `disabled` while saving: a disabled button drops focus to <body>; useSortable sets aria-disabled and ignores input.
   return (
@@ -60,11 +68,14 @@ function OptionRow({ option, locked, onSave, onDelete }: { option: OptionItem; l
         className="flex flex-wrap items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault();
+          savedRowRef.current = option.id; // set before the save: the remounted row can appear before the action's promise settles
           startTransition(async () => {
             try {
               const r = await onSave({ label, color });
+              if (!r.ok) savedRowRef.current = null;
               setError(r.ok ? null : r.error);
             } catch {
+              savedRowRef.current = null;
               setError("Could not save. Try again.");
             }
           });
@@ -74,7 +85,7 @@ function OptionRow({ option, locked, onSave, onDelete }: { option: OptionItem; l
           <GripVerticalIcon aria-hidden="true" />
         </Button>
         <span aria-hidden="true" className="w-28 shrink-0 [&>span]:max-w-full"><OptionChip option={{ label: label.trim() || "…", color }} /></span>
-        <Input aria-label={`Label of option ${option.label}`} required maxLength={MAX_OPTION_LABEL} value={label} onChange={(e) => setLabel(e.target.value)} className="w-40 flex-1" />
+        <Input ref={labelInput} aria-label={`Label of option ${option.label}`} required maxLength={MAX_OPTION_LABEL} value={label} onChange={(e) => setLabel(e.target.value)} className="w-40 flex-1" />
         <ColorPicker value={color} onChange={setColor} name={option.label} />
         <Button type="submit" variant="outline" size="sm" disabled={pending} aria-label={`Save option ${option.label}`}>{pending ? "Saving…" : "Save"}</Button>
         <Button type="button" variant="ghost" size="icon-sm" disabled={locked} onClick={onDelete} aria-label={`Delete option ${option.label}`} title="Delete…" className="text-destructive hover:text-destructive">
@@ -146,6 +157,7 @@ export function OptionEditor({ column, open, onOpenChange, onCloseAutoFocus, onA
   // Delete confirm. The count is fetched fresh on every open; confirm stays disabled until it is shown and, if rows use the option, a choice is made.
   const [delOpen, setDelOpen] = useState(false);
   const back = useReturnFocus();
+  const savedRow = useRef<number | null>(null); // the option row to put focus back in after a save remounts it
   const refocusNew = useRef(false); // after a delete the row's button is gone: focus goes to the new-option field
   const [deleting, setDeleting] = useState<OptionItem | null>(null);
   const [impact, setImpact] = useState<OptionImpact | null>(null); // null while loading
@@ -194,7 +206,7 @@ export function OptionEditor({ column, open, onOpenChange, onCloseAutoFocus, onA
     });
   }
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setLabel(""); setError(null); setReorderError(null); } onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setLabel(""); setError(null); setReorderError(null); savedRow.current = null; } onOpenChange(o); }}>
       <DialogContent
         showCloseButton={false}
         className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl"
@@ -226,7 +238,7 @@ export function OptionEditor({ column, open, onOpenChange, onCloseAutoFocus, onA
               <SortableContext items={options.map((o) => o.id)} strategy={verticalListSortingStrategy}>
                 <ul className="flex flex-col gap-2">
                   {options.map((o) => (
-                    <OptionRow key={`${o.id}-${o.label}-${o.color}`} option={o} locked={reordering} onSave={(patch) => onUpdate(o.id, patch)} onDelete={() => openDelete(o)} />
+                    <OptionRow key={`${o.id}-${o.label}-${o.color}`} option={o} locked={reordering} savedRowRef={savedRow} onSave={(patch) => onUpdate(o.id, patch)} onDelete={() => openDelete(o)} />
                   ))}
                 </ul>
               </SortableContext>

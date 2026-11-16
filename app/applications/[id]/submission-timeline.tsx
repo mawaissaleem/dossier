@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import type { SubmissionItem } from "@/lib/db/submissions";
 import { IntegrityBadge } from "./integrity-badge";
 import { NoteTime } from "./note-time";
+import { PreviewButton, PreviewGroup } from "./preview-file";
 import { SubmissionNote } from "./submission-note";
+import { previewKind } from "@/lib/file-serve";
+import { previewItems } from "@/lib/preview-nav";
 import { fileCountLabel } from "@/lib/submission-timeline";
 import { formatBytes } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
-// Submissions, newest first (FR-7.9). The latest starts expanded; the page keys this component by the latest id, so a new submission
+// Submissions, newest first (FR-7.9). A PDF or image in a submission has Preview (13.4): one dialog per submission, Previous / Next across that submission's files. The latest starts expanded; the page keys this component by the latest id, so a new submission
 // remounts it expanded. Open is the 5.10 route in a new tab. Download is the same route with the `download` attribute: the server's safe
 // headers (nosniff, CSP, sanitised filename) are unchanged, and the attribute only makes the browser save instead of render.
 // A file deleted after it was submitted (8.8) is shown as a record only: name, label, size, checksum and the date, no Open or Download.
@@ -49,6 +52,7 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                 {s.files.length === 0 ? (
                   <p className="border-t border-border px-3 py-2 pl-9 text-sm text-muted-foreground">No files were recorded for this submission.</p>
                 ) : (
+                  <PreviewGroup items={previewItems(s.files)}>
                   <ul className="divide-y divide-border border-t border-border">
                     {s.files.map((f) => (
                       <li key={f.id} className="flex items-center gap-3 px-3 py-2 pl-9">
@@ -68,6 +72,7 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                           </p>
                         </div>
                         {f.deletedAt ? null : <>
+                        {previewKind(f.storedName) && <PreviewButton id={f.id} name={f.originalName} />}
                         <Button asChild variant="outline" size="sm">
                           <a href={`/api/files/${f.id}`} target="_blank" rel="noopener" aria-label={`Open ${f.originalName}`}>
                             Open <ExternalLinkIcon aria-hidden />
@@ -83,6 +88,7 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                       </li>
                     ))}
                   </ul>
+                  </PreviewGroup>
                 )}
               </div>
             </div>

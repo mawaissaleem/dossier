@@ -53,6 +53,10 @@ describe.each(THEMES)("%s theme contrast (WCAG AA)", (theme) => {
   it("the selected colour swatch border (foreground) stands out from every chip colour", () => {
     for (const p of PALETTE) expect(contrast(t["--foreground"], t[`--chip-${p}`]), `swatch ${p}`).toBeGreaterThanOrEqual(3);
   });
+  it("the Pipeline bar: its outline and gaps (input) reach 3:1 on the card, and the No status segment (muted) stands out from them", () => {
+    expect(contrast(t["--input"], t["--card"])).toBeGreaterThanOrEqual(3);
+    expect(contrast(t["--muted"], t["--input"])).toBeGreaterThanOrEqual(3);
+  });
   it("every palette token has a chip pair with 4.5:1 text", () => {
     for (const p of PALETTE) {
       expect(contrast(t[`--chip-${p}-foreground`], t[`--chip-${p}`]), `chip ${p}`).toBeGreaterThanOrEqual(4.5);

@@ -142,14 +142,14 @@ describe("Check files", () => {
 });
 
 describe("Open when the missing state cannot be recorded (8.6 review)", () => {
-  it("answers with the JSON 404 instead of throwing", async () => {
+  it("answers with the themed 404 page instead of throwing", async () => {
     const f = await store("a.pdf", "one");
     remove(f.relativePath);
     db.run(sql`CREATE TRIGGER no_update BEFORE UPDATE ON files BEGIN SELECT RAISE(ABORT, 'database is locked'); END`);
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await GET(new NextRequest(`http://localhost:3000/api/files/${f.id}`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(f.id) }) } as never);
     expect(res.status).toBe(404);
-    expect((await res.json()).error).toContain("is missing");
+    expect(await res.text()).toContain("is missing");
     spy.mockRestore();
   });
 });

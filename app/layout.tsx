@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { FileStackIcon, LayoutDashboardIcon, ListChecksIcon, RouteIcon, SettingsIcon } from "lucide-react";
 import "./globals.css";
 import { BackupBanner } from "./backup-banner";
+import { DatabaseGate } from "./database-gate";
 import { NavLink } from "./nav-link";
 import { SearchPalette } from "./search-palette";
 import { ThemeSwitcher } from "./theme-switcher";
@@ -48,7 +49,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Suspense>
             <BackupBanner />
           </Suspense>
-          {children}
+          <Suspense>
+            <DatabaseGate>{children}</DatabaseGate>
+          </Suspense>
         </main>
       </body>
     </html>

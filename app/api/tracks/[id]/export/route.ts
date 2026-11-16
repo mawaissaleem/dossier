@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { exportFilename, trackCsv } from "@/lib/csv";
 import { getTrackExport } from "@/lib/db/export";
 import { contentDisposition } from "@/lib/file-serve";
+import { databaseUpdateResponse } from "@/lib/db/migrations";
 import { isCrossSiteFetch, isLocalHost } from "@/lib/local-request";
 
 // GET /api/tracks/:id/export  downloads the track's table as CSV (lib/csv.ts has the format and the formula guard). It is every
@@ -13,6 +14,8 @@ const json = (error: string, status: number) => NextResponse.json({ error }, { s
 
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/tracks/[id]/export">) {
   if (!isLocalHost(request.headers) || isCrossSiteFetch(request.headers)) return json("Local use only.", 403);
+  const behind = databaseUpdateResponse(); // 503 while migrations are pending, instead of a "no such table" crash
+  if (behind) return behind;
   const { id: raw } = await ctx.params;
   const id = /^\d{1,15}$/.test(raw) ? Number(raw) : NaN;
   const data = Number.isSafeInteger(id) ? await getTrackExport(id) : null;

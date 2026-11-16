@@ -14,9 +14,10 @@
 // files split between the two folders; the setting still names the old one, so re-pointing it at the new folder after moving the rest back
 // (or the other way round) fixes it.
 //
-// repointStoredFiles: the user already moved the folder. Every live row's path must exist in the new folder as a plain file with the recorded size
-// (the hash is NOT re-read here: that would read every byte of the archive in one request; Open and Check files verify it later). A refusal
-// lists the first few problems and saves nothing. There is deliberately no override in v1.
+// repointStoredFiles: the user already moved the folder. Every live row's path must exist in the new folder as a plain file. One whose size
+// differs from the record (edited outside Dossier, AT-8) is accepted and flagged 'mismatch', as Move does; the hash is NOT re-read here: that
+// would read every byte of the archive in one request (Open and Check files verify it later). A missing file refuses: the refusal lists the
+// first few and saves nothing. There is deliberately no override in v1.
 import { createHash } from "node:crypto";
 import { constants, createReadStream } from "node:fs";
 import { chmod, copyFile, lstat, mkdir, readdir, realpath, rename, rmdir, rm, stat } from "node:fs/promises";
@@ -29,7 +30,7 @@ import { resolveInRoot } from "./resolve";
 import { validateFilesRoot } from "./root";
 
 export type MoveResult = { ok: true; path: string; moved: number; bytes: number; renamed: number; copied: number; warnings: string[] } | { ok: false; error: string };
-export type RepointResult = { ok: true; path: string; checked: number } | { ok: false; error: string };
+export type RepointResult = { ok: true; path: string; checked: number; changed: number } | { ok: false; error: string };
 
 const fail = (error: string) => ({ ok: false, error }) as const;
 const code = (e: unknown) => (e as NodeJS.ErrnoException).code;
@@ -141,13 +142,15 @@ export async function repointStoredFiles(input: unknown): Promise<RepointResult>
   if (!v.ok) return v;
   const live = await listLiveFiles();
   const problems: string[] = [];
+  const changed: number[] = [];
   for (const f of live) {
     const t = await resolveInRoot(v.path, f.relativePath);
     const st = t.ok ? await stat(t.path).catch(() => null) : null;
     if (!st?.isFile()) problems.push(`${f.relativePath} (missing)`);
-    else if (st.size !== f.sizeBytes) problems.push(`${f.relativePath} (size differs)`);
+    else if (st.size !== f.sizeBytes) changed.push(f.id);
   }
   if (problems.length) return fail(problemsMessage(problems));
   if (!(await switchFilesRoot(v.path, live))) return fail("Your files changed while they were being checked (an upload or a delete). Nothing was changed; try again.");
-  return { ok: true, path: v.path, checked: live.length };
+  for (const id of changed) await recordIntegrity(id, "mismatch"); // after the switch: a refused re-point flags nothing
+  return { ok: true, path: v.path, checked: live.length, changed: changed.length };
 }

@@ -211,24 +211,35 @@ describe("AT-13: back up, wipe, restore", () => {
     expect(readFileSync(join(root, "keep-me.txt"), "utf8")).toBe("left alone");
   });
 
-  it("restores an older-schema backup and migrates it", async () => {
+  it("restores an older-schema backup, migrates it, then flags a changed and a missing file", async () => {
     const dir = mkdtempSync(join(tmpdir(), "dossier-old-"));
     try {
       cpSync("./drizzle", join(dir, "old"), { recursive: true });
       const journalPath = join(dir, "old/meta/_journal.json");
       const journal = JSON.parse(readFileSync(journalPath, "utf8"));
-      journal.entries = journal.entries.slice(0, 1);
+      journal.entries = journal.entries.slice(0, 3); // has `files`, but not integrity / checked_at / deleted_at
       writeFileSync(journalPath, JSON.stringify(journal));
       const file = join(dir, "old.db");
       const old = new Database(file);
       migrate(drizzle(old), { migrationsFolder: join(dir, "old") });
       old.prepare("INSERT INTO tracks (user_id, name, position, created_at, updated_at) VALUES ('local', 'T', 0, 1, 1)").run();
       old.prepare("INSERT INTO applications (user_id, track_id, title, created_at, updated_at) VALUES ('local', 1, 'Old app', 1, 1)").run();
+      // Three file rows, all recorded with the hash of "original": the first is intact in the backup, the second was edited, the third is not in it.
+      const hash = createHash("sha256").update("original").digest("hex");
+      ["ok", "changed", "gone"].forEach((n, i) => old.prepare(
+        "INSERT INTO files (user_id, created_at, updated_at, application_id, label, original_name, stored_name, relative_path, sha256, size_bytes, upload_date, base_name, extension, seq) VALUES ('local', 1, 1, 1, 'CV', ?, ?, ?, ?, 8, '2026-11-08', ?, 'txt', ?)",
+      ).run(`${n}.txt`, `${n}.txt`, `app/${n}.txt`, hash, n, i + 1));
       old.close();
-      const zip = craft("old.zip", (m) => { for (const n of [...m.keys()]) if (n.startsWith("files/")) m.delete(n); m.set("database/dossier.db", readFileSync(file)); });
-      expect(await checkBackup(zip)).toMatchObject({ ok: true, info: { schemaOlder: true, counts: { applications: 1, files: 0, notes: 0 } } });
+      const zip = craft("old.zip", (m) => {
+        for (const n of [...m.keys()]) if (n.startsWith("files/")) m.delete(n);
+        m.set("files/app/ok.txt", Buffer.from("original"));
+        m.set("files/app/changed.txt", Buffer.from("edited!!"));
+        m.set("database/dossier.db", readFileSync(file));
+      });
+      expect(await checkBackup(zip)).toMatchObject({ ok: true, info: { schemaOlder: true, counts: { applications: 1, files: 3, notes: 0 } } });
       const r = await restore(zip);
       expect(r.ok).toBe(true);
+      expect(integrity()).toEqual({ "app/ok.txt": "ok", "app/changed.txt": "mismatch", "app/gone.txt": "missing" });
       expect(getDb().select().from(applications).all().map((a) => a.title)).toEqual(["Old app"]);
       expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: 5 });
       expect((getDb().$client.prepare("PRAGMA table_info(files)").all() as { name: string }[]).map((c) => c.name)).toEqual(expect.arrayContaining(["integrity", "checked_at", "deleted_at"]));

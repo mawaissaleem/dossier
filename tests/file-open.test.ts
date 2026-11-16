@@ -89,7 +89,7 @@ describe("GET /api/files/:id", () => {
     expect(res.headers.get("content-disposition")).toBe(`inline; filename="01-20261108-My_CV.pdf"; filename*=UTF-8''01-20261108-My_CV.pdf`);
     expect(res.headers.get("content-length")).toBe(String(Buffer.byteLength(bytes)));
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'");
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'self'");
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
   it.each([["pic.png", "image/png"], ["notes.txt", "text/plain; charset=utf-8"]])("%s is inline and keeps the sandbox", async (name, type) => {
@@ -97,7 +97,7 @@ describe("GET /api/files/:id", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe(type);
     expect(res.headers.get("content-disposition")).toMatch(/^inline;/);
-    expect(res.headers.get("content-security-policy")).toBe("sandbox; default-src 'none'");
+    expect(res.headers.get("content-security-policy")).toBe("sandbox; default-src 'none'; frame-ancestors 'self'");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
   });
   it.each([["page.html", "<script>alert(1)</script>"], ["pic.svg", "<svg onload=alert(1)/>"], ["x.js", "alert(1)"], ["doc.docx", "PK"]])("%s is an attachment, sandboxed and nosniff", async (name, body) => {
@@ -107,7 +107,7 @@ describe("GET /api/files/:id", () => {
     expect(await res.text()).toBe(body);
     expect(res.headers.get("content-type")).toBe("application/octet-stream");
     expect(res.headers.get("content-disposition")).toMatch(/^attachment;/);
-    expect(res.headers.get("content-security-policy")).toBe("sandbox; default-src 'none'");
+    expect(res.headers.get("content-security-policy")).toBe("sandbox; default-src 'none'; frame-ancestors 'self'");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
   });
   it("404 for an unknown id, a bad id and another user's file", async () => {
@@ -152,12 +152,55 @@ describe("GET /api/files/:id", () => {
     }
     expect((await get(f.id)).status).toBe(200);
   });
+  it("a frame request from Dossier itself (same-origin, Sec-Fetch-Dest: iframe) is served with the PDF's own headers; one from another site or localhost port is refused", async () => {
+    const f = await store("a.pdf", "secret cv", "2026-11-08");
+    const ok = await get(f.id, { "sec-fetch-site": "same-origin", "sec-fetch-dest": "iframe" });
+    expect(ok.status).toBe(200);
+    expect(await ok.text()).toBe("secret cv");
+    expect(ok.headers.get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'self'");
+    expect(ok.headers.get("cross-origin-resource-policy")).toBe("same-origin");
+    expect(ok.headers.get("content-disposition")).toMatch(/^inline;/);
+    for (const site of ["cross-site", "same-site"]) {
+      const res = await get(f.id, { "sec-fetch-site": site, "sec-fetch-dest": "iframe" });
+      expect(res.status, site).toBe(403);
+      expect(await res.text()).not.toContain("secret cv");
+    }
+  });
+  it("?download=1 sends the same bytes as an attachment, still hash-checked", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    const dl = (q: string) => GET(new NextRequest(`http://localhost:3000/api/files/${f.id}${q}`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(f.id) }) } as never);
+    const ok = await dl("?download=1");
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("content-disposition")).toMatch(/^attachment; filename="/);
+    expect(await ok.text()).toBe("original");
+    chmodSync(join(root, f.relativePath), 0o644);
+    writeFileSync(join(root, f.relativePath), "tampered");
+    const bad = await dl("?download=1");
+    expect(bad.status).toBe(409);
+    expect(await bad.text()).not.toContain("tampered");
+  });
+  it("the changed-file and folder-missing pages can be framed only by Dossier, and their links work in a frame (open anyway stays in it, back and settings leave it)", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    chmodSync(join(root, f.relativePath), 0o644);
+    writeFileSync(join(root, f.relativePath), "tampered");
+    const changed = await get(f.id, { "sec-fetch-site": "same-origin", "sec-fetch-dest": "iframe" });
+    expect(changed.status).toBe(409);
+    expect(changed.headers.get("content-security-policy")).toMatch(/frame-ancestors 'self'$/);
+    expect(changed.headers.get("content-security-policy")).not.toMatch(/sandbox/); // a sandboxed frame's own links would count as cross-site
+    const html = await changed.text();
+    expect(html).toContain(`<a href="/api/files/${f.id}?anyway=1">Open anyway</a>`); // no target: loads in the frame, same-origin
+    expect(html).toContain('target="_top"');
+    db.delete(settings).run();
+    const setup = await get(f.id, { "sec-fetch-site": "same-origin", "sec-fetch-dest": "iframe" });
+    expect(setup.headers.get("content-security-policy")).toMatch(/frame-ancestors 'self'$/);
+  });
   it("409 when the files folder is not set", async () => {
     const f = await store("a.pdf", "1", "2026-11-08");
     db.delete(settings).run();
     const res = await get(f.id);
     expect(res.status).toBe(409);
-    expect((await res.json()).error).toMatch(/Settings/);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    expect(await res.text()).toMatch(/Choose the files folder in Settings[\s\S]*Back to the application/);
   });
   it("404 with a clear message when the file is gone from disk, or is a folder", async () => {
     const f = await store("a.pdf", "1", "2026-11-08");
@@ -166,9 +209,50 @@ describe("GET /api/files/:id", () => {
     rmSync(abs);
     const res = await get(f.id);
     expect(res.status).toBe(404);
-    expect((await res.json()).error).toContain(`${f.storedName} is missing`);
+    expect(await res.text()).toContain(`${f.storedName} is missing`);
     mkdirSync(abs);
     expect((await get(f.id)).status).toBe(404);
+  });
+  it("a file missing from disk (404) and an unreadable one (500) get the themed, frameable problem page with a way back; unknown ids and 403 stay JSON", async () => {
+    const f = await store("a.pdf", "1", "2026-11-08");
+    const abs = join(root, f.relativePath);
+    const asFrame = { "sec-fetch-site": "same-origin", "sec-fetch-dest": "iframe" };
+    const page = async (res: Response, status: number, title: string) => {
+      expect(res.status).toBe(status);
+      expect(res.headers.get("content-type")).toContain("text/html");
+      expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
+      expect(res.headers.get("cross-origin-resource-policy")).toBe("same-origin");
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      const html = await res.text();
+      expect(html).toContain(`<h1>${title}</h1>`);
+      expect(html).toContain(`<a href="/applications/${appId}" target="_top">Back to the application</a>`);
+      return html;
+    };
+    if (process.getuid?.() !== 0) { // root reads anything, so the unreadable case cannot be made
+      chmodSync(abs, 0o000);
+      await page(await get(f.id, asFrame), 500, "This file could not be read");
+    }
+    chmodSync(abs, 0o666);
+    rmSync(abs);
+    const html = await page(await get(f.id, asFrame), 404, "This file is missing");
+    expect(html).toContain(`${f.storedName} is missing from the files folder`);
+    await page(await get(f.id), 404, "This file is missing"); // a new tab gets the same page
+    const unknown = await get(f.id + 100);
+    expect(unknown.headers.get("content-type")).toContain("application/json");
+    const cross = await get(f.id, { "sec-fetch-site": "cross-site" });
+    expect(cross.status).toBe(403);
+    expect(cross.headers.get("content-type")).toContain("application/json");
+  });
+  it("Open anyway on the changed-file page keeps the download when it was reached with ?download=1, and not otherwise", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    chmodSync(join(root, f.relativePath), 0o644);
+    writeFileSync(join(root, f.relativePath), "tampered");
+    const req = (q: string) => GET(new NextRequest(`http://localhost:3000/api/files/${f.id}${q}`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(f.id) }) } as never);
+    expect(await (await req("?download=1")).text()).toContain(`<a href="/api/files/${f.id}?anyway=1&download=1">Open anyway</a>`);
+    expect(await (await req("")).text()).toContain(`<a href="/api/files/${f.id}?anyway=1">Open anyway</a>`);
+    const any = await req("?anyway=1&download=1");
+    expect(any.status).toBe(200);
+    expect(any.headers.get("content-disposition")).toMatch(/^attachment;/);
   });
   it("refuses a tampered relative_path (../ and absolute) and a symlink out of the root", async () => {
     const f = await store("a.pdf", "1", "2026-11-08");
@@ -214,18 +298,33 @@ describe("hash verification on open (8.6)", () => {
     expect(html).toContain(f.storedName);
     expect(html).toContain(row(f.id).sha256.slice(0, 12));
     expect(html).toContain(`/api/files/${f.id}?anyway=1`);
-    expect(html).toContain(`<a href="/applications/${appId}">Back to the application</a>`);
+    expect(html).toContain(`<a href="/applications/${appId}" target="_top">Back to the application</a>`);
     expect(html).toContain("prefers-color-scheme:light");
-    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'");
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(row(f.id).integrity).toBe("mismatch");
   });
-  it("a files folder that no longer exists says so and points to Re-point (409); a path that escapes the root is still refused (404)", async () => {
+  it("a tampered stored hash is escaped on the changed page: markup shows as text", async () => {
+    const f = await store("a.pdf", "original", "2026-11-08");
+    db.$client.pragma("ignore_check_constraints = ON"); // the CHECK on files.sha256 would refuse this; a hand-edited database file would not
+    db.update(files).set({ sha256: "<style>x</style><script>" }).where(eq(files.id, f.id)).run();
+    const html = await (await get(f.id)).text();
+    expect(html).not.toMatch(/<style>x|<script>/);
+    expect(html).toContain("Expected hash &#60;style&#62;x&#60;");
+  });
+  it("a files folder that no longer exists gets the themed page (409) with the Re-point message and a way back; a path that escapes the root is still refused (404)", async () => {
     const f = await store("a.pdf", "1", "2026-11-08");
     rmSync(root, { recursive: true, force: true });
     const res = await get(f.id);
     expect(res.status).toBe(409);
-    expect((await res.json()).error).toMatch(/files folder was not found.*Re-point in Settings/);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
+    expect(res.headers.get("cross-origin-resource-policy")).toBe("same-origin");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const html = await res.text();
+    expect(html).toMatch(/files folder was not found\. If you moved it, use Re-point in Settings/);
+    expect(html).toContain('<a href="/settings" target="_top">Open Settings</a>');
+    expect(html).toContain(`<a href="/applications/${appId}" target="_top">Back to the application</a>`);
     expect(await verifyStoredFile(f.id)).toMatchObject({ ok: false, kind: "setup" });
     mkdirSync(root);
     db.update(files).set({ relativePath: "../outside.pdf" }).where(eq(files.id, f.id)).run();
@@ -241,7 +340,7 @@ describe("hash verification on open (8.6)", () => {
     expect(await res.text()).toBe("tampered");
     expect(res.headers.get("content-length")).toBe("8");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'");
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'self'");
     expect(row(f.id).integrity).toBe("mismatch");
   });
   it("a file deleted outside the app is missing (404) and recorded; put back with its original bytes it is ok again", async () => {

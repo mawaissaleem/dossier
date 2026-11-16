@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applicationExists } from "@/lib/db/files";
 import { storeUploadedFile, type StoredFile } from "@/lib/files/store";
+import { databaseUpdateResponse } from "@/lib/db/migrations";
 import { isLocalHost, isSameOrigin } from "@/lib/local-request";
 import { MAX_UPLOAD_BYTES as MAX_BYTES, parseUploadFields } from "@/lib/upload-form";
 
@@ -40,6 +41,8 @@ async function readForm(request: NextRequest): Promise<FormData | "too-large" | 
 
 export async function POST(request: NextRequest, ctx: RouteContext<"/api/applications/[id]/files">) {
   if (!isLocalHost(request.headers) || !isSameOrigin(request.headers)) return json({ error: "Local use only." }, 403);
+  const behind = databaseUpdateResponse(); // 503 while migrations are pending, instead of a "no such table" crash
+  if (behind) return behind;
   const { id: raw } = await ctx.params;
   const id = /^\d{1,15}$/.test(raw) ? Number(raw) : NaN;
   if (!Number.isSafeInteger(id) || !(await applicationExists(id))) return json({ error: "Application not found." }, 404);

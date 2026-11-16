@@ -57,7 +57,7 @@ export function FilesRootForm({ current, liveFiles }: { current: string | null; 
         const r = await repointFilesRoot(value);
         if (r.ok) {
           setValue(r.path);
-          setSaved(`Saved. All ${plural(r.checked, "file")} were found there with the recorded size.`);
+          setSaved(`Saved. All ${plural(r.checked, "file")} were found there.${r.changed ? ` ${plural(r.changed, "file")} differ${r.changed === 1 ? "s" : ""} from the recorded size and ${r.changed === 1 ? "is" : "are"} flagged as changed.` : ""}`);
         } else {
           setError(r.error);
         }
@@ -146,7 +146,7 @@ export function FilesRootForm({ current, liveFiles }: { current: string | null; 
       {liveFiles > 0 && (
         <p className="text-sm text-muted-foreground">
           {plural(liveFiles, "file")} stored. <strong className="font-medium text-foreground">Move files</strong> moves them into the empty folder named above.{" "}
-          <strong className="font-medium text-foreground">Re-point</strong> is for a folder you already moved yourself: it saves the path only if every stored file is there with its recorded size.
+          <strong className="font-medium text-foreground">Re-point</strong> is for a folder you already moved yourself: it saves the path only if every stored file is there (a file whose size differs is flagged as changed).
         </p>
       )}
       {error && <p id="files-root-err" role="alert" className="text-sm text-destructive">{error}</p>}

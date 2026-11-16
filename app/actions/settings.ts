@@ -59,7 +59,7 @@ export async function moveFilesRoot(input: unknown, expected: unknown): Promise<
   }
 }
 
-// Re-point (8.10): the user already moved the folder; saves it only if every stored file is there with its recorded size.
+// Re-point (8.10): the user already moved the folder; saves it only if every stored file is there (a size that differs is flagged as changed, as Move does).
 export async function repointFilesRoot(input: unknown): Promise<RepointResult> {
   const lock = tryLock("move");
   if (!lock.ok) return lock;

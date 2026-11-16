@@ -8,7 +8,7 @@ import { listTracks } from "./tracks";
 import { getUserId } from "./user";
 
 // `labels` = every configured win status label in track and option order (the card is shown, with an empty state, as long as there is one);
-// `wins` = most recently reached first, archived ones included. `since` = the newest status change into the current status, else the application's updated_at.
+// `wins` = most recently reached first, archived ones included. `since` = the newest status change into the current status, else the application's created_at (an edit must not move a win up).
 export async function getWins(): Promise<{ labels: string[]; wins: Win[] }> {
   const db = getDb();
   const userId = getUserId();
@@ -23,7 +23,7 @@ export async function getWins(): Promise<{ labels: string[]; wins: Win[] }> {
   const since = sql<number>`coalesce((select max(${activityEvents.occurredAt}) from ${activityEvents}
     where ${activityEvents.applicationId} = ${applications.id} and ${activityEvents.userId} = ${userId} and ${activityEvents.kind} = 'status_changed'
     and case when json_valid(${activityEvents.details}) then json_extract(${activityEvents.details}, '$.columnId') end = ${cellValues.columnId}
-    and case when json_valid(${activityEvents.details}) then json_extract(${activityEvents.details}, '$.toOptionId') end = ${cellValues.valueOptionId}), ${applications.updatedAt})`;
+    and case when json_valid(${activityEvents.details}) then json_extract(${activityEvents.details}, '$.toOptionId') end = ${cellValues.valueOptionId}), ${applications.createdAt})`;
   const rows = db
     .select({ id: applications.id, title: applications.title, trackId: applications.trackId, archived: applications.archived, optionId: cellValues.valueOptionId, since })
     .from(applications)

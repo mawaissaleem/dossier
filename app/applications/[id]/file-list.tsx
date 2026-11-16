@@ -4,13 +4,17 @@ import { Button } from "@/components/ui/button";
 import type { FileListItem } from "@/lib/db/files";
 import { DeleteFile } from "./delete-file";
 import { IntegrityBadge } from "./integrity-badge";
+import { previewItems } from "@/lib/preview-nav";
 import { formatBytes } from "@/lib/upload-client";
+import { PreviewButton, PreviewGroup } from "./preview-file";
 
-// The application's uploaded files (5.10). Open is a plain link to the GET route in a new tab: the server decides inline or download.
+// The application's uploaded files (5.10). A PDF or an image also has Preview (13.3, 13.4): one dialog for the list, Previous / Next across its previewable files. Open is a plain link to the GET route in a new tab: the server decides inline or download.
 // min-w-0 + truncate keep a long name from widening the row; the full text is in the title.
 export function FileList({ files }: { files: FileListItem[] }) {
   if (files.length === 0) return <EmptyState className="mt-4" title="No files yet" description="Files you upload for this application are listed here." />;
+  const previewable = previewItems(files);
   return (
+    <PreviewGroup items={previewable}>
     <ul aria-label="Files" className="mt-4 divide-y divide-border rounded-lg border border-border bg-card">
       {files.map((f) => (
         <li key={f.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted">
@@ -24,6 +28,7 @@ export function FileList({ files }: { files: FileListItem[] }) {
               <time dateTime={f.uploadDate}>{f.uploadDate}</time> · <span title={f.storedName}>{f.storedName}</span> · {formatBytes(f.sizeBytes)}
             </p>
           </div>
+          {previewable.some((p) => p.id === f.id) && <PreviewButton id={f.id} name={f.originalName} />}
           <Button asChild variant="outline" size="sm">
             <a href={`/api/files/${f.id}`} target="_blank" rel="noopener" aria-label={`Open ${f.originalName}`}>
               Open <ExternalLinkIcon aria-hidden />
@@ -33,5 +38,6 @@ export function FileList({ files }: { files: FileListItem[] }) {
         </li>
       ))}
     </ul>
+    </PreviewGroup>
   );
 }

@@ -54,10 +54,10 @@ describe("win statuses and getWins (data layer)", () => {
     const status = db.insert(columns).values({ userId, trackId: t, name: "Status", type: "single_select", position: 0, isStatus: true }).returning().get().id;
     const opt = (label: string, p: number) => db.insert(columnOptions).values({ userId, columnId: status, label, color: "blue", position: p }).returning().get().id;
     const [todo, interview, offer] = [opt("To apply", 0), opt("Interview", 1), opt("Offer", 2)];
-    // `at` = the day the status change into `to` was logged (ms); none = no event, so updated_at is used
-    const add = (title: string, to: number | null, o: { archived?: boolean; at?: number; updated?: number; uid?: string } = {}) => {
+    // `at` = the day the status change into `to` was logged (ms); none = no event, so created_at is used (`updated` is an edit and must not matter)
+    const add = (title: string, to: number | null, o: { archived?: boolean; at?: number; created?: number; updated?: number; uid?: string } = {}) => {
       const uid = o.uid ?? userId;
-      const id = db.insert(applications).values({ userId: uid, trackId: t, title, archived: o.archived ?? false, updatedAt: new Date(o.updated ?? 1000) }).returning().get().id;
+      const id = db.insert(applications).values({ userId: uid, trackId: t, title, archived: o.archived ?? false, createdAt: new Date(o.created ?? 1000), updatedAt: new Date(o.updated ?? 1000) }).returning().get().id;
       if (to !== null) db.insert(cellValues).values({ userId: uid, applicationId: id, columnId: status, valueOptionId: to }).run();
       if (o.at !== undefined) db.insert(activityEvents).values({ userId: uid, applicationId: id, kind: "status_changed", occurredAt: new Date(o.at), details: JSON.stringify({ columnId: status, fromOptionId: todo, fromLabel: "To apply", toOptionId: to, toLabel: "x" }) }).run();
       return id;
@@ -94,13 +94,13 @@ describe("win statuses and getWins (data layer)", () => {
     expect(labels).toEqual(["Interview"]);
   });
 
-  it("lists current wins newest first by the status change into it (else updated_at), archived included, ties by id", async () => {
+  it("lists current wins newest first by the status change into it (else created_at), archived included, ties by id", async () => {
     const j = track("Job", 0), p = track("PhD", 1);
     const a = j.add("old interview", j.interview, { at: 1_000_000 });
     const b = j.add("new offer", j.offer, { at: 5_000_000 });
     const c = j.add("archived interview", j.interview, { at: 3_000_000, archived: true });
-    const d = p.add("no event", p.offer, { updated: 4_000_000 });
-    const e = p.add("tie with d", p.offer, { updated: 4_000_000 });
+    const d = p.add("no event", p.offer, { created: 4_000_000, updated: 4_500_000 });
+    const e = p.add("tie with d", p.offer, { created: 4_000_000, updated: 9_999_999 }); // edited long after: still ties with d, does not jump to the top
     j.add("not a win", j.todo, { at: 9_000_000 });
     j.add("no status", null);
     // an older event into a different status must not count: the newest into the *current* one does
@@ -112,6 +112,16 @@ describe("win statuses and getWins (data layer)", () => {
     expect(wins.map((w) => w.id)).toEqual([b, d, e, c, f, a]);
     expect(wins.find((w) => w.id === c)).toMatchObject({ archived: true, trackName: "Job", label: "Interview", since: 3_000_000 });
     expect(wins.find((w) => w.id === d)).toMatchObject({ trackName: "PhD", since: 4_000_000 });
+  });
+
+  it("scoping: another user's applications, tracks and status events never count towards my wins", async () => {
+    const j = track("Job", 0);
+    const mine = j.add("mine, no event of mine", j.offer, { created: 2_000_000 });
+    // someone else's event on MY application (same ids) and someone else's row in my track: neither may date or add a win
+    db.insert(activityEvents).values({ userId: "someone", applicationId: mine, kind: "status_changed", occurredAt: new Date(7_000_000), details: JSON.stringify({ columnId: j.status, toOptionId: j.offer }) }).run();
+    j.add("theirs, in my track", j.offer, { uid: "someone", at: 8_000_000 });
+    const { wins } = await getWins();
+    expect(wins.map((w) => [w.title, w.since])).toEqual([["mine, no event of mine", 2_000_000]]);
   });
 
   it("excludes another user's applications and tracks; saved-empty on every track gives no labels (card hidden)", async () => {
