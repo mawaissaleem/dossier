@@ -1,8 +1,8 @@
 // Server-only. Convention for lib/db/<area>.ts: import getDb and tables, export plain async functions returning plain objects
 // (never query builders). Async even though better-sqlite3 is sync, so callers don't change when v2 moves to Postgres (NFR-6).
-import { asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { getDb } from "./client";
-import { tracks } from "./schema";
+import { applications, tracks } from "./schema";
 import { getUserId } from "./user";
 
 export type TrackListItem = { id: number; name: string; position: number };
@@ -14,4 +14,14 @@ export async function listTracks(): Promise<TrackListItem[]> {
     .where(eq(tracks.userId, getUserId()))
     .orderBy(asc(tracks.position), asc(tracks.id))
     .all();
+}
+
+// The sidebar's per-track counts: non-archived applications, one grouped query. A track with none is 0.
+export async function listTrackCounts(): Promise<(TrackListItem & { count: number })[]> {
+  const db = getDb();
+  const userId = getUserId();
+  const counts = new Map(
+    db.select({ trackId: applications.trackId, n: count() }).from(applications).where(and(eq(applications.userId, userId), eq(applications.archived, false))).groupBy(applications.trackId).all().map((r) => [r.trackId, r.n]),
+  );
+  return (await listTracks()).map((t) => ({ ...t, count: counts.get(t.id) ?? 0 }));
 }

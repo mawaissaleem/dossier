@@ -92,7 +92,7 @@ export async function setOptionBuffer(optionId: unknown, input: unknown): Promis
 export const stillToDoKey = (trackId: number) => `track.${trackId}.still_to_do`;
 
 // Status option ids that are "still to do" for a track (FR-8.4): saved list (deleted ids dropped), else the options before the first submitted status.
-function stillToDoIds(trackId: number): number[] {
+export function stillToDoIds(trackId: number): number[] {
   return resolveStillToDo(readSetting(stillToDoKey(trackId)), statusOptions(trackId), submittedStatusIds(trackId));
 }
 
@@ -136,7 +136,7 @@ export type UndatedItem = PlannerItem & UndatedScore & { reasoning: string }; //
 
 // "Last touched" (FR-8.6) = the later of the application's own updated_at and its newest note or activity event (when it was written, so a
 // backdated manual submission does not count as the past). Every edit counts: form saves, archive/restore and table/board cell writes all bump updated_at. Ms per application id.
-function lastTouchedMs(): Map<number, number> {
+export function lastTouchedMs(): Map<number, number> {
   const db = getDb();
   const userId = getUserId();
   const m = new Map<number, number>();
@@ -224,7 +224,7 @@ export async function getPlannerRanking(today: string): Promise<{ ranked: Ranked
 
 // The still-to-do applications of every track with their Deadline slot value, from the ranking's own gathering (below its policy step, so the
 // overdue and no-deadline rules never change it). React `cache` = once per request: the cards and the summary line share one pass, not one each.
-const datedStillToDo = cache(() => gatherStillToDo().flatMap((t) => t.apps.map((a) => ({ id: a.id, title: t.titles.get(a.id)!, trackId: t.id, trackName: t.name, deadline: a.deadline }))));
+export const datedStillToDo = cache(() => gatherStillToDo().flatMap((t) => t.apps.map((a) => ({ id: a.id, title: t.titles.get(a.id)!, trackId: t.id, trackName: t.name, deadline: a.deadline }))));
 
 // FR-9.5: those whose deadline is before today, most overdue first. The planner's overdue rule (pin, hide or normal) never changes it.
 export const getOverdueAlerts = cache(async (today: string): Promise<OverdueAlert[]> => overdueAlerts(datedStillToDo(), today));

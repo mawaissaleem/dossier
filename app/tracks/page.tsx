@@ -1,40 +1,37 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { ChevronRightIcon } from "lucide-react";
-import { listTracks } from "@/lib/db/tracks";
+import { localToday } from "@/lib/deadline";
+import { getTrackOverviews } from "@/lib/db/track-overview";
+import { overviewSummary } from "@/lib/track-overview";
 import { EmptyState } from "@/components/empty-state";
 import { Page, PageHeader } from "@/components/page-header";
+import { TrackPanel } from "./track-panel";
 
 // Request-time data under cacheComponents: connection() opts out of prerendering, Suspense keeps the heading in the static shell.
-async function TrackList() {
+// The header sentence and the panels share one cached read (getTrackOverviews), so the summary and the panels cannot disagree.
+async function Summary() {
   await connection();
-  const tracks = await listTracks();
-  if (tracks.length === 0) return <EmptyState title="No tracks yet" description={<>Run <code>npm run db:seed</code> to create the Job and PhD tracks.</>} />;
-  return (
-    <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-      {tracks.map((t) => (
-        <li key={t.id}>
-          <Link
-            href={`/tracks/${t.id}`}
-            className="flex items-center justify-between rounded-lg px-3 py-2 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-          >
-            {t.name}
-            <ChevronRightIcon aria-hidden className="size-4 text-muted-foreground" />
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
+  const tracks = await getTrackOverviews(localToday());
+  return tracks.length ? overviewSummary(tracks) : null;
 }
 
+async function Panels() {
+  await connection();
+  const tracks = await getTrackOverviews(localToday());
+  if (tracks.length === 0) return <EmptyState title="No tracks yet" description={<>Run <code>npm run db:seed</code> to create the Job and PhD tracks.</>} />;
+  return <div className="flex flex-col gap-4">{tracks.map((t) => <TrackPanel key={t.id} track={t} />)}</div>;
+}
+
+// Full width like the dashboard (same cap), one panel per track.
 export default function TracksPage() {
   return (
-    <Page narrow>
-      <PageHeader title="Tracks" />
-      <Suspense fallback={<p className="text-muted-foreground">Loading tracks…</p>}>
-        <TrackList />
-      </Suspense>
-    </Page>
+    <div className="max-w-[1760px]">
+      <Page>
+        <PageHeader title="Tracks" description={<Suspense fallback={null}><Summary /></Suspense>} />
+        <Suspense fallback={<p className="text-muted-foreground">Loading tracks…</p>}>
+          <Panels />
+        </Suspense>
+      </Page>
+    </div>
   );
 }

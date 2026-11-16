@@ -38,7 +38,7 @@ async function TrackView({ params }: { params: Promise<{ id: string }> }) {
         }
       />
       <TrackTabs tracks={tracks} currentId={track.id} />
-      <div className="mb-4 rounded-lg border border-border bg-card p-3">
+      <div id="add-application" className="mb-4 scroll-mt-4 rounded-lg border border-border bg-card p-3">
         <NewApplicationForm key={track.id} trackId={track.id} columns={cols} />
       </div>
       <TrackViews trackId={track.id} columns={cols} rows={rows} />

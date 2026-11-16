@@ -31,6 +31,12 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
     );
   }
 
+  // The sidebar track counts live in the root layout, which a push alone does not re-render; refresh re-fetches it for the new route.
+  function leave(trackId: number) {
+    router.push(`/tracks/${trackId}`);
+    router.refresh();
+  }
+
   function archive() {
     setError(null);
     startTransition(async () => {
@@ -54,7 +60,7 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
           setDone({ trackId: r.trackId, warning: r.warning });
         } else if (r.ok) {
           setOpen(false);
-          router.push(`/tracks/${r.trackId}`);
+          leave(r.trackId);
         } else {
           // Refused (e.g. a value was added meanwhile): show the fresh count before confirm re-enables.
           setDelError(r.error);
@@ -74,7 +80,7 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
       <ConfirmDialog
         open={open}
         onOpenChange={(o) => {
-          if (done) return router.push(`/tracks/${done.trackId}`); // any way of closing leaves the deleted application
+          if (done) return leave(done.trackId); // any way of closing leaves the deleted application
           if (o) {
             setDelError(null);
             loadImpact();
@@ -99,7 +105,7 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
         busyLabel="Deleting…"
         confirmDisabled={!impact?.ok}
         busy={pending}
-        onConfirm={done ? () => router.push(`/tracks/${done.trackId}`) : confirmDelete}
+        onConfirm={done ? () => leave(done.trackId) : confirmDelete}
       />
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     </div>

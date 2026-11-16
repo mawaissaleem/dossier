@@ -8,6 +8,7 @@ import { DatabaseGate } from "./database-gate";
 import { NavLink } from "./nav-link";
 import { SearchPalette } from "./search-palette";
 import { ThemeSwitcher } from "./theme-switcher";
+import { TrackNav } from "./track-nav";
 import { DEFAULT_THEME, THEME_INIT_SCRIPT } from "@/lib/theme";
 
 export const metadata: Metadata = {
@@ -40,6 +41,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Suspense>
             <NavLink href="/" icon={<LayoutDashboardIcon />}>Dashboard</NavLink>
             <NavLink href="/tracks" icon={<ListChecksIcon />}>Tracks</NavLink>
+          </Suspense>
+          {/* The per-track counts read the database at request time, so they get their own boundary: the links above and below stay in the static shell. */}
+          <Suspense>
+            <TrackNav />
+          </Suspense>
+          <Suspense>
             <NavLink href="/planner" icon={<RouteIcon />}>Planner</NavLink>
             <NavLink href="/settings" icon={<SettingsIcon />}>Settings</NavLink>
           </Suspense>
