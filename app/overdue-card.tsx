@@ -8,7 +8,7 @@ import { ACCENT_LINK, DashboardCard, ROW_LINK as LINK } from "./dashboard-card";
 
 const SHOWN = 5;
 
-// FR-9.5: red rows that open the application. Nothing overdue renders nothing at all (no empty red card).
+// FR-9.5: red rows that open the application, the top card of the dashboard rail. Nothing overdue renders nothing at all (no empty red card; the Overdue tile says "0").
 function Rows({ items }: { items: OverdueAlert[] }) {
   return (
     <ul className="flex flex-col">

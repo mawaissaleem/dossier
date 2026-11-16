@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { firstN } from "@/lib/dashboard";
 import { localToday } from "@/lib/deadline";
 import { getWins } from "@/lib/db/wins";
-import { noWinsText, winAge, winCountsText, type Win } from "@/lib/wins";
+import { noWinsText, winAge, type Win } from "@/lib/wins";
 import { OptionChip } from "./option-chip";
 import { ACCENT_LINK, DashboardCard, ROW_LINK } from "./dashboard-card";
 
@@ -28,7 +28,8 @@ function Rows({ items, today }: { items: Win[]; today: string }) {
   );
 }
 
-// FR-9.7: the good news (interviews, offers) kept on the home screen. Not rendered until a win status is configured; with none reached yet it is one calm line.
+// FR-9.7: the good news (interviews, offers), the dashboard rail's "Recent wins" (the Wins tile holds the count and links here by #wins). Not rendered until a win status is
+// configured; with none reached yet it is one calm line.
 export async function WinsCard({ className }: { className?: string }) {
   await connection();
   const { labels, wins } = await getWins();
@@ -36,12 +37,11 @@ export async function WinsCard({ className }: { className?: string }) {
   const today = localToday();
   const { shown, more } = firstN(wins, SHOWN);
   return (
-    <DashboardCard title="Wins" count={wins.length || undefined} className={className}>
+    <DashboardCard id="wins" title="Recent wins" className={className}>
       {wins.length === 0 ? (
         <p className="text-sm text-muted-foreground">{noWinsText(labels)}.</p>
       ) : (
         <>
-          <p className="mb-3 text-sm font-medium tabular-nums">{winCountsText(wins, labels)}</p>
           <Rows items={shown} today={today} />
           {more > 0 && (
             <details className="mt-3 border-t border-border pt-3 text-sm">

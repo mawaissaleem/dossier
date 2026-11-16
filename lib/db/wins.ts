@@ -1,5 +1,6 @@
 // Server-only. FR-9.7: applications whose current status is one of their track's win statuses (`track.<id>.win_statuses`, lib/db/track-settings.ts).
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { cache } from "react";
 import { orderWins, type Win } from "../wins";
 import { getDb } from "./client";
 import { activityEvents, applications, cellValues, columns } from "./schema";
@@ -9,7 +10,8 @@ import { getUserId } from "./user";
 
 // `labels` = every configured win status label in track and option order (the card is shown, with an empty state, as long as there is one);
 // `wins` = most recently reached first, archived ones included. `since` = the newest status change into the current status, else the application's created_at (an edit must not move a win up).
-export async function getWins(): Promise<{ labels: string[]; wins: Win[] }> {
+// React `cache` = once per request: the Wins tile and the Recent wins card share one read.
+export const getWins = cache(async (): Promise<{ labels: string[]; wins: Win[] }> => {
   const db = getDb();
   const userId = getUserId();
   const byOption = new Map<number, { label: string; color: string; trackId: number; trackName: string }>();
@@ -36,4 +38,4 @@ export async function getWins(): Promise<{ labels: string[]; wins: Win[] }> {
     return o && o.trackId === r.trackId ? [{ id: r.id, title: r.title, trackId: o.trackId, trackName: o.trackName, label: o.label, color: o.color, archived: r.archived, since: Number(r.since) }] : [];
   });
   return { labels, wins: orderWins(wins) };
-}
+});

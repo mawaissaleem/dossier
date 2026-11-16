@@ -119,3 +119,28 @@ export function summaryLine(today: string, s: { overdue: number; nextDays: numbe
   parts.push(`${s.count} of ${s.capacity} this week`);
   return parts.join(" · ");
 }
+
+// ---- DASH.1: the text and tone of the four stat tiles at the top of the dashboard (pure, so the wording is tested). ----
+export type TileText = { value: string; hint: string };
+const dayWord = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
+
+// Always shown. Calm "0 / Nothing late"; otherwise the count, the most overdue item and how many more follow ("PhD · X, 2 days late · +3 more"). `alert` = destructive border and number.
+export function overdueTile(items: readonly OverdueAlert[]): TileText & { alert: boolean } {
+  const [first] = items;
+  if (!first) return { value: "0", hint: "Nothing late", alert: false };
+  const more = items.length > 1 ? ` · +${items.length - 1} more` : "";
+  return { value: String(items.length), hint: `${first.trackName} · ${first.title}, ${dayWord(first.days)} late${more}`, alert: true };
+}
+
+// The nearest upcoming deadline: "Today" / "Tomorrow" / "3 days" over "PhD · Title". None: "None / No upcoming deadlines".
+export function deadlineTile(first: UpcomingDeadline | undefined): TileText {
+  return first ? { value: first.text, hint: `${first.trackName} · ${first.title}` } : { value: "None", hint: "No upcoming deadlines" };
+}
+
+// One line from the goal and the streak: met says so (with the streak when there is one); otherwise how many more it takes.
+export function weekHint(p: { count: number; capacity: number; met: boolean; streak: number }): string {
+  const streakText = p.streak > 0 ? `${p.streak}-week streak` : null;
+  if (p.met) return streakText ? `Goal met · ${streakText}` : "Weekly goal met";
+  const more = `${p.capacity - p.count} more to ${p.streak > 0 ? "extend the streak" : "start a streak"}`;
+  return streakText ? `${streakText} · ${more}` : more;
+}
