@@ -20,7 +20,7 @@ import { createBackup } from "@/lib/files/backup";
 import { verifyStoredFile } from "@/lib/files/open";
 import { checkBackup, restoreFromBackup } from "@/lib/files/restore";
 import { storeUploadedFile } from "@/lib/files/store";
-import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
+import { dropTestDb, MIGRATION_COUNT, runSeed, useTestDb } from "./helpers/db";
 import { readZip, rewriteZip, writeZip, type ZipSpec } from "./helpers/zip";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
@@ -241,7 +241,7 @@ describe("AT-13: back up, wipe, restore", () => {
       expect(r.ok).toBe(true);
       expect(integrity()).toEqual({ "app/ok.txt": "ok", "app/changed.txt": "mismatch", "app/gone.txt": "missing" });
       expect(getDb().select().from(applications).all().map((a) => a.title)).toEqual(["Old app"]);
-      expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: 5 });
+      expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: MIGRATION_COUNT });
       expect((getDb().$client.prepare("PRAGMA table_info(files)").all() as { name: string }[]).map((c) => c.name)).toEqual(expect.arrayContaining(["integrity", "checked_at", "deleted_at"]));
       expect(getDb().$client.prepare("SELECT name FROM sqlite_master WHERE name = 'activity_events'").all()).toHaveLength(1);
     } finally {

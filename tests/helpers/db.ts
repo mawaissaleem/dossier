@@ -1,11 +1,14 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { closeDb, getDb } from "@/lib/db/client";
 
 let dir: string | undefined;
+
+// How many migrations the app ships, so tests don't break when one is added.
+export const MIGRATION_COUNT: number = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")).entries.length;
 
 // Fresh migrated SQLite file in the OS temp dir, never the project's data/. Call in beforeEach; pair with dropTestDb in afterEach.
 export function useTestDb() {
