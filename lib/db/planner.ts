@@ -131,8 +131,10 @@ export async function setRankingRules(overdue: unknown, noDeadline: unknown): Pr
 
 export type PlannerItem = { id: number; title: string; trackId: number; trackName: string };
 // `reasoning` = the FR-8.9 line ("Priority (+3), Heavy effort (+2), due in 5 days").
-export type RankedItem = Scored & PlannerItem & { overdue: boolean; reasoning: string }; // score parts (score, daysLeft, priority, effort) + who it is; overdue = pinned and flagged
-export type UndatedItem = PlannerItem & UndatedScore & { reasoning: string }; // buffer and daysUntouched
+// `status` = the application's current status option (its label and chip colour), for the dashboard plan's chip; never null for a still-to-do application.
+export type PlanStatus = { label: string; color: string };
+export type RankedItem = Scored & PlannerItem & { overdue: boolean; reasoning: string; status: PlanStatus | null }; // score parts (score, daysLeft, priority, effort) + who it is; overdue = pinned and flagged
+export type UndatedItem = PlannerItem & UndatedScore & { reasoning: string; status: PlanStatus | null }; // buffer and daysUntouched
 
 // "Last touched" (FR-8.6) = the later of the application's own updated_at and its newest note or activity event (when it was written, so a
 // backdated manual submission does not count as the past). Every edit counts: form saves, archive/restore and table/board cell writes all bump updated_at. Ms per application id.
@@ -158,7 +160,7 @@ function scoreOptions(columnId: number | null): (ScoreOption & { label: string }
     .all();
 }
 
-type TodoTrack = { id: number; name: string; slots: SlotMapping; apps: PlannerApp[]; titles: Map<number, string> };
+type TodoTrack = { id: number; name: string; slots: SlotMapping; apps: PlannerApp[]; titles: Map<number, string>; statuses: Map<number, PlanStatus> };
 
 // The gathering below the policy step, shared by the ranking and the overdue alerts: per track, its non-archived applications in a
 // still-to-do status (no status = never), with each one's slot values (FR-8.7). No overdue or no-deadline rule is applied here.
@@ -180,6 +182,8 @@ function gatherStillToDo(): TodoTrack[] {
       cells.set(c.a, row);
     }
     const titles = new Map<number, string>();
+    const statuses = new Map<number, PlanStatus>();
+    const options = new Map(statusOptions(t.id).map((o) => [o.id, { label: o.label, color: o.color }]));
     const apps: PlannerApp[] = [];
     for (const a of db.select({ id: applications.id, title: applications.title }).from(applications)
       .where(and(eq(applications.trackId, t.id), eq(applications.userId, userId), eq(applications.archived, false))).orderBy(asc(applications.id)).all()) {
@@ -188,9 +192,11 @@ function gatherStillToDo(): TodoTrack[] {
       if (status === null || !todo.has(status)) continue;
       const at = (col: number | null) => (col === null ? undefined : v?.get(col));
       titles.set(a.id, a.title);
+      const opt = options.get(status);
+      if (opt) statuses.set(a.id, opt);
       apps.push({ id: a.id, deadline: at(slots.deadline)?.date ?? null, priority: at(slots.priority)?.option ?? null, effort: at(slots.effort)?.option ?? null });
     }
-    out.push({ ...t, slots, apps, titles });
+    out.push({ ...t, slots, apps, titles, statuses });
   }
   return out;
 }
@@ -201,13 +207,13 @@ function gatherStillToDo(): TodoTrack[] {
 export async function getPlannerRanking(today: string): Promise<{ ranked: RankedItem[]; undated: UndatedItem[] }> {
   const touched = lastTouchedMs();
   const rules = await getRankingRules();
-  const ranked: (Scored & PlannerItem & { reasoning: string })[] = [];
+  const ranked: (Scored & PlannerItem & { reasoning: string; status: PlanStatus | null })[] = [];
   const undated: UndatedItem[] = [];
   for (const t of gatherStillToDo()) {
-    const { slots, apps, titles } = t;
+    const { slots, apps, titles, statuses } = t;
     const [po, eo] = [scoreOptions(slots.priority), scoreOptions(slots.effort)];
     const r = rankApplications(apps, today, po, eo);
-    const who = (id: number) => ({ id, title: titles.get(id)!, trackId: t.id, trackName: t.name });
+    const who = (id: number) => ({ id, title: titles.get(id)!, trackId: t.id, trackName: t.name, status: statuses.get(id) ?? null });
     const why = (b: Pick<Scored, "priority" | "effort">, daysLeft: number | null, daysUntouched: number | null) => reasoning({
       priority: { label: b.priority.fallback ? null : po.find((o) => o.id === b.priority.optionId)?.label ?? null, buffer: b.priority.buffer },
       effort: { label: eo.find((o) => o.id === b.effort.optionId)?.label ?? null, buffer: b.effort.buffer },

@@ -33,6 +33,17 @@ describe("dashboard plan card data", () => {
     expect(plan).toEqual(list.slice(0, 3));
   });
 
+  it("each item carries its current status (label and chip colour) for the plan's chip, dated and undated alike", async () => {
+    setup(1);
+    const t = db.select().from(tracks).get()!.id;
+    const status = db.select().from(columns).all().find((c) => c.trackId === t && c.isStatus)!.id;
+    const a = db.insert(applications).values({ userId: "local", trackId: t, title: "undated" }).returning().get().id;
+    db.insert(cellValues).values({ userId: "local", applicationId: a, columnId: status, valueOptionId: db.select().from(columnOptions).get()!.id }).run();
+    db.update(columnOptions).set({ label: "Preparing", color: "amber" }).run();
+    const { plan } = await getWeeksPlan(TODAY);
+    expect(plan.map((p) => [p.title, p.status])).toEqual([["app-1", { label: "Preparing", color: "amber" }], ["undated", { label: "Preparing", color: "amber" }]]);
+  });
+
   it("shows fewer than capacity when fewer are ranked, and nothing when none are", async () => {
     expect((await getWeeksPlan(TODAY)).plan).toEqual([]);
     setup(2);

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApplication } from "@/lib/db/applications";
 import { activityEvents, applications, cellValues, columnOptions, columns, files, notes, settings, submissionFiles, submissions, tracks } from "@/lib/db/schema";
-import { createTrackFromTemplate, deleteTrack, getTrackDeleteImpact, listTrackCounts, listTracks, updateTrack } from "@/lib/db/tracks";
+import { createTrackFromTemplate, deleteTrack, getStarredTrackIds, getTrackDeleteImpact, listTracks, setTrackStarred, updateTrack } from "@/lib/db/tracks";
 import { setExpectedLabels, getExpectedLabels, getSubmittedStatuses } from "@/lib/db/track-settings";
 import { setSetting } from "@/lib/db/settings";
 import { PALETTE } from "@/lib/colors";
@@ -26,7 +26,7 @@ const add = async (name: string, template: string) => {
 describe("a fresh database", () => {
   it("has no tracks", async () => {
     expect(await listTracks()).toEqual([]);
-    expect(await listTrackCounts()).toEqual([]);
+    expect(await getStarredTrackIds()).toEqual(new Set());
   });
 });
 
@@ -226,11 +226,53 @@ describe("deleting a track", () => {
     expect(await listTracks()).toHaveLength(1);
   });
 
-  it("is reflected by the sidebar counts and expected labels reading", async () => {
+  it("is reflected by the track list, the stars and expected labels reading", async () => {
     const id = await add("Job", "job");
     await setExpectedLabels(id, ["CV"]);
+    await setTrackStarred(id, true);
     await deleteTrack(id, "Job", (await getTrackDeleteImpact(id))!);
-    expect(await listTrackCounts()).toEqual([]);
+    expect(await listTracks()).toEqual([]);
+    expect(await getStarredTrackIds()).toEqual(new Set());
+    expect(db.select().from(settings).all().filter((s) => s.key.includes("starred"))).toEqual([]); // the star went with the track's other settings
     expect(await getExpectedLabels(id)).toEqual([]);
+  });
+});
+
+describe("starring a track", () => {
+  it("stars and unstars; the star is one `track.<id>.starred` setting, removed again on unstar", async () => {
+    const a = await add("Job", "job");
+    const b = await add("PhD", "phd");
+    expect(await getStarredTrackIds()).toEqual(new Set());
+    expect(await setTrackStarred(a, true)).toEqual({ ok: true });
+    expect(await setTrackStarred(a, true)).toEqual({ ok: true }); // starring twice is still one star
+    await setTrackStarred(b, true);
+    expect(await getStarredTrackIds()).toEqual(new Set([a, b]));
+    expect(db.select().from(settings).all().filter((s) => s.key === `track.${a}.starred`)).toHaveLength(1);
+    expect(await setTrackStarred(a, false)).toEqual({ ok: true });
+    expect(await setTrackStarred(a, false)).toEqual({ ok: true });
+    expect(await getStarredTrackIds()).toEqual(new Set([b]));
+    expect(db.select().from(settings).all().filter((s) => s.key === `track.${a}.starred`)).toEqual([]);
+  });
+
+  it("refuses a missing track and another user's track, and writes nothing", async () => {
+    const other = db.insert(tracks).values({ userId: "someone-else", name: "Other", position: 5 }).returning().get().id;
+    for (const id of [9999, other]) {
+      expect(await setTrackStarred(id, true)).toEqual({ ok: false, error: "Track not found." });
+      expect(await setTrackStarred(id, false)).toEqual({ ok: false, error: "Track not found." });
+    }
+    expect(db.select().from(settings).all()).toEqual([]);
+  });
+
+  it("only this user's `track.<id>.starred = true` rows count", async () => {
+    const a = await add("Job", "job");
+    db.insert(settings).values([
+      { userId: "someone-else", key: `track.${a}.starred`, value: "true" },
+      { userId: "local", key: "track.7.starred", value: "false" },
+      { userId: "local", key: "track.8.starred", value: "not json" },
+      { userId: "local", key: "track.9.starred_not", value: "true" },
+    ]).run();
+    expect(await getStarredTrackIds()).toEqual(new Set());
+    await setTrackStarred(a, true);
+    expect(await getStarredTrackIds()).toEqual(new Set([a]));
   });
 });

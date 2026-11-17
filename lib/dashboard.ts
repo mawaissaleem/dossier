@@ -144,3 +144,17 @@ export function weekHint(p: { count: number; capacity: number; met: boolean; str
   const more = `${p.capacity - p.count} more to ${p.streak > 0 ? "extend the streak" : "start a streak"}`;
   return streakText ? `${streakText} · ${more}` : more;
 }
+
+// ---- DASH.3: the bento. ----
+// A stat tile's value as a big part and a muted unit: "3 days" -> "3" + " days", "1 of 4" -> "1" + " of 4", "Today" and "None" have no unit. The first word is the big part.
+export function splitValue(value: string): { big: string; unit: string } {
+  const i = value.indexOf(" ");
+  return i < 0 ? { big: value, unit: "" } : { big: value.slice(0, i), unit: value.slice(i) };
+}
+
+// How many items share the row of item `index` in a grid with `perRow` items per row: perRow, except in an incomplete last row, whose items share it
+// (so no cell is empty). The dashboard's track cards and its All tracks tile use it to pick their column spans (12 / n at xl, 2 / n below).
+export function itemsInRow(index: number, count: number, perRow: number): number {
+  const lastRow = Math.ceil(count / perRow) - 1;
+  return Math.floor(index / perRow) === lastRow ? count - lastRow * perRow : perRow;
+}

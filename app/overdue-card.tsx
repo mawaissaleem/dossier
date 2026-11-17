@@ -6,7 +6,7 @@ import { firstN, type OverdueAlert } from "@/lib/dashboard";
 import { getOverdueAlerts } from "@/lib/db/planner";
 import { ACCENT_LINK, DashboardCard, ROW_LINK as LINK } from "./dashboard-card";
 
-const SHOWN = 5;
+const SHOWN = 3; // the rail shares the plan's height at xl, so each card shows a few rows and keeps the rest one click away
 
 // FR-9.5: red rows that open the application, the top card of the dashboard rail. Nothing overdue renders nothing at all (no empty red card; the Overdue tile says "0").
 function Rows({ items }: { items: OverdueAlert[] }) {

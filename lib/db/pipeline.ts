@@ -24,6 +24,6 @@ export async function getPipelineCounts(): Promise<TrackPipeline[]> {
   const statusCols = new Map(
     db.select({ id: columns.id, trackId: columns.trackId }).from(columns).where(and(eq(columns.userId, userId), eq(columns.isStatus, true))).orderBy(asc(columns.id)).all().map((c) => [c.trackId, c.id]),
   );
-  const tracks = (await listTracks()).map((t) => ({ id: t.id, name: t.name, statusColumnId: statusCols.get(t.id) ?? null, options: statusOptions(t.id) }));
+  const tracks = (await listTracks()).map((t) => ({ id: t.id, name: t.name, color: t.color, statusColumnId: statusCols.get(t.id) ?? null, options: statusOptions(t.id) }));
   return pipelineCounts(rows, tracks);
 }

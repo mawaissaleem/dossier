@@ -1,13 +1,14 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { createTrackFromTemplate, deleteTrack as remove, getTrackDeleteImpact, updateTrack as change, type TrackDeleteImpact, type TrackResult } from "@/lib/db/tracks";
+import { recordTrackView as record } from "@/lib/db/recently-viewed";
+import { createTrackFromTemplate, deleteTrack as remove, getTrackDeleteImpact, setTrackStarred, updateTrack as change, type TrackDeleteImpact, type TrackResult } from "@/lib/db/tracks";
 import { isId } from "@/lib/ids";
 
 const bad = { ok: false, error: "Track not found." } as const;
 
 // Runs on any POST, so the argument types are checked here; the name, colour and ownership rules live in the data layer.
-// refresh() only on success (nothing changed otherwise, and the dialog keeps what was typed); it also re-renders the layout, so the sidebar's track list is current.
+// refresh() only on success (nothing changed otherwise, and the dialog keeps what was typed); it re-renders the page that called, so the new track shows.
 export async function createTrack(name: string, template: string): Promise<{ ok: true; id: number } | { ok: false; error: string }> {
   if (typeof name !== "string") return { ok: false, error: "Name is required." };
   const r = await createTrackFromTemplate(name, template);
@@ -39,4 +40,18 @@ export async function deleteTrack(id: number, confirm: boolean, typedName: strin
   if (confirm !== true || typeof typedName !== "string" || typeof expected !== "object" || expected === null || !keys.every((k) => count(expected[k]))) return { ok: false, error: "Deleting must be confirmed." };
   if (!isId(id)) return bad;
   return remove(id, typedName, { applications: expected.applications, columns: expected.columns, submissions: expected.submissions, notes: expected.notes, files: expected.files });
+}
+
+// Star or unstar a track (the /tracks tiles). Runs on any POST, so both arguments are checked. refresh() on success re-renders /tracks (the Starred section); the tile already shows the new state (optimistic).
+export async function setStarred(id: number, starred: boolean): Promise<TrackResult> {
+  if (!isId(id) || typeof starred !== "boolean") return bad;
+  const r = await setTrackStarred(id, starred);
+  if (r.ok) refresh();
+  return r;
+}
+
+// "Recently viewed" on /tracks: called from a client effect when a track page is opened. No refresh(): the track page already on screen has nothing new to show, and /tracks is read fresh on arrival.
+export async function recordTrackView(id: number, view: string): Promise<TrackResult> {
+  if (!isId(id) || typeof view !== "string") return bad;
+  return record(id, view);
 }

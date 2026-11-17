@@ -112,23 +112,23 @@ If you moved the folder by hand and did not Re-point, opening a file shows `The 
 
 ## Updating
 
-First take a backup while the server is still running: use **Back up now** in Settings. Then stop the server. (Or stop the server first and copy the database file, `data/dossier.db` unless you changed `DATABASE_PATH`, and the files root somewhere safe.) Only then update:
-
 ```bash
 git pull
-npm ci
-npm run db:migrate
+npm install
 npm run build
+npm run start
 ```
 
-Then start the server again with `npm run start`. If you start a newer version before running `npm run db:migrate`, every page says "Your database needs updating" instead of failing; nothing is migrated by itself.
+If the new version needs a database update, every page says **Your database needs updating**. Press **Back up and update**: Dossier first saves a copy of your database (to your backup folder from Settings if you set one, otherwise to `backups/` next to the database file, named like `dossier-before-update-2026-11-17T10-30-00.db`), then updates it, and takes you back to where you were. If the backup fails nothing is changed. If the update fails the database is left exactly as it was and the message names the backup. A brand-new install needs no button: the database is created and set up on first start. For your files, keep using **Back up now** in Settings as usual.
+
+**Prefer the terminal?** Stop the server, copy the database file (`data/dossier.db` unless you changed `DATABASE_PATH`) somewhere safe, run `npm run db:migrate`, then start the server again. Dossier never updates an existing database by itself: it waits for you to press the button or run that command.
 
 ## Troubleshooting
 
 - **`Forbidden: Dossier answers on localhost only.`** You opened Dossier with a name other than `localhost`, `127.0.0.1` or `[::1]` (for example a computer name or a proxy). Use `http://127.0.0.1:3000`.
 - **`EADDRINUSE: address already in use`** Something already uses the port, often an old Dossier. Stop it, or start on another port: `npm run start -- -p 4000`.
 - **`DATABASE_PATH is not set`** The `.env` file is missing or you started the app from another folder. Run it from the project folder, or set `DATABASE_PATH` in `.env.local`.
-- **`Your database needs updating`** on every page. The database is behind this version of Dossier (a new version added migrations, or the database file is new and empty). Nothing was changed and nothing is lost. Stop the server, copy the database file somewhere safe, run `npm run db:migrate`, then start the server again. API requests answer `503` with the same message until then.
+- **`Your database needs updating`** on every page. The database is behind this version of Dossier (a new version added migrations). Nothing was changed and nothing is lost. Press **Back up and update** (or follow "Prefer the terminal?" on that page). API requests answer `503` with the same message until then.
 - **`no such table: tracks`.** The database is not migrated. Run `npm run db:migrate`.
 - **No tracks in the app.** That is normal for a new database. Use **Add track** on the Tracks page (or run `npm run db:seed` for the Job and PhD tracks).
 - **`Choose the files folder in Settings before uploading.`** Set the files root in **Settings → Files**.

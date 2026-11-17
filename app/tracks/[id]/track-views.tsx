@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { ApplicationRow } from "@/lib/db/applications";
 import type { ColumnItem } from "@/lib/db/columns";
@@ -8,6 +8,7 @@ import { filterRows, parseFilters, withFilters, type Filter } from "@/lib/filter
 import { quickColumns } from "@/lib/quick-filter";
 import { cn } from "@/lib/utils";
 import { setColumnHidden } from "@/app/actions/columns";
+import { recordTrackView } from "@/app/actions/tracks";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { ApplicationsTable } from "./applications-table";
@@ -25,6 +26,8 @@ const VIEWS = [{ id: "table", label: "Table" }, { id: "board", label: "Board" }]
 export function TrackViews({ trackId, columns, rows }: { trackId: number; columns: ColumnItem[]; rows: ApplicationRow[] }) {
   const params = useSearchParams();
   const view = params.get("view") === "board" ? "board" : "table";
+  // "Recently viewed" on /tracks: opening the track (or switching its view) is recorded from here, never while rendering. A failed save is not worth interrupting the page for.
+  useEffect(() => { recordTrackView(trackId, view).catch(() => undefined); }, [trackId, view]);
   // Filters live in the URL, may use hidden columns, and run on the rows the server sent. Keyed on the f params as a string, so sorting does not re-filter.
   const selects = useMemo(() => columns.filter((c) => c.type === "single_select"), [columns]);
   const quick = useMemo(() => quickColumns(selects), [selects]);

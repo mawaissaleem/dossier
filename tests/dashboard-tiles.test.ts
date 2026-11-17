@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deadlineTile, overdueTile, weekHint, type OverdueAlert, type UpcomingDeadline } from "@/lib/dashboard";
+import { deadlineTile, itemsInRow, overdueTile, splitValue, weekHint, type OverdueAlert, type UpcomingDeadline } from "@/lib/dashboard";
 
 const late = (id: number, days: number, title = `App ${id}`): OverdueAlert => ({ id, title, trackId: 1, trackName: "PhD", date: "1 Nov 2026", days, text: "" });
 const next = (text: string): UpcomingDeadline => ({ id: 1, title: "Robotics Lab", trackId: 1, trackName: "PhD", date: "20 Nov 2026", days: 3, big: "3", unit: "days", text });
@@ -33,5 +33,26 @@ describe("weekHint (pure)", () => {
   it("says the goal is met, with the streak when there is one", () => {
     expect(weekHint({ ...p, count: 4, met: true })).toBe("Weekly goal met");
     expect(weekHint({ ...p, count: 5, met: true, streak: 3 })).toBe("Goal met · 3-week streak");
+  });
+});
+
+describe("splitValue (pure)", () => {
+  it("the first word is the big part, the rest a muted unit", () => {
+    expect(splitValue("3 days")).toEqual({ big: "3", unit: " days" });
+    expect(splitValue("1 of 4")).toEqual({ big: "1", unit: " of 4" });
+    expect(splitValue("Today")).toEqual({ big: "Today", unit: "" });
+    expect(splitValue("")).toEqual({ big: "", unit: "" });
+  });
+});
+
+describe("itemsInRow (pure)", () => {
+  it("full rows have perRow items; an incomplete last row's items share it, so no cell is empty", () => {
+    const row = (n: number, per: number) => Array.from({ length: n }, (_, i) => itemsInRow(i, n, per));
+    expect(row(3, 3)).toEqual([3, 3, 3]);
+    expect(row(4, 3)).toEqual([3, 3, 3, 1]);
+    expect(row(5, 3)).toEqual([3, 3, 3, 2, 2]);
+    expect(row(3, 2)).toEqual([2, 2, 1]);
+    expect(row(1, 3)).toEqual([1]);
+    expect(row(2, 3)).toEqual([2, 2]);
   });
 });

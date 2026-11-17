@@ -7,7 +7,7 @@ import { noWinsText, winAge, type Win } from "@/lib/wins";
 import { OptionChip } from "./option-chip";
 import { ACCENT_LINK, DashboardCard, ROW_LINK } from "./dashboard-card";
 
-const SHOWN = 5;
+const SHOWN = 3; // the rail shares the plan's height at xl, so each card shows a few rows and keeps the rest one click away
 
 function Rows({ items, today }: { items: Win[]; today: string }) {
   return (

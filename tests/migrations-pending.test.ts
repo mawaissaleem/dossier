@@ -40,7 +40,9 @@ describe("pending migrations", () => {
     expect(error).toContain("2 database updates");
     expect(error).toContain("npm run db:migrate");
     expect(updateIntro(1)).toContain("1 database update that has");
-    expect(UPDATE_STEPS.join(" ")).toMatch(/Stop.*Back up.*db:migrate.*db:seed.*Start/);
+    expect(UPDATE_STEPS.join(" ")).not.toContain("db:seed");
+    expect(error).toContain("Back up and update");
+    expect(UPDATE_STEPS.join(" ")).toMatch(/Stop.*Back up.*db:migrate.*Start/);
     getDb().run(sql`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('x', ${Date.now() + 1e9})`);
     expect(pendingMigrations()).toBe(0);
   });
@@ -48,12 +50,12 @@ describe("pending migrations", () => {
     forget(TOTAL - 1);
     expect(pendingMigrations()).toBe(TOTAL - 1);
   });
-  it("an empty database file counts every migration as pending, and is not migrated by the check", () => {
+  it("a brand-new empty database file is created by the check, not left pending (see database-update.test.ts)", () => {
     closeDb();
     extra = mkdtempSync(join(tmpdir(), "dossier-empty-"));
     process.env.DATABASE_PATH = join(extra, "empty.db");
-    expect(pendingMigrations()).toBe(TOTAL);
-    expect(getDb().$client.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'").get()).toEqual({ n: 0 });
+    expect(pendingMigrations()).toBe(0);
+    expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: TOTAL });
   });
   it("the check is cheap: up to date it is remembered, behind it is one small query", () => {
     let t = performance.now();

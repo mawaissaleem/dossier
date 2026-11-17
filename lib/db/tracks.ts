@@ -3,8 +3,10 @@
 import { and, asc, count, eq, like, ne, sql } from "drizzle-orm";
 import { TEMPLATES, checkTrackColor, checkTrackName, colorOrFallback, defaultTrackColor, isTemplateId, type TrackTemplate } from "../track-templates";
 import { PALETTE } from "../colors";
+import { starredIds, starredKey } from "../track-star";
 import { getDb } from "./client";
 import { applications, columnOptions, columns, files, notes, settings, submissions, tracks } from "./schema";
+import { setSetting } from "./settings";
 import { getUserId } from "./user";
 
 export type TrackListItem = { id: number; name: string; position: number; color: string };
@@ -18,16 +20,6 @@ export async function listTracks(): Promise<TrackListItem[]> {
     .orderBy(asc(tracks.position), asc(tracks.id))
     .all()
     .map((t) => ({ ...t, color: colorOrFallback(t.color, t.id) }));
-}
-
-// The sidebar's per-track counts: non-archived applications, one grouped query. A track with none is 0.
-export async function listTrackCounts(): Promise<(TrackListItem & { count: number })[]> {
-  const db = getDb();
-  const userId = getUserId();
-  const counts = new Map(
-    db.select({ trackId: applications.trackId, n: count() }).from(applications).where(and(eq(applications.userId, userId), eq(applications.archived, false))).groupBy(applications.trackId).all().map((r) => [r.trackId, r.n]),
-  );
-  return (await listTracks()).map((t) => ({ ...t, count: counts.get(t.id) ?? 0 }));
 }
 
 export type TrackResult = { ok: true } | { ok: false; error: string };
@@ -128,4 +120,18 @@ export async function deleteTrack(id: number, typedName: string, expected: Track
     tx.delete(tracks).where(and(eq(tracks.id, id), eq(tracks.userId, userId))).run();
     return { ok: true } as const;
   });
+}
+
+// The starred tracks: one query over the `track.<id>.starred` settings. A star of a deleted track cannot exist (deleteTrack removes `track.<id>.*`).
+export async function getStarredTrackIds(): Promise<Set<number>> {
+  return starredIds(getDb().select({ key: settings.key, value: settings.value }).from(settings).where(and(eq(settings.userId, getUserId()), like(settings.key, "track.%.starred"))).all());
+}
+
+// Star or unstar a track the user owns. Unstarring deletes the row (nothing is stored for the common case), so the other `track.<id>.*` cleanup stays the only one there is.
+export async function setTrackStarred(id: number, starred: boolean): Promise<TrackResult> {
+  const userId = getUserId();
+  if (!getDb().select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, id), eq(tracks.userId, userId))).get()) return NO_TRACK;
+  if (starred) await setSetting(starredKey(id), true);
+  else getDb().delete(settings).where(and(eq(settings.userId, userId), eq(settings.key, starredKey(id)))).run();
+  return { ok: true };
 }

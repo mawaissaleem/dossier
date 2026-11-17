@@ -31,7 +31,7 @@ export function PageHeader({ title, marker, back, description, actions }: {
           <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight break-words">{marker}<span className="min-w-0">{title}</span></h1>
           {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
         </div>
-        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
     </header>
   );

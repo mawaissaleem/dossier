@@ -31,7 +31,7 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
     );
   }
 
-  // The sidebar track counts live in the root layout, which a push alone does not re-render; refresh re-fetches it for the new route.
+  // refresh() after the push, so no cached copy of the track page, /tracks or the dashboard (counts, attention lines) can show the removed application.
   function leave(trackId: number) {
     router.push(`/tracks/${trackId}`);
     router.refresh();

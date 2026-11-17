@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { pipelineCounts } from "@/lib/pipeline";
-import { ATTENTION_DAYS, STALE_DAYS, overviewSummary, relativeTime, trackOverview, type OverviewApp } from "@/lib/track-overview";
+import { ACTIVE_DAYS, ATTENTION_DAYS, STALE_DAYS, attentionLine, overviewSummary, parseTrackSort, relativeTime, sortTracks, trackOverview, type OverviewApp } from "@/lib/track-overview";
 
 const DAY = 86_400_000;
 const TODAY = "2026-11-17";
 const NOW = Date.UTC(2026, 10, 17, 12);
 const [TODO, APPLIED, INTERVIEW, OFFER] = [1, 2, 3, 4];
 const opts = [{ id: TODO, label: "To apply", color: "gray" }, { id: APPLIED, label: "Applied", color: "blue" }, { id: INTERVIEW, label: "Interview", color: "teal" }, { id: OFFER, label: "Offer", color: "green" }];
-const pipeline = (apps: OverviewApp[]) => pipelineCounts(apps.map((a) => ({ trackId: 7, optionId: a.statusId, n: 1 })), [{ id: 7, name: "Job", statusColumnId: 70, options: opts }])[0];
-const app = (id: number, o: Partial<OverviewApp> = {}): OverviewApp => ({ id, title: `a${id}`, statusId: TODO, touchedMs: NOW - DAY, deadline: null, firstSubmitted: null, ...o });
+const pipeline = (apps: OverviewApp[]) => pipelineCounts(apps.map((a) => ({ trackId: 7, optionId: a.statusId, n: 1 })), [{ id: 7, name: "Job", color: "blue", statusColumnId: 70, options: opts }])[0];
+const app = (id: number, o: Partial<OverviewApp> = {}): OverviewApp => ({ id, title: `a${id}`, statusId: TODO, touchedMs: NOW - DAY, deadline: null, ...o });
 const over = (apps: OverviewApp[]) => trackOverview({ pipeline: pipeline(apps), todoIds: [TODO], submittedIds: [APPLIED], winIds: [INTERVIEW, OFFER], apps }, TODAY, NOW);
 const dayStr = (offset: number) => new Date(Date.UTC(2026, 10, 17 + offset)).toISOString().slice(0, 10);
 
@@ -21,41 +21,28 @@ describe("relativeTime", () => {
 });
 
 describe("trackOverview: counts", () => {
-  it("empty track: zeros, no rate, nothing recent or to attend to", () => {
+  it("empty track: zeros, never updated, nothing to attend to", () => {
     const o = over([]);
-    expect(o).toMatchObject({ total: 0, toApply: 0, submitted: 0, wins: 0, winRate: null, submittedThisMonth: 0, updatedMs: null, recent: [], attention: [] });
+    expect(o).toMatchObject({ total: 0, toApply: 0, submitted: 0, wins: 0, updatedMs: null, attention: [], overdue: 0, nextDeadlineDays: null, activeCount: 0 });
   });
   it("counts by the three status sets; the total includes statuses in none of them", () => {
     const o = over([app(1), app(2), app(3, { statusId: APPLIED }), app(4, { statusId: INTERVIEW }), app(5, { statusId: null })]);
     expect([o.total, o.toApply, o.submitted, o.wins]).toEqual([5, 2, 1, 1]);
-  });
-  it("win rate is a whole percent of the applications that reached a submitted or win status (no divide by zero)", () => {
-    expect(over([app(1)]).winRate).toBeNull();
-    expect(over([app(1, { statusId: APPLIED }), app(2, { statusId: APPLIED }), app(3, { statusId: OFFER })]).winRate).toBe(33);
-    expect(over([app(1, { statusId: OFFER })]).winRate).toBe(100);
-  });
-  it("an option in both the submitted and the win set is counted once in the rate", () => {
-    const apps = [app(1, { statusId: INTERVIEW }), app(2, { statusId: APPLIED })];
-    const o = trackOverview({ pipeline: pipeline(apps), todoIds: [TODO], submittedIds: [APPLIED, INTERVIEW], winIds: [INTERVIEW], apps }, TODAY, NOW);
-    expect(o.winRate).toBe(50);
-  });
-  it("submitted this month = first submission in the current month, whatever the status", () => {
-    const o = over([app(1, { firstSubmitted: "2026-11-02" }), app(2, { firstSubmitted: "2026-10-31" }), app(3, { firstSubmitted: "2025-11-05" }), app(4)]);
-    expect(o.submittedThisMonth).toBe(1);
   });
   it("refuses an invalid today", () => {
     expect(() => trackOverview({ pipeline: pipeline([]), todoIds: [], submittedIds: [], winIds: [], apps: [] }, "nope", NOW)).toThrow();
   });
 });
 
-describe("trackOverview: recently updated", () => {
-  it("the 3 most recently touched, newest first (ties: higher id), with their status label", () => {
-    const o = over([app(1, { touchedMs: NOW - 5 * DAY }), app(2, { touchedMs: NOW - 1 * DAY, statusId: APPLIED }), app(3, { touchedMs: NOW - 3 * DAY }), app(4, { touchedMs: NOW - 1 * DAY, statusId: null }), app(5, { touchedMs: NOW - 9 * DAY })]);
-    expect(o.recent.map((r) => [r.id, r.status])).toEqual([[4, null], [2, "Applied"], [3, "To apply"]]);
-    expect(o.updatedMs).toBe(NOW - DAY);
-    expect([o.updated, o.recent[0].when, o.recent[2].when]).toEqual(["yesterday", "yesterday", "3 days ago"]);
+describe("trackOverview: updated and active", () => {
+  it("updated = the newest touch of any application, in words; the track's colour comes with it", () => {
+    const o = over([app(1, { touchedMs: NOW - 5 * DAY }), app(2, { touchedMs: NOW - DAY }), app(3, { touchedMs: NOW - 9 * DAY })]);
+    expect([o.updatedMs, o.updated, o.color]).toEqual([NOW - DAY, "yesterday", "blue"]);
   });
-  it("fewer than 3 applications gives fewer rows", () => expect(over([app(1)]).recent).toHaveLength(1));
+  it("active = applications touched within the last ACTIVE_DAYS days (the boundary day counts)", () => {
+    const o = over([app(1, { touchedMs: NOW }), app(2, { touchedMs: NOW - ACTIVE_DAYS * DAY }), app(3, { touchedMs: NOW - ACTIVE_DAYS * DAY - 1 })]);
+    expect(o.activeCount).toBe(2);
+  });
 });
 
 describe("trackOverview: needs attention", () => {
@@ -86,6 +73,60 @@ describe("trackOverview: needs attention", () => {
     expect(o.attention.map((a) => a.kind)).toEqual(["Deadline"]);
   });
   it("nothing to attend to is an empty list", () => expect(over([app(1, { deadline: dayStr(60) })]).attention).toEqual([]));
+});
+
+describe("trackOverview: overdue and next deadline", () => {
+  it("overdue counts only still-to-do deadlines before today; next deadline is the nearest one from today on, however far", () => {
+    const o = over([app(1, { deadline: dayStr(-3) }), app(2, { deadline: dayStr(-1) }), app(3, { deadline: dayStr(90) }), app(4, { deadline: dayStr(40) }), app(5, { deadline: dayStr(-9), statusId: APPLIED })]);
+    expect([o.overdue, o.nextDeadlineDays]).toEqual([2, 40]);
+  });
+  it("today is a next deadline of 0 days, not overdue; none at all is null", () => {
+    expect(over([app(1, { deadline: dayStr(0) })])).toMatchObject({ overdue: 0, nextDeadlineDays: 0 });
+    expect(over([app(1), app(2, { deadline: dayStr(-1) })]).nextDeadlineDays).toBeNull();
+  });
+  it("a stale submitted application needs attention but is not overdue", () => {
+    expect(over([app(1, { statusId: APPLIED, touchedMs: NOW - 40 * DAY })])).toMatchObject({ overdue: 0, attention: [{ id: 1 }] });
+  });
+});
+
+describe("attentionLine", () => {
+  const line = (o: Partial<Parameters<typeof attentionLine>[0]>) => attentionLine({ total: 5, attention: [], overdue: 0, nextDeadlineDays: null, ...o });
+  const items = (n: number) => Array.from({ length: n }, (_, i) => ({ id: i, title: "", kind: "", when: "", tone: "muted" as const }));
+  it("overdue first (the red part), then how many more need attention", () => {
+    expect(line({ overdue: 1, attention: items(3) })).toEqual({ alert: "1 overdue", text: "2 more need attention" });
+    expect(line({ overdue: 2, attention: items(3) })).toEqual({ alert: "2 overdue", text: "1 more needs attention" });
+  });
+  it("overdue alone says only that; with a next deadline it adds it", () => {
+    expect(line({ overdue: 2, attention: items(2) })).toEqual({ alert: "2 overdue", text: "" });
+    expect(line({ overdue: 1, attention: items(1), nextDeadlineDays: 11 })).toEqual({ alert: "1 overdue", text: "next deadline in 11 days" });
+  });
+  it("nothing overdue: the count of those that need attention, else the next deadline, else calm text", () => {
+    expect(line({ attention: items(1) })).toEqual({ alert: null, text: "1 needs attention" });
+    expect(line({ attention: items(3), nextDeadlineDays: 2 })).toEqual({ alert: null, text: "3 need attention" });
+    expect(line({ nextDeadlineDays: 6 })).toEqual({ alert: null, text: "Next deadline in 6 days" });
+    expect(line({ nextDeadlineDays: 0 }).text).toBe("Next deadline today");
+    expect(line({ nextDeadlineDays: 1 }).text).toBe("Next deadline tomorrow");
+    expect(line({})).toEqual({ alert: null, text: "Nothing needs attention" });
+  });
+  it("an empty track says how to start", () => expect(line({ total: 0 })).toEqual({ alert: null, text: "Add the first application to start this track" }));
+});
+
+describe("sortTracks and parseTrackSort", () => {
+  const t = (name: string, updatedMs: number | null, activeCount: number) => ({ name, updatedMs, activeCount });
+  const list = [t("Job", 100, 1), t("phd", 300, 1), t("Fellowships", null, 0), t("Awards", 200, 5), t("Empty2", null, 0)];
+  const names = (sort: Parameters<typeof sortTracks>[1]) => sortTracks(list, sort).map((x) => x.name);
+  it("recent: last updated first, tracks with no applications last in their own order", () => expect(names("recent")).toEqual(["phd", "Awards", "Job", "Fellowships", "Empty2"]));
+  it("name: A to Z ignoring case", () => expect(names("name")).toEqual(["Awards", "Empty2", "Fellowships", "Job", "phd"]));
+  it("active: most recently active applications first, ties by last updated, then position", () => expect(names("active")).toEqual(["Awards", "phd", "Job", "Fellowships", "Empty2"]));
+  it("returns a new array and leaves the input alone", () => {
+    const before = list.map((x) => x.name);
+    expect(sortTracks(list, "name")).not.toBe(list);
+    expect(list.map((x) => x.name)).toEqual(before);
+  });
+  it("the sort parameter: anything unknown, empty or repeated is Recent", () => {
+    expect(["name", "active", "recent"].map(parseTrackSort)).toEqual(["name", "active", "recent"]);
+    for (const v of [undefined, "", "NAME", "x", ["name", "active"], 3, null, "constructor"]) expect(parseTrackSort(v)).toBe("recent");
+  });
 });
 
 describe("overviewSummary", () => {

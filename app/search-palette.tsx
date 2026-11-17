@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SearchIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useReturnFocus } from "@/components/use-return-focus";
 import { cn } from "@/lib/utils";
-import { chordLabel, highlightSegments, isMacPlatform, isSearchChord, wrapIndex } from "@/lib/search-palette";
+import { highlightSegments, isSearchChord, wrapIndex } from "@/lib/search-palette";
+import { OPEN_SEARCH_EVENT, useIsMac } from "./search-trigger";
 
 // Shape of GET /api/search (task 4.6).
 type Hit = { id: number; title: string; archived: boolean; track: { id: number; name: string }; matched: { kind: "title" | "cell" | "note"; column: string | null; snippet: string } };
@@ -27,18 +26,17 @@ function Highlight({ text, query }: { text: string; query: string }) {
   );
 }
 
-// The search button (side nav / top bar) plus the Ctrl/Cmd+K palette. Mounted once, in the app frame.
-export function SearchPalette({ className }: { className?: string }) {
+// The Ctrl/Cmd+K palette, mounted once in the app frame. It opens from the chord or from any search button (app/search-trigger.tsx) and returns focus to whatever had it.
+export function SearchPalette() {
   const router = useRouter();
   const id = useId();
-  const mac = useSyncExternalStore(() => () => {}, () => isMacPlatform(navigator.platform), () => false);
+  const mac = useIsMac();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [active, setActive] = useState(0);
-  const button = useRef<HTMLButtonElement>(null);
   const content = useRef<HTMLDivElement>(null);
-  const returnFocus = useReturnFocus(button);
+  const returnFocus = useReturnFocus();
   const navigated = useRef(false);
   const openWhenReady = useRef(false); // Enter pressed before the answer for this query arrived
   const q = query.trim();
@@ -66,8 +64,10 @@ export function SearchPalette({ className }: { className?: string }) {
       e.preventDefault(); // keep the browser's own Ctrl+K (address bar / search) out of it
       if (!open && !document.querySelector(BUSY_LAYER)) openPalette();
     };
+    const onOpen = () => { if (!open && !document.querySelector(BUSY_LAYER)) openPalette(); };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener(OPEN_SEARCH_EVENT, onOpen);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener(OPEN_SEARCH_EVENT, onOpen); };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- openPalette only uses setters and refs
   }, [open, mac]);
 
@@ -124,11 +124,6 @@ export function SearchPalette({ className }: { className?: string }) {
 
   return (
     <>
-      <Button ref={button} variant="outline" className={cn("justify-start gap-2 text-muted-foreground", className)} aria-keyshortcuts={mac ? "Meta+K" : "Control+K"} onClick={openPalette}>
-        <SearchIcon aria-hidden />
-        Search
-        <kbd className="ml-auto rounded-sm border border-border px-1.5 text-xs font-medium">{chordLabel(mac)}</kbd>
-      </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           ref={content}

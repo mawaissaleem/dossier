@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { refresh } from "next/cache";
-import { createTrack, deleteTrack, fetchTrackDeleteImpact, updateTrack } from "@/app/actions/tracks";
+import { createTrack, deleteTrack, fetchTrackDeleteImpact, setStarred, updateTrack } from "@/app/actions/tracks";
 import { tracks } from "@/lib/db/schema";
-import { listTracks } from "@/lib/db/tracks";
+import { getStarredTrackIds, listTracks } from "@/lib/db/tracks";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
@@ -38,6 +38,21 @@ describe("track actions", () => {
     expect(await updateTrack(r.id, "Work", "teal")).toEqual({ ok: true });
     expect(refresh).toHaveBeenCalledTimes(1);
     expect((await listTracks())[0]).toMatchObject({ name: "Work", color: "teal" });
+  });
+
+  it("setStarred checks its arguments, stars and unstars, and refreshes only on success", async () => {
+    const r = await createTrack("Job", "blank");
+    if (!r.ok) throw new Error(r.error);
+    vi.mocked(refresh).mockClear();
+    for (const id of [0, -1, 1.5, NaN, "1" as unknown as number]) expect(await setStarred(id, true)).toEqual({ ok: false, error: "Track not found." });
+    for (const flag of ["true", 1, null, undefined] as unknown[]) expect(await setStarred(r.id, flag as boolean)).toEqual({ ok: false, error: "Track not found." });
+    expect(await setStarred(9999, true)).toEqual({ ok: false, error: "Track not found." });
+    expect(refresh).not.toHaveBeenCalled();
+    expect(await setStarred(r.id, true)).toEqual({ ok: true });
+    expect(await getStarredTrackIds()).toEqual(new Set([r.id]));
+    expect(await setStarred(r.id, false)).toEqual({ ok: true });
+    expect(await getStarredTrackIds()).toEqual(new Set());
+    expect(refresh).toHaveBeenCalledTimes(2);
   });
 
   it("deleteTrack needs confirm, the typed name and the shown counts; it does not refresh (the client leaves the page)", async () => {
