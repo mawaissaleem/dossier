@@ -21,7 +21,7 @@ function Figure({ label, value }: { label: string; value: number }) {
 export function TrackTile({ track: t, starred, figures }: { track: TrackOverview; starred: boolean; figures?: boolean }) {
   const a = attentionLine(t);
   return (
-    <article className="relative flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:border-input hover:bg-popover has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2">
+    <article className="relative flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:border-input hover:bg-popover has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring">
       <div className="flex items-start gap-3">
         <TrackMarker name={t.name} color={t.color} className="size-10 rounded-lg text-base" />
         <div className="min-w-0 flex-1">

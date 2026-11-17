@@ -83,7 +83,6 @@ export function trackOverview(input: OverviewInput, today: string, nowMs: number
   };
 }
 
-// "2 tracks · 11 applications · 4 need attention" (the /tracks header).
 // The attention line of a track tile and the sentence under it. `alert` = the destructive part ("1 overdue"), `text` the muted rest; always words, colour only adds to it.
 // "1 overdue · 2 more need attention" / "1 overdue · next deadline in 11 days" / "Next deadline in 6 days" / "Nothing needs attention" / "Add the first application to start this track".
 export function attentionLine(o: Pick<TrackOverview, "total" | "attention" | "overdue" | "nextDeadlineDays">): { alert: string | null; text: string } {
@@ -109,6 +108,7 @@ export function sortTracks<T extends Pick<TrackOverview, "name" | "updatedMs" | 
   return [...os].sort(by); // Array.prototype.sort is stable
 }
 
+// "2 tracks · 11 applications · 4 need attention" (the /tracks header).
 export function overviewSummary(os: readonly Pick<TrackOverview, "total" | "attention">[]): string {
   const need = os.reduce((n, o) => n + o.attention.length, 0);
   return [plural(os.length, "track"), plural(os.reduce((n, o) => n + o.total, 0), "application"), `${need} ${need === 1 ? "needs" : "need"} attention`].join(" · ");

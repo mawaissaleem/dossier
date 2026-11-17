@@ -32,6 +32,19 @@
   }
 }
 
+/* The sidebar's expanded state (DASH.4): from md up when <html data-sidebar="open"> (set before first paint from the cookie, see lib/sidebar.ts), and always inside the phone panel (data-wide).
+   Everything is collapsed by default, so the static HTML is right for the default and the variant only widens it; no JavaScript is needed to lay it out. */
+@custom-variant wide {
+  @media (min-width: 48rem) {
+    html[data-sidebar="open"] & {
+      @slot;
+    }
+  }
+  [data-wide] & {
+    @slot;
+  }
+}
+
 /*
   Design tokens (see DESIGN.md). Every colour is a #rrggbb value so tests/theme-contrast.test.ts can
   measure WCAG contrast straight from this file. Themes are selected by <html data-theme="...">; the

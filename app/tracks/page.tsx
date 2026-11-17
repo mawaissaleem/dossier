@@ -27,7 +27,10 @@ async function Summary() {
   return tracks.length ? overviewSummary(tracks) : null;
 }
 
+// Nothing to sort before the first track exists.
 async function Sort({ searchParams }: Props) {
+  await connection();
+  if (!(await getTrackOverviews(localToday())).length) return null;
   return <SortControl sort={parseTrackSort((await searchParams).sort)} />;
 }
 

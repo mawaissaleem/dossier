@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setStillToDo } from "@/lib/db/planner";
 import { applications, cellValues, columnOptions, columns, notes, tracks, type ColumnType } from "@/lib/db/schema";
 import { getTrackOverviews } from "@/lib/db/track-overview";
+import { listTrackCounts } from "@/lib/db/tracks";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
 const DAY = 86_400_000;
 const TODAY = "2026-11-17";
 const NOW = Date.UTC(2026, 10, 17, 12);
 
-describe("getTrackOverviews (data layer)", () => {
+describe("getTrackOverviews and listTrackCounts (data layer)", () => {
   let db: ReturnType<typeof useTestDb>;
   beforeEach(() => { db = useTestDb(); });
   afterEach(dropTestDb);
@@ -69,5 +70,12 @@ describe("getTrackOverviews (data layer)", () => {
     expect((await getTrackOverviews(TODAY, NOW))[0]).toMatchObject({ toApply: 1, attention: [{ title: "sent", when: "In 3 days" }] });
     const empty = track("Empty", 1);
     expect((await getTrackOverviews(TODAY, NOW))[1]).toMatchObject({ id: empty.t, total: 0, attention: [], updatedMs: null, activeCount: 0 });
+  });
+
+  it("sidebar counts: non-archived applications per track, 0 for an empty one, other users excluded", async () => {
+    const j = track("Job", 0);
+    track("PhD", 1);
+    j.add("a", j.toApply); j.add("b", j.toApply); j.add("c", j.toApply, { archived: true }); j.add("d", j.toApply, { userId: "other" });
+    expect((await listTrackCounts()).map((t) => [t.name, t.count])).toEqual([["Job", 2], ["PhD", 0]]);
   });
 });

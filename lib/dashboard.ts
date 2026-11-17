@@ -158,3 +158,10 @@ export function itemsInRow(index: number, count: number, perRow: number): number
   const lastRow = Math.ceil(count / perRow) - 1;
   return Math.floor(index / perRow) === lastRow ? count - lastRow * perRow : perRow;
 }
+
+// ---- DASH.4: the plan card's "Up next". ----
+// The first `limit` of the ranking after this week's plan, numbered on from it (rank `start`, as on /planner), and `total` = the whole ranking for "All N in Planner" (shown only when `more`).
+export function upNext<T>(plan: readonly unknown[], rest: readonly T[], limit: number): { shown: T[]; start: number; total: number; more: boolean } {
+  const { shown, more } = firstN(rest, limit);
+  return { shown, start: plan.length + 1, total: plan.length + rest.length, more: more > 0 };
+}

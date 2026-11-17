@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deadlineTile, itemsInRow, overdueTile, splitValue, weekHint, type OverdueAlert, type UpcomingDeadline } from "@/lib/dashboard";
+import { deadlineTile, itemsInRow, overdueTile, splitValue, upNext, weekHint, type OverdueAlert, type UpcomingDeadline } from "@/lib/dashboard";
 
 const late = (id: number, days: number, title = `App ${id}`): OverdueAlert => ({ id, title, trackId: 1, trackName: "PhD", date: "1 Nov 2026", days, text: "" });
 const next = (text: string): UpcomingDeadline => ({ id: 1, title: "Robotics Lab", trackId: 1, trackName: "PhD", date: "20 Nov 2026", days: 3, big: "3", unit: "days", text });
@@ -54,5 +54,20 @@ describe("itemsInRow (pure)", () => {
     expect(row(3, 2)).toEqual([2, 2, 1]);
     expect(row(1, 3)).toEqual([1]);
     expect(row(2, 3)).toEqual([2, 2]);
+  });
+});
+
+describe("upNext (pure)", () => {
+  const ids = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
+  it("takes the first `limit` after the plan, numbered on from it, and says when there are more", () => {
+    expect(upNext(ids(4), ids(30), 12)).toEqual({ shown: ids(12), start: 5, total: 34, more: true });
+  });
+  it("shows all of a short rest with no link", () => {
+    expect(upNext(ids(4), ids(3), 12)).toEqual({ shown: [1, 2, 3], start: 5, total: 7, more: false });
+    expect(upNext(ids(4), ids(12), 12)).toMatchObject({ shown: ids(12), more: false }); // exactly the limit: nothing left out
+  });
+  it("is empty when everything fits in the plan", () => {
+    expect(upNext(ids(2), [], 12)).toEqual({ shown: [], start: 3, total: 2, more: false });
+    expect(upNext([], [], 12)).toEqual({ shown: [], start: 1, total: 0, more: false });
   });
 });

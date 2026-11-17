@@ -22,6 +22,16 @@ export async function listTracks(): Promise<TrackListItem[]> {
     .map((t) => ({ ...t, color: colorOrFallback(t.color, t.id) }));
 }
 
+// The sidebar's per-track counts: non-archived applications, one grouped query. A track with none is 0.
+export async function listTrackCounts(): Promise<(TrackListItem & { count: number })[]> {
+  const db = getDb();
+  const userId = getUserId();
+  const counts = new Map(
+    db.select({ trackId: applications.trackId, n: count() }).from(applications).where(and(eq(applications.userId, userId), eq(applications.archived, false))).groupBy(applications.trackId).all().map((r) => [r.trackId, r.n]),
+  );
+  return (await listTracks()).map((t) => ({ ...t, count: counts.get(t.id) ?? 0 }));
+}
+
 export type TrackResult = { ok: true } | { ok: false; error: string };
 const NO_TRACK = { ok: false, error: "Track not found." } as const;
 

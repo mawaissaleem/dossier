@@ -7,7 +7,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { DEFAULT_THEME, THEMES, THEME_LABELS, THEME_STORAGE_KEY, parseTheme } from "@/lib/theme";
-import { RAIL_ITEM, RailTip } from "./rail";
+import { RAIL_ITEM, RailLabel, RailTip } from "./rail";
 
 // The <html data-theme> attribute is the source of truth (set before paint by THEME_INIT_SCRIPT), so several switchers stay in sync.
 const subscribe = (cb: () => void) => {
@@ -57,7 +57,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
   );
 }
 
-// The rail's theme item: an icon that opens a menu of the three themes (the current one checked).
+// The sidebar's theme item: an icon (and, expanded, the word Theme) that opens a menu of the three themes (the current one checked).
 export function ThemeMenu({ className }: { className?: string }) {
   const [theme, setTheme] = useTheme();
   return (
@@ -65,6 +65,7 @@ export function ThemeMenu({ className }: { className?: string }) {
       <DropdownMenuTrigger asChild>
         <button type="button" aria-label={`Theme: ${THEME_LABELS[theme]}`} className={cn(RAIL_ITEM, className)}>
           <PaletteIcon aria-hidden />
+          <RailLabel>Theme</RailLabel>
           <RailTip>Theme</RailTip>
         </button>
       </DropdownMenuTrigger>
