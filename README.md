@@ -100,9 +100,9 @@ Listed honestly so you know what you are getting.
 
 ## Requirements
 
-- **Node.js 20.9 or newer** with npm. Use an even-numbered release (20 LTS or 22 LTS): the database library, `better-sqlite3`, does not support odd-numbered Node versions.
-- Developed and tested on Linux. CI runs on Ubuntu with Node 20.
-- A normal install downloads a ready-made binary for `better-sqlite3`. If your platform has none, `npm ci` builds it, and that needs Python 3 and a C++ compiler.
+- **Node.js 22 LTS** (or 24) with npm.
+- Linux or Windows: CI runs every check on Ubuntu and Windows with Node 22. macOS should work but is not tested.
+- With Node 22 or 24, `npm ci` downloads a ready-made binary for the database library, `better-sqlite3`. On another version (Node 20 included) it has to build it, and that needs Python 3 and a C++ compiler (Visual Studio Build Tools on Windows).
 
 
 ## Install and run
