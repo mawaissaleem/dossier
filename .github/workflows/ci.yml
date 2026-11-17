@@ -6,8 +6,14 @@ on:
     branches: [main]
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # a Windows failure must not cancel the Linux run (and the reverse)
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
+      # keep LF line endings on Windows so tests that read source files see the same bytes as on Linux
+      - run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
