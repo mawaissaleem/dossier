@@ -117,8 +117,8 @@ export default function SettingsPage() {
       </section>
       <section aria-labelledby="appearance">
         <h2 id="appearance" className="mb-2 text-lg font-semibold">Appearance</h2>
-        <ThemeSwitcher className="max-w-48" />
-        <p className="mt-2 text-sm text-muted-foreground">Graphite is the default dark theme, Ink a cooler blue-black one, Paper a light one. The choice is saved in this browser.</p>
+        <ThemeSwitcher />
+        <p className="mt-2 text-sm text-muted-foreground">Graphite is the default. Five more dark and two light themes to choose from. The choice is saved in this browser.</p>
       </section>
     </Page>
   );

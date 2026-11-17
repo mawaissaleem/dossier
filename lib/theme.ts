@@ -1,8 +1,8 @@
 // Pure: theme names, validation of the stored choice, and the pre-paint script. No DOM or React imports.
-export const THEMES = ["graphite", "ink", "paper"] as const;
+export const THEMES = ["graphite", "ember", "amethyst", "glacier", "rosewood", "paper", "sand"] as const;
 export type Theme = (typeof THEMES)[number];
 export const DEFAULT_THEME: Theme = "graphite";
-export const THEME_LABELS: Record<Theme, string> = { graphite: "Graphite", ink: "Ink", paper: "Paper" };
+export const THEME_LABELS: Record<Theme, string> = { graphite: "Graphite", ember: "Ember", amethyst: "Amethyst", glacier: "Glacier", rosewood: "Rosewood", paper: "Paper", sand: "Sand" };
 export const THEME_STORAGE_KEY = "dossier-theme";
 
 // Anything unknown, missing or tampered falls back to Graphite.

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { FileStackIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, XIcon } from "lucide-react";
+import { PanelLeftCloseIcon, PanelLeftOpenIcon, XIcon } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useReturnFocus } from "@/components/use-return-focus";
 import { isMacPlatform } from "@/lib/search-palette";
 import { isTypingTarget, sidebarChordLabel, sidebarCookie, toggles } from "@/lib/sidebar";
+import { DossierMark } from "./dossier-mark";
 import { NavItems } from "./nav-items";
 import { RailTip } from "./rail";
 import { useIsMac } from "./search-trigger";
@@ -44,7 +45,7 @@ function setSidebar(open: boolean, logo: HTMLElement | null, collapse: HTMLEleme
 
 const Mark = ({ className }: { className?: string }) => (
   <span aria-hidden className={`grid size-9 shrink-0 place-items-center rounded-lg bg-linear-to-br from-accent to-accent-to text-accent-foreground ${className ?? ""}`}>
-    <FileStackIcon className="size-[18px]" />
+    <DossierMark className="size-[18px]" />
   </span>
 );
 

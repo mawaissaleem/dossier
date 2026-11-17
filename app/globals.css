@@ -49,11 +49,12 @@
   Design tokens (see DESIGN.md). Every colour is a #rrggbb value so tests/theme-contrast.test.ts can
   measure WCAG contrast straight from this file. Themes are selected by <html data-theme="...">; the
   :root block is Graphite, so a page with no stored choice renders Graphite. Keep the theme blocks in
-  this order (graphite, ink, paper): later blocks override earlier ones.
+  this order (graphite, ember, amethyst, glacier, rosewood, paper, sand): later blocks override earlier ones,
+  and the chip blocks below must stay after every theme block.
   Surfaces layer background < card < popover. `accent-to` is the second stop of the accent gradients
-  (primary button, active nav and tab indicator, logo mark); `wash` is the top stop of the faint canvas
-  wash. `elevation` is the neutral shadow of floating layers (menus, dialogs). Never purple, violet,
-  indigo, magenta, pink or orange in the chrome; no blur, no glow or coloured shadows.
+  (primary button, active nav bar, logo mark); `wash` is the top stop of the faint canvas
+  wash. `elevation` is the neutral shadow of floating layers (menus, dialogs). Any hue may be a theme accent
+  (user ruling 2026-11-17); no blur, no glow or coloured shadows.
 */
 :root,
 [data-theme="graphite"] {
@@ -79,56 +80,151 @@
   --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.7);
 }
 
-[data-theme="ink"] {
+[data-theme="ember"] {
   color-scheme: dark;
-  --background: #080d19;
-  --wash: #0a1926;
-  --foreground: #e5ecf7;
-  --card: #0d1424;
-  --card-foreground: #e5ecf7;
-  --popover: #121b30;
-  --popover-foreground: #e5ecf7;
-  --muted: #18233b;
-  --muted-foreground: #98abc6;
-  --border: #233150;
-  --input: #5b7093;
-  --ring: #22d3ee;
-  --accent: #22d3ee;
-  --accent-to: #4f9dff;
-  --accent-foreground: #03131f;
+  --background: #120f0d;
+  --wash: #1c1510;
+  --foreground: #f1e9e1;
+  --card: #1a1613;
+  --card-foreground: #f1e9e1;
+  --popover: #221d19;
+  --popover-foreground: #f1e9e1;
+  --muted: #2a231e;
+  --muted-foreground: #b2a497;
+  --border: #3a312a;
+  --input: #7c6e60;
+  --ring: #f59e0b;
+  --accent: #f59e0b;
+  --accent-to: #fb7c3c;
+  --accent-foreground: #1a0e02;
+  --destructive: #ff6b6b;
+  --destructive-foreground: #1a0505;
+  --warning: #e3c04d;
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.7);
+}
+
+[data-theme="amethyst"] {
+  color-scheme: dark;
+  --background: #0f0d16;
+  --wash: #17122a;
+  --foreground: #ece8f5;
+  --card: #16131f;
+  --card-foreground: #ece8f5;
+  --popover: #1d1929;
+  --popover-foreground: #ece8f5;
+  --muted: #252033;
+  --muted-foreground: #a9a1bf;
+  --border: #332c46;
+  --input: #766d92;
+  --ring: #b794f6;
+  --accent: #b794f6;
+  --accent-to: #e07cf5;
+  --accent-foreground: #150a24;
+  --destructive: #ff7a70;
+  --destructive-foreground: #1a0705;
+  --warning: #e3c04d;
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.7);
+}
+
+[data-theme="glacier"] {
+  color-scheme: dark;
+  --background: #1c2230;
+  --wash: #202c3b;
+  --foreground: #e5e9f0;
+  --card: #232a39;
+  --card-foreground: #e5e9f0;
+  --popover: #2a3244;
+  --popover-foreground: #e5e9f0;
+  --muted: #303a4e;
+  --muted-foreground: #a7b1c4;
+  --border: #3d475d;
+  --input: #7d889f;
+  --ring: #88c0d0;
+  --accent: #88c0d0;
+  --accent-to: #81a1c1;
+  --accent-foreground: #0c1a22;
   --destructive: #ff8a80;
   --destructive-foreground: #1a0705;
   --warning: #e3c04d;
-  --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.75);
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.7);
+}
+
+[data-theme="rosewood"] {
+  color-scheme: dark;
+  --background: #140c10;
+  --wash: #1f1017;
+  --foreground: #f3e6ec;
+  --card: #1b1116;
+  --card-foreground: #f3e6ec;
+  --popover: #23161d;
+  --popover-foreground: #f3e6ec;
+  --muted: #2c1c25;
+  --muted-foreground: #bba3ae;
+  --border: #3d2632;
+  --input: #85676f;
+  --ring: #fb7185;
+  --accent: #fb7185;
+  --accent-to: #f472b6;
+  --accent-foreground: #220710;
+  --destructive: #ff8a4d;
+  --destructive-foreground: #1c0a02;
+  --warning: #e3c04d;
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.7);
 }
 
 [data-theme="paper"] {
   color-scheme: light;
-  --background: #f5f6f8;
-  --wash: #eceff7;
-  --foreground: #14171c;
-  --card: #ffffff;
-  --card-foreground: #14171c;
-  --popover: #ffffff;
-  --popover-foreground: #14171c;
-  --muted: #edf0f4;
-  --muted-foreground: #525a66;
-  --border: #dce0e6;
-  --input: #79818e;
-  --ring: #1d4ed8;
-  --accent: #1d4ed8;
-  --accent-to: #2f62e6;
-  --accent-foreground: #ffffff;
+  --background: #e9e7e1;
+  --wash: #e3e6df;
+  --foreground: #1c1b18;
+  --card: #efede7;
+  --card-foreground: #1c1b18;
+  --popover: #f4f2ec;
+  --popover-foreground: #1c1b18;
+  --muted: #dfdcd4;
+  --muted-foreground: #57534a;
+  --border: #cfcbc1;
+  --input: #7b776c;
+  --ring: #0b6860;
+  --accent: #0b6860;
+  --accent-to: #0c6079;
+  --accent-foreground: #f7f6f1;
   --destructive: #b3261e;
-  --destructive-foreground: #ffffff;
-  --warning: #7a5b00;
-  --elevation: 0 1px 2px rgb(16 24 40 / 0.06), 0 12px 32px -8px rgb(16 24 40 / 0.18);
+  --destructive-foreground: #f7f6f1;
+  --warning: #6e5200;
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.08), 0 12px 32px -8px rgb(0 0 0 / 0.22);
 }
 
-/* Option chip colours (lib/colors.ts token names are stored data). Pairs are chip background + text. Dark themes share one set. */
+[data-theme="sand"] {
+  color-scheme: light;
+  --background: #e8dcc6;
+  --wash: #efe3cc;
+  --foreground: #2a2117;
+  --card: #f2e8d5;
+  --card-foreground: #2a2117;
+  --popover: #f7efe0;
+  --popover-foreground: #2a2117;
+  --muted: #e2d4ba;
+  --muted-foreground: #5e4d38;
+  --border: #d2c09e;
+  --input: #85735a;
+  --ring: #963d19;
+  --accent: #963d19;
+  --accent-to: #853514;
+  --accent-foreground: #fbf5ea;
+  --destructive: #a8261e;
+  --destructive-foreground: #fbf5ea;
+  --warning: #6c5000;
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.08), 0 12px 32px -8px rgb(0 0 0 / 0.22);
+}
+
+/* Option chip colours (lib/colors.ts token names are stored data). Pairs are chip background + text. Dark themes share one set, light themes another. */
 :root,
 [data-theme="graphite"],
-[data-theme="ink"] {
+[data-theme="ember"],
+[data-theme="amethyst"],
+[data-theme="glacier"],
+[data-theme="rosewood"] {
   --chip-red: #5c1f1f;
   --chip-red-foreground: #ffd0cc;
   --chip-orange: #5c3012;
@@ -147,7 +243,8 @@
   --chip-gray-foreground: #e4e4e4;
 }
 
-[data-theme="paper"] {
+[data-theme="paper"],
+[data-theme="sand"] {
   --chip-red: #fee2e2;
   --chip-red-foreground: #7f1d1d;
   --chip-orange: #ffedd5;

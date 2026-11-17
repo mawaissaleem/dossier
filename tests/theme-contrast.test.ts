@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { contrast, mix } from "@/lib/contrast";
+import { contrast, luminance, mix } from "@/lib/contrast";
 import { PALETTE } from "@/lib/colors";
 import { THEMES } from "@/lib/theme";
 
@@ -16,6 +16,23 @@ const tokens = (theme: string) => {
   }
   return out;
 };
+
+// Every variable and property the :root (Graphite) blocks set, so a theme cannot silently inherit one of them.
+const required = blocks.filter((b) => b.selectors.includes(":root")).flatMap((b) => [...b.body.matchAll(/((?:--)?[\w-]+):/g)].map((m) => m[1]));
+
+describe.each(THEMES)("%s theme blocks", (theme) => {
+  const own = blocks.filter((b) => b.selectors.includes(`[data-theme="${theme}"]`)).map((b) => b.body).join("\n");
+  it("define every token and color-scheme themselves (no fallback to :root)", () => {
+    expect(required).toContain("color-scheme");
+    expect(required).toContain("--chip-gray-foreground");
+    for (const name of required) expect(own, `${name} in [data-theme="${theme}"]`).toMatch(new RegExp(`(^|[\\s;])${name}:`));
+  });
+  it("light themes have no white or near-white surface (all below #f8f8f8)", () => {
+    if (!/color-scheme:\s*light/.test(own)) return;
+    const t = tokens(theme);
+    for (const s of ["--background", "--wash", "--card", "--muted", "--popover"]) expect(luminance(t[s]), s).toBeLessThan(luminance("#f8f8f8"));
+  });
+});
 
 describe.each(THEMES)("%s theme contrast (WCAG AA)", (theme) => {
   const t = tokens(theme);
@@ -37,7 +54,7 @@ describe.each(THEMES)("%s theme contrast (WCAG AA)", (theme) => {
     expect(contrast(t["--accent-foreground"], t["--accent-to"]), "label on accent-to stop").toBeGreaterThanOrEqual(4.5);
     expect(contrast(t["--destructive-foreground"], t["--destructive"])).toBeGreaterThanOrEqual(4.5);
   });
-  it("the active nav bar and tab underline (accent -> accent-to) reach 3:1 on every surface", () => {
+  it("the active nav bar (accent -> accent-to) reach 3:1 on every surface", () => {
     for (const s of surfaces) for (const stop of ["--accent", "--accent-to"]) expect(contrast(t[stop], t[s]), `${stop} on ${s}`).toBeGreaterThanOrEqual(3);
   });
   it("control borders and the focus ring reach 3:1 on every surface a control sits on", () => {

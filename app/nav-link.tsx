@@ -10,7 +10,7 @@ export function NavLink({ href, icon, label, className }: { href: string; icon: 
   const path = usePathname();
   // Prefix match so /tracks/1 keeps "Tracks" lit; "/" stays exact.
   const active = href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`);
-  // Only the exact page is aria-current="page"; a section parent is "true", so /tracks/1 has one "page" (its track tab).
+  // Only the exact page is aria-current="page"; a section parent is "true", so /tracks/1 has one "page" (the sidebar track link).
   return (
     <Link href={href} aria-label={label} aria-current={path === href ? "page" : active ? "true" : undefined} className={cn(RAIL_ITEM, active && RAIL_ACTIVE, className)}>
       {icon}

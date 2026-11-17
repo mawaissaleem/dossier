@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Dossier architecture",
+    "locale": "en",
+    "output": "docs/architecture/architecture.html",
+    "quality_profile": "showcase",
+    "repository": { "url": "https://github.com/mawaissaleem/dossier.git", "provider": "github", "link_mode": "web", "revision": "11b4cf2ed816a09416730317096e212b798eca96" }
+  },
+  "components": [
+    { "id": "browser", "type": "external", "label": "Browser", "sublabel": "127.0.0.1:3000", "pos": [40, 60], "size": [130, 64],
+      "sources": [{ "path": "package.json", "line": 6, "end_line": 8 }] },
+    { "id": "proxy", "type": "security", "label": "Host check", "sublabel": "proxy.ts", "tag": "localhost only", "pos": [240, 60], "size": [140, 64],
+      "sources": [{ "path": "proxy.ts", "line": 1, "end_line": 11 }, { "path": "lib/local-request.ts", "line": 6, "end_line": 20 }] },
+    { "id": "pages", "type": "frontend", "label": "Pages + server actions", "sublabel": "App Router, app/", "pos": [490, 60], "size": [180, 64],
+      "sources": [{ "path": "app/layout.tsx", "line": 28, "end_line": 62 }, { "path": "app/actions/backup.ts", "line": 1 }] },
+    { "id": "db", "type": "backend", "label": "lib/db", "sublabel": "Drizzle queries", "pos": [780, 60], "size": [140, 64],
+      "sources": [{ "path": "lib/db/client.ts", "line": 1, "end_line": 28 }, { "path": "lib/db/applications.ts", "line": 60, "end_line": 91 }] },
+    { "id": "sqlite", "type": "database", "label": "SQLite file", "sublabel": "DATABASE_PATH", "pos": [1030, 60], "size": [140, 64],
+      "sources": [{ "path": "lib/db/client.ts", "line": 7, "end_line": 17 }, { "path": "lib/db/migrations.ts", "line": 13, "end_line": 30 }] },
+    { "id": "api", "type": "backend", "label": "API routes", "sublabel": "upload, serve, zip, CSV", "pos": [490, 250], "size": [180, 64],
+      "sources": [{ "path": "app/api/applications/[id]/files/route.ts", "line": 1, "end_line": 76 }, { "path": "app/api/files/[id]/route.ts", "line": 1, "end_line": 44 }] },
+    { "id": "files", "type": "backend", "label": "lib/files", "sublabel": "store, resolve, backup", "pos": [780, 250], "size": [140, 64],
+      "sources": [{ "path": "lib/files/store.ts", "line": 1, "end_line": 60 }, { "path": "lib/files/resolve.ts", "line": 1, "end_line": 45 }] },
+    { "id": "root", "type": "database", "label": "Files root", "sublabel": "read-only copies", "pos": [1030, 250], "size": [140, 64],
+      "sources": [{ "path": "lib/files/store.ts", "line": 1, "end_line": 15 }] },
+    { "id": "backups", "type": "database", "label": "Backup folder", "sublabel": "one zip per backup", "pos": [1030, 420], "size": [140, 64],
+      "sources": [{ "path": "lib/files/backup.ts", "line": 1, "end_line": 18 }] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Next.js server, bound to 127.0.0.1", "wraps": ["proxy", "pages", "api", "db", "files"] }
+  ],
+  "connections": [
+    { "id": "browser-proxy", "from": "browser", "to": "proxy", "label": "HTTP", "variant": "emphasis" },
+    { "id": "proxy-pages", "from": "proxy", "to": "pages", "label": "allowed Host", "variant": "emphasis" },
+    { "id": "proxy-api", "from": "proxy", "to": "api", "label": "allowed Host" },
+    { "id": "pages-db", "from": "pages", "to": "db", "label": "read / write", "variant": "emphasis" },
+    { "id": "db-sqlite", "from": "db", "to": "sqlite", "label": "SQL" },
+    { "id": "api-files", "from": "api", "to": "files", "label": "file bytes" },
+    { "id": "files-db", "from": "files", "to": "db", "label": "file rows" },
+    { "id": "files-root", "from": "files", "to": "root", "label": "store copy" },
+    { "id": "files-backups", "from": "files", "to": "backups", "label": "zip db + files", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Rules the code follows", "items": ["Only lib/db touches the database; only lib/files touches the disk", "Pure logic (filename rule, planner, filters, sort) has no DB or UI imports", "Stored paths are relative to the files root and checked so nothing escapes it"] },
+    { "dot": "rose", "title": "Safety", "items": ["Server binds to 127.0.0.1; every request must carry a localhost Host", "Uploads are copied, hashed (SHA-256) and set read-only", "Backups and restores are one zip with a manifest; a restore saves a safety backup first"] }
+  ]
+}

@@ -3,7 +3,7 @@
 export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const CSS = `:root{color-scheme:dark light;--bg:#0d0f0f;--fg:#e7ebea;--muted:#9ba5a2;--border:#2b3232;--link:#34d399}` +
-  `@media (prefers-color-scheme:light){:root{--bg:#f5f6f8;--fg:#14171c;--muted:#525a66;--border:#dce0e6;--link:#1d4ed8}}` +
+  `@media (prefers-color-scheme:light){:root{--bg:#e9e7e1;--fg:#1c1b18;--muted:#57534a;--border:#cfcbc1;--link:#0b6860}}` +
   `body{margin:0 auto;max-width:40rem;padding:2rem 1rem;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;overflow-wrap:anywhere}` +
   `h1{font-size:1.25rem;margin:0 0 1rem}p,ul{margin:0 0 1rem}li{margin:.25rem 0}a{color:var(--link)}` +
   `.back{border-top:1px solid var(--border);padding-top:1rem;color:var(--muted)}`;

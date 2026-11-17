@@ -9,7 +9,6 @@ import { TrackViews } from "./track-views";
 import { NewApplicationForm } from "./new-application-form";
 import { Page, PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { TrackTabs } from "./track-tabs";
 import { TrackMarker } from "@/app/track-marker";
 import { TrackMenu } from "@/app/track-menu";
 
@@ -20,8 +19,7 @@ async function TrackView({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id: raw } = await params;
   const id = /^\d+$/.test(raw) ? Number(raw) : NaN;
-  const tracks = await listTracks(); // one query serves both the tabs and the current-track lookup
-  const track = tracks.find((t) => t.id === id);
+  const track = (await listTracks()).find((t) => t.id === id);
   if (!track) notFound();
   const cols = await listColumns(track.id);
   const rows = await listApplicationRows(track.id, cols); // reuse cols: 4 queries, and rows match the headers
@@ -43,7 +41,6 @@ async function TrackView({ params }: { params: Promise<{ id: string }> }) {
           </>
         }
       />
-      <TrackTabs tracks={tracks} currentId={track.id} />
       <div id="add-application" className="mb-4 scroll-mt-4 rounded-lg border border-border bg-card p-3">
         <NewApplicationForm key={track.id} trackId={track.id} columns={cols} />
       </div>

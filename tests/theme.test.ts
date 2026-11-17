@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_THEME, THEMES, THEME_INIT_SCRIPT, THEME_STORAGE_KEY, parseTheme } from "@/lib/theme";
 
 describe("parseTheme", () => {
-  it("accepts the three theme names", () => {
+  it("accepts every theme name and keeps the order", () => {
+    expect([...THEMES]).toEqual(["graphite", "ember", "amethyst", "glacier", "rosewood", "paper", "sand"]);
     for (const t of THEMES) expect(parseTheme(t)).toBe(t);
   });
   it("falls back to Graphite for unknown or tampered values", () => {
     expect(DEFAULT_THEME).toBe("graphite");
+    expect(parseTheme("ink")).toBe("graphite"); // the removed theme
     for (const v of [null, undefined, "", "dark", "Ink", "constructor", "__proto__", "ink; x", 3, {}, ["ink"]]) expect(parseTheme(v)).toBe("graphite");
   });
 });

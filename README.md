@@ -1,153 +1,297 @@
 # Dossier
 
-Dossier is a single-user app for tracking job and PhD applications. It keeps the exact files you sent to each application, so you can find them again later.
+A local-first tracker for job and PhD applications that keeps the exact files you sent.
 
-Everything stays on your computer. There are no accounts, no cloud and no telemetry.
+Add an application, attach your CV and cover letter, and record a submission when you send it. Months later, when a recruiter calls back, open the application and the exact files you sent are one click away: not "CV_final_v3_really_final.pdf", but the copy that went to that company on that day.
 
-## First run (cold start)
+> **Version 0.1.0.** Dossier is a single-user app that runs on your own computer. There are no accounts, no sync and no cloud. It is usable every day, and it does not try to be a hosted product. Read [Not implemented yet](#not-implemented-yet) and [Known issues](#known-issues) before you start.
 
-You need:
+![Dossier: search, open an application and find the files that were sent](docs/media/demo.gif)
 
-- **Node.js 20.9 or newer** (Next.js 16 needs at least 20.9) and npm. Use an even-numbered release, 20 LTS or 22 LTS: the database library (`better-sqlite3`) does not support odd-numbered Node versions. CI uses Node 20.
-- A normal install downloads a ready-made binary for the database library (`better-sqlite3`). If your platform has none, `npm ci` builds it, and that needs Python 3 and a C++ compiler.
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/media/dashboard.png" width="420px" alt="Dashboard"><br>
+      Dashboard
+    </td>
+    <td align="center">
+      <img src="docs/media/table.png" width="420px" alt="Track table"><br>
+      Track table
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/media/board.png" width="420px" alt="Board view"><br>
+      Board view
+    </td>
+    <td align="center">
+      <img src="docs/media/application.png" width="420px" alt="Application with its submission"><br>
+      Application and its submission
+    </td>
+  </tr>
+</table>
 
-From a fresh clone, in the project folder:
+All screenshots use made-up demo data.
+
+
+## Why this exists
+
+When you apply to many jobs or PhD programmes at once, the spreadsheet holds the status and a folder somewhere holds the files, and the two drift apart. A few weeks later you cannot say which version of the CV went where.
+
+Dossier keeps both in one place. It is built around four ideas:
+
+- **The files are the point.** Every upload is copied, renamed by a fixed rule, hashed (SHA-256) and set read-only. A submission records exactly which files went out and when.
+- **Local-first.** One SQLite file and one folder of files on your own disk. No account, no telemetry and no network calls to third parties. The server only answers on `127.0.0.1`.
+- **Your columns, not mine.** Tracks, columns and statuses are data you edit in the app. A PhD track can have Supervisor and Funding columns; a job track can have Location and Effort. No code change is needed for either.
+- **Nothing is lost quietly.** Every destructive action confirms and says what will be lost. Backups are one zip, and a restore saves a safety backup first.
+
+
+## What works today
+
+| Feature | How to use it |
+|---|---|
+| Tracks | Start from the Job or PhD template or a blank track. Rename, recolour, star or delete tracks on the **Tracks** page |
+| Flexible columns | Text, number, date, link, checkbox and single-select columns. Add, rename, hide, reorder; edit the options and their colours |
+| Table view | Edit cells in place, sort by any column, filter by any single-select column. Scrolls smoothly with hundreds of rows |
+| Board view | One column per status. Drag a card to change its status, or use the keyboard (Space, arrows, Space) or the card's **Move to** menu |
+| File uploads | Drop files on an application. Each one is labelled (CV, Cover letter, SOP, ...) and stored as `NN-YYYYMMDD-name.ext` in a folder for that application |
+| Submissions | **New submission** records the date and the files you sent. Dossier warns if a file it expects for that track (for example a CV) is missing |
+| Preview and download | Preview a file inside the app, open it in a new tab, download it, or download all of an application's files as one zip |
+| File checks | **Check files** compares every stored file with its hash and flags any file changed or missing on disk |
+| Notes and history | Add notes to an application. Status changes, uploads and submissions appear on its timeline |
+| Search | `Ctrl + K` searches titles, companies, text fields and notes across every track |
+| Planner | Ranks what to work on this week by priority, effort, deadline and follow-up date, with the reason for each place. Weekly capacity and rules are in **Planner settings** |
+| Dashboard | Overdue items, next deadline, this week's progress and streak, follow-ups due, recent wins, and the pipeline across all tracks |
+| Backup and restore | **Back up now** writes one zip with the database and every file. Restore checks the zip first, then replaces your data after a confirmation |
+| CSV export | **Export CSV** on a track saves every application in it, archived ones too |
+| Themes | Seven themes: Graphite (default), Ember, Amethyst, Glacier and Rosewood (dark), Paper and Sand (light) |
+| Database updates | After an update, a **Back up and update** button backs up the database and applies the new schema in one step |
+
+**Keys**
+
+```
+Ctrl + K        Search
+Ctrl + B        Expand or collapse the sidebar
+Ctrl + Enter    Add the note you are typing
+Space           On the board: pick up a card, then drop it
+← / →           On the board: move a picked-up card to the next column
+Esc             Close a dialog, or cancel a drag
+```
+
+![The seven themes](docs/media/themes.png)
+
+
+## Not implemented yet
+
+Listed honestly so you know what you are getting.
+
+- **Contacts.** There is no list of recruiters, professors or referees linked to applications. Use a text column or a note for now.
+- **Saved views.** Filters and sort live in the page address. Bookmark the URL to keep a view.
+- **Sync or a second user.** Dossier is one person on one computer. Moving to a new computer is a backup and a restore.
+- **Import.** There is CSV export, but no CSV import from an existing spreadsheet.
+
+
+## Known issues
+
+- File preview uses your browser's built-in PDF viewer, so what it shows depends on the browser. **Open** and **Download** always work.
+- Board drag and drop on touch screens has had little testing. The **Move to** menu on each card works everywhere.
+- A backup interrupted by a crash or power loss leaves an unfinished zip behind. It does not open, and Dossier does not clean it up.
+
+
+## Requirements
+
+- **Node.js 20.9 or newer** with npm. Use an even-numbered release (20 LTS or 22 LTS): the database library, `better-sqlite3`, does not support odd-numbered Node versions.
+- Developed and tested on Linux. CI runs on Ubuntu with Node 20.
+- A normal install downloads a ready-made binary for `better-sqlite3`. If your platform has none, `npm ci` builds it, and that needs Python 3 and a C++ compiler.
+
+
+## Install and run
 
 ```bash
+git clone https://github.com/mawaissaleem/dossier.git
+cd dossier
 npm ci
 npm run db:migrate
 npm run build
 npm run start
 ```
 
-Then open <http://127.0.0.1:3000>. If `localhost` works for you, it is fine too.
+Open <http://127.0.0.1:3000>.
 
-- `npm run db:migrate` creates the database file and applies the schema. It is safe to repeat.
-- A new database has no tracks. Open **Tracks** and choose **Add track**: the Job template, the PhD template or a blank track. You can rename, recolour and delete tracks there too.
-- `npm run db:seed` is optional: it adds the Job and PhD tracks in one step (the same as adding both templates). It does nothing if you already have a track.
-- `npm run build` and `npm run start` are for daily use. For development use `npm run dev` instead.
-- To use another port, add `-- -p 4000`, for example `npm run start -- -p 4000`.
+**First steps in the app**
 
-### The `.env` file
+1. **Settings → Files**: choose the folder where your files will be stored (the files root). It must be an existing folder outside the project folder.
+2. **Settings → Backup**: choose a backup folder, then press **Back up now** once.
+3. **Tracks → Add track**: pick the Job template, the PhD template or a blank track.
 
-The repository ships a `.env` file with two lines:
+`npm run db:seed` is optional. It adds the Job and PhD tracks in one step and does nothing if you already have a track.
 
-```
-NEXT_TELEMETRY_DISABLED=1
-DATABASE_PATH=./data/dossier.db
-```
+To use another port: `npm run start -- -p 4000`.
 
-`DATABASE_PATH` is the only setting Dossier reads. It is where the database file lives. A relative path is resolved from the folder you start the app in, so always run the npm commands from the project folder.
+**Localhost only.** Always start Dossier with the npm scripts. They bind to `127.0.0.1`. Running `next start` or `next dev` directly listens on every network interface. As a second guard, every request must carry a `localhost`, `127.0.0.1` or `[::1]` Host name; anything else gets `Forbidden: Dossier answers on localhost only.`
 
-To keep the database somewhere else, do not edit `.env`. Create a file named `.env.local` in the project folder (git ignores it) with your own value, for example:
+
+## Where your data lives
+
+Everything stays on your machine. Dossier makes no requests to outside services.
+
+| What | Where |
+|---|---|
+| Database | The file in `DATABASE_PATH`. Default: `data/dossier.db` in the project folder (git ignores `data/`) |
+| Files root | The folder you choose in **Settings → Files**. No default: uploads are refused until you choose one |
+| Backups | The folder you choose in **Settings → Backup**. No default either |
+
+The repository ships a `.env` file with `DATABASE_PATH=./data/dossier.db`. To keep the database somewhere else, do not edit `.env`. Create `.env.local` (git ignores it) with a full path, then run `npm run db:migrate` again:
 
 ```
 DATABASE_PATH=/path/to/dossier-data/dossier.db
 ```
 
-Use a full path. Run `npm run db:migrate` again after you change it, and add your tracks again, because that is a new, empty database.
+**How files are stored**
 
-## Localhost only
+- Each application gets its own folder in the files root, named from its first upload: `Company_Role_YYYY-MM` for a job, `University_Program_YYYY-MM` for a PhD. Renaming the company later does not move anything.
+- Each file is renamed `NN-YYYYMMDD-name.ext`, for example `01-20261117-cv.pdf`. `NN` counts up per name, date and extension, so an older file is never overwritten.
+- Your original is copied, never changed. Stored files are set to read-only. The limit is 50 MB per upload.
+- The same file (same SHA-256) is not stored twice for one application.
+- Paths are stored relative to the files root and checked on every read, so nothing can point outside it.
 
-Dossier must only answer on your own computer. Start it with the npm scripts (`npm run start` or `npm run dev`). They bind to `127.0.0.1`.
-
-Do not run `next start` or `next dev` directly. Without the `-H 127.0.0.1` flag they listen on every network interface, so other devices on your network could reach your data.
-
-As a second guard, every request must carry a `localhost`, `127.0.0.1` or `[::1]` Host name. Anything else gets `Forbidden: Dossier answers on localhost only.`
-
-## Where your data lives
-
-| What | Where |
-| --- | --- |
-| Database | The file in `DATABASE_PATH`. Default: `data/dossier.db` inside the project folder (git ignores `data/`). |
-| Files root | The folder where your uploaded files are kept. It has **no default**. You choose it in the app: **Settings → Files**. Until you do, uploads are refused. |
-| Backups | The folder you choose in **Settings → Backup**. It has no default either. |
-
-The files root and the backup folder are stored in the database, not in `.env`. Both must be existing folders given as a full path, outside the project folder and outside the folder that holds the database.
-
-How files are stored:
-
-- Each application gets its own folder in the files root, named from its first upload. A Job application uses `Company_Role_YYYY-MM`, a PhD application uses `University_Program_YYYY-MM`. If those values are empty, the application title is used. Renaming the company later does not move anything.
-- Each file is renamed `NN-YYYYMMDD-name.ext`, for example `01-20261115-cv.pdf`. `NN` counts up per name, date and extension, so an older file is never overwritten.
-- Your original file is copied, never changed. Stored files are set to read-only. The limit is 50 MB per upload.
-- The same file (same checksum) is not stored twice for one application.
 
 ## Backup and restore
 
 Open **Settings → Backup**.
 
-**Back up now** writes one zip into your backup folder. The name is `dossier-backup-YYYYMMDD-HHMM.zip`. A backup never overwrites an earlier one. The zip holds:
+**Back up now** writes `dossier-backup-YYYYMMDD-HHMM.zip` into your backup folder. It never overwrites an earlier backup. The zip holds a `manifest.json` (date, schema version, counts), a consistent copy of the database, and every file in your files root with the same relative paths. A banner reminds you when the last backup is older than the reminder interval (7 days by default).
 
-- `manifest.json` (date, schema version, file counts),
-- `database/dossier.db` (a consistent copy of the database),
-- `files/...` (every file in your files root, with the same relative paths).
+**Restore.** Type the full path of a backup zip and press **Check backup**. Dossier reads it and verifies every file; nothing changes yet. Then **Restore…** shows what you will lose. Dossier saves a safety backup of your current data first, and changes nothing if that fails. To undo a restore, restore the safety backup.
 
-**Reminder.** A banner on every page tells you when the last backup is older than the reminder interval (default 7 days, you can set 1 to 365). It also shows if you have applications and have never backed up. Set the interval in **Settings → Backup**.
+On a new computer: set the files root and the backup folder in Settings, then restore.
 
-**Restore from a zip.** One backup file rebuilds the whole app.
+**Moving the files folder.** In **Settings → Files**, **Move files…** moves everything into a new empty folder, checking each copy against its hash. **Re-point** is for a folder you already moved yourself: Dossier saves the new path only if every stored file is there.
 
-1. In **Settings → Backup**, type the full path of the zip and press **Check backup**. Dossier reads it and verifies every file. Nothing changes yet.
-2. Press **Restore…**. The dialog says what you will lose and what replaces it.
-3. Dossier first saves a safety backup of your current data into your backup folder. If that fails, nothing is changed. A restore needs a saved backup folder for this reason.
-4. Then it replaces the database and the contents of your files root with the backup's. Keep only Dossier files in the files root: anything else there is removed by a restore.
+**Manual fallback.** Stop the server, then copy the database file and the whole files root somewhere safe.
 
-What a restore keeps on this computer: the files root path, the backup folder, the reminder interval and the last backup time. To undo a restore, restore the safety backup.
-
-On a new computer, set the files root and the backup folder in Settings first. Then restore.
-
-**CSV export.** Open a track and press **Export CSV**. It saves every application in that track, including archived ones, as `dossier-<track>-YYYYMMDD.csv`. This is for reading in a spreadsheet. It is not a backup.
-
-**Manual fallback.** Stop the server, then copy the database file and the whole files root to a safe place. To go back, stop the server and copy them back. Copy the database file only while the server is stopped.
-
-## Moving the files folder
-
-In **Settings → Files**, once files are stored, a new folder has two options:
-
-- **Move files…** Dossier moves the files into the new folder, which must be empty and exist already. You confirm first. Files on the same drive are renamed. Otherwise each is copied, checked against its checksum, and the old copy is removed.
-- **Re-point** is for a folder you already moved yourself. Dossier saves the new path only if every stored file is there. A file whose size differs from the record is accepted and flagged as changed. If any file is missing, nothing is saved.
-
-A plain **Save** of a different folder is refused, so no file is lost track of.
-
-If you moved the folder by hand and did not Re-point, opening a file shows `The files folder was not found. If you moved it, use Re-point in Settings.` Use Re-point with the new path.
 
 ## Updating
 
 ```bash
 git pull
-npm install
+npm ci
 npm run build
 npm run start
 ```
 
-If the new version needs a database update, every page says **Your database needs updating**. Press **Back up and update**: Dossier first saves a copy of your database (to your backup folder from Settings if you set one, otherwise to `backups/` next to the database file, named like `dossier-before-update-2026-11-17T10-30-00.db`), then updates it, and takes you back to where you were. If the backup fails nothing is changed. If the update fails the database is left exactly as it was and the message names the backup. A brand-new install needs no button: the database is created and set up on first start. For your files, keep using **Back up now** in Settings as usual.
+If the new version changes the database, every page says **Your database needs updating**. Press **Back up and update**: Dossier copies the database first, then applies the changes in one transaction. If the copy fails, nothing is changed; if the update fails, the database is left as it was. Dossier never updates an existing database by itself.
 
-**Prefer the terminal?** Stop the server, copy the database file (`data/dossier.db` unless you changed `DATABASE_PATH`) somewhere safe, run `npm run db:migrate`, then start the server again. Dossier never updates an existing database by itself: it waits for you to press the button or run that command.
+From the terminal instead: stop the server, copy the database file somewhere safe, run `npm run db:migrate`, and start again.
+
+
+## Architecture
+
+![Dossier architecture](docs/media/architecture.png)
+
+The interactive version, with links from each box to its source, is [docs/architecture/architecture.html](docs/architecture/architecture.html) (download it and open it in a browser).
+
+```
+app/            Pages, server actions (app/actions/) and API routes (app/api/)
+├── api/        File upload, file serving, zip download, CSV export, search
+├── tracks/     Track table and board
+└── applications/  Application page: files, submissions, history
+components/     Shared UI (shadcn/ui based)
+lib/
+├── db/         Every database query (Drizzle + better-sqlite3)
+├── files/      Every file-system operation: store, resolve, backup, restore, move
+└── *.ts        Pure logic: filename rule, planner scoring, filters, sort, CSV, dates
+drizzle/        SQL migrations
+proxy.ts        The localhost Host check in front of every request
+tests/          Vitest suites
+```
+
+Three rules hold throughout:
+
+- Only `lib/db` touches the database and only `lib/files` touches the disk. Pages, components and API routes go through them.
+- Pure logic lives in its own modules with no database or UI imports, so it is tested on its own.
+- Columns and their values are data (`columns`, `cell_values`), never schema changes. Adding a column in the app does not change a table.
+
+**Upload flow.** The browser posts the files to `/api/applications/<id>/files`. The route checks the Host and the origin, then `lib/files/store.ts` writes each file to a temporary name, hashes it, links it to its final name, removes the temporary name, sets it read-only and only then inserts the database row. A failure part way leaves no half-written file and no row pointing at nothing.
+
+**Reading a file.** `/api/files/<id>` looks up the row, resolves the stored relative path inside the files root (`lib/files/resolve.ts`), checks the hash and serves the bytes. A file that changed on disk gets a warning page with an **Open anyway** link instead.
+
+**Stack.** Next.js (App Router) with TypeScript and Tailwind, SQLite through better-sqlite3 and Drizzle, TanStack Table and Virtual, dnd-kit, archiver, shadcn/ui, Vitest.
+
+
+## Tests
+
+```bash
+npm test
+```
+
+117 test files and 1,641 tests cover the filename rule, the planner, filters and sort, CSV export, the database layer and its migrations, uploads and duplicates, path checks (nothing may escape the files root, zip entries included), backup, restore and moving the files folder, the localhost checks, server actions, and colour contrast. Every theme is checked against WCAG AA from the CSS itself, so a colour change that makes text unreadable fails the tests. Tests run against temporary databases and folders, never `data/`.
+
+GitHub Actions runs lint, the type check, the tests and a production build on every push and pull request to `main`.
+
+```bash
+npm run lint
+npx next typegen && npx tsc --noEmit
+npm run build
+```
+
+
+## Performance
+
+Measured on a production build with a test database of 500 applications:
+
+| Measurement | Time |
+|---|---|
+| Dashboard (`/`) | 61 to 74 ms |
+| Tracks page (`/tracks`) | 27 to 46 ms |
+| Pipeline across all tracks | about 40 ms |
+| From search to the latest submission of an application | 2 clicks, about 1.1 s |
+
+`npm run db:seed:fake -- --count 500` fills a scratch database with fake applications for checks like these. It refuses to write into `data/dossier.db`.
+
 
 ## Troubleshooting
 
-- **`Forbidden: Dossier answers on localhost only.`** You opened Dossier with a name other than `localhost`, `127.0.0.1` or `[::1]` (for example a computer name or a proxy). Use `http://127.0.0.1:3000`.
-- **`EADDRINUSE: address already in use`** Something already uses the port, often an old Dossier. Stop it, or start on another port: `npm run start -- -p 4000`.
-- **`DATABASE_PATH is not set`** The `.env` file is missing or you started the app from another folder. Run it from the project folder, or set `DATABASE_PATH` in `.env.local`.
-- **`Your database needs updating`** on every page. The database is behind this version of Dossier (a new version added migrations). Nothing was changed and nothing is lost. Press **Back up and update** (or follow "Prefer the terminal?" on that page). API requests answer `503` with the same message until then.
-- **`no such table: tracks`.** The database is not migrated. Run `npm run db:migrate`.
-- **No tracks in the app.** That is normal for a new database. Use **Add track** on the Tracks page (or run `npm run db:seed` for the Job and PhD tracks).
+- **`Forbidden: Dossier answers on localhost only.`** Open <http://127.0.0.1:3000> instead of a computer name or proxy.
+- **`EADDRINUSE: address already in use`** Another process, often an old Dossier, uses the port. Stop it, or use `npm run start -- -p 4000`.
+- **`DATABASE_PATH is not set`** Run the commands from the project folder, or set `DATABASE_PATH` in `.env.local`.
+- **`no such table: tracks`** Run `npm run db:migrate`.
 - **`Choose the files folder in Settings before uploading.`** Set the files root in **Settings → Files**.
-- **A file shows `Changed since upload` or `Missing`.** The file on disk is not the one that was stored. It was edited, replaced or deleted outside Dossier. On the application page press **Check files** to recheck every file. A changed file can still be opened from the warning page with **Open anyway**.
-- **`The files folder was not found. If you moved it, use Re-point in Settings.`** See "Moving the files folder". If the drive is just not mounted, mount it and try again.
+- **A file shows `Changed since upload` or `Missing`.** It was edited, replaced or deleted outside Dossier. Press **Check files** on the application page to recheck all of them.
+- **`The files folder was not found.`** If you moved the folder, use **Re-point** in Settings. If the drive is not mounted, mount it and try again.
 - **A backup is refused.** The backup folder must exist, be writable, and be outside the project folder, the database folder and the files root.
+
 
 ## Development
 
-- `npm run dev`: start the dev server
-- `npm run build`: production build
-- `npm run lint`: ESLint
-- `npx next typegen && npx tsc --noEmit`: type check (typegen creates route types; needed on a fresh clone)
-- `npm test`: run Vitest once (temporary databases only; `npm run test:watch` to watch)
-- `npm run db:migrate`: apply `./drizzle` migrations to `DATABASE_PATH`
-- `npm run db:seed`: optional; add the Job and PhD tracks from the templates (idempotent)
-- `npm run db:seed:fake -- --count 500`: add fake applications to a scratch database for performance and search checks (run `db:seed` first; options `--mix Job=80,PhD=20`, `--seed`, `--base`; each run adds another batch; refuses `./data/dossier.db` unless `--force`)
-- `npm run db:generate`: generate a migration after editing `lib/db/schema.ts`
+```
+npm run dev            Development server on 127.0.0.1:3000
+npm run build          Production build
+npm run start          Production server on 127.0.0.1:3000
+npm run lint           ESLint
+npm test               Vitest, once (npm run test:watch to watch)
+npm run db:migrate     Apply ./drizzle migrations to DATABASE_PATH
+npm run db:seed        Optional: add the Job and PhD tracks
+npm run db:generate    Generate a migration after editing lib/db/schema.ts
+npm run db:seed:fake   Fake applications for a scratch database (--count, --mix, --seed)
+```
 
-Tests never touch `data/`. They create temporary databases.
 
-More documents (these are kept by the author and are not in the git repository): `WORKFLOW.md` (how the coding agents work), `DESIGN.md` (UI rules and themes), and the requirements specification and build plan (`Application Tracker ... .md`).
+## Security notes
+
+Dossier holds personal documents, so a few things are deliberate:
+
+- The server binds to `127.0.0.1`, and every request must carry a localhost Host name. That also blocks DNS-rebinding attacks from a web page.
+- Uploads and file actions also require a same-origin request.
+- A file path from the database is resolved inside the files root and checked. A stored path cannot point outside it, and zip downloads use stored names only.
+- Uploaded files are served with `X-Content-Type-Options: nosniff`, and only safe types are shown inline.
+- No telemetry and no analytics. Next.js telemetry is switched off in `.env`.
+
+Known gap: there is no login. Anyone who can use your computer account can open Dossier.
+
+Found a security problem? Open an issue, or use the contact on the author's GitHub profile if you would rather not disclose it publicly.
+
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
