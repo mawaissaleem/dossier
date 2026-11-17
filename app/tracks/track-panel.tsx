@@ -7,6 +7,8 @@ import { ROW_LINK } from "../dashboard-card";
 import { RecentList } from "../recent-list";
 import { StatusBar } from "../status-bar";
 import { TrackActions } from "../track-actions";
+import { TrackMarker } from "../track-marker";
+import { TrackMenu } from "../track-menu";
 
 const SHOWN = 5;
 const TONE = { overdue: "font-medium text-destructive", warning: "font-medium text-warning", muted: "text-muted-foreground" } as const;
@@ -54,17 +56,23 @@ const H3 = "text-sm font-semibold";
 
 // One track on /tracks (DASH.2, DESIGN.md "Tracks page"): header (name, "N applications · updated 2 hours ago", Table, Board, + Add), then three columns separated by hairlines
 // (`gap-px` over `bg-border`): Pipeline (Wins/Submitted/To apply counts, the bar), Needs attention and Recently updated. Cells never go empty: below `lg` Pipeline spans the row, below `md` all stack.
-export function TrackPanel({ track: t }: { track: TrackOverview }) {
+export function TrackPanel({ track: t, color }: { track: TrackOverview; color: string }) {
   const col = t.pipeline.statusColumnId;
   const link = (ids: number[]) => (col !== null && ids.length ? `/tracks/${t.id}?f=${col}:${ids.join(".")}` : null);
   return (
     <section aria-labelledby={`track-${t.id}`} className="min-w-0 rounded-lg border border-border bg-card">
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
-          <h2 id={`track-${t.id}`} className="text-lg font-semibold tracking-tight"><Link href={`/tracks/${t.id}`} className={ROW_LINK}>{t.name}</Link></h2>
-          <p className="text-sm text-muted-foreground">{t.total} {t.total === 1 ? "application" : "applications"}{t.updated !== null && ` · updated ${t.updated}`}</p>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <TrackMarker name={t.name} color={color} />
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
+            <h2 id={`track-${t.id}`} className="text-lg font-semibold tracking-tight break-words"><Link href={`/tracks/${t.id}`} className={ROW_LINK}>{t.name}</Link></h2>
+            <p className="text-sm text-muted-foreground">{t.total} {t.total === 1 ? "application" : "applications"}{t.updated !== null && ` · updated ${t.updated}`}</p>
+          </div>
         </div>
-        <TrackActions id={t.id} name={t.name} />
+        <div className="flex flex-wrap items-center gap-2">
+          <TrackActions id={t.id} name={t.name} />
+          <TrackMenu id={t.id} name={t.name} color={color} />
+        </div>
       </header>
       <div className="grid grid-cols-1 gap-px overflow-hidden rounded-b-lg bg-border md:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-3 bg-card p-4 md:col-span-2 lg:col-span-1">

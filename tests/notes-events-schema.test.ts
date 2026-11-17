@@ -118,7 +118,8 @@ describe("migration 0002 on a database with data", () => {
       writeFileSync(journalPath, JSON.stringify(journal));
       process.env.DATABASE_PATH = join(dir, "t.db");
       migrate(getDb(), { migrationsFolder: join(dir, "old") });
-      const t = getDb().insert(tracks).values({ userId: "local", name: "Keep", position: 0 }).returning().get().id;
+      // Raw SQL: the app schema has columns that this old database does not have yet.
+      const t = Number(getDb().$client.prepare("INSERT INTO tracks (user_id, name, position, created_at, updated_at) VALUES ('local', 'Keep', 0, 0, 0)").run().lastInsertRowid);
       const a = getDb().insert(applications).values({ userId: "local", trackId: t, title: "Keep me" }).returning().get().id;
       getDb().insert(submissions).values({ userId: "local", applicationId: a, date: "2026-11-10" }).run();
       expect(getDb().all(sql`select name from sqlite_master where name in ('notes','activity_events')`)).toEqual([]);

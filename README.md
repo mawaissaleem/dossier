@@ -16,7 +16,6 @@ From a fresh clone, in the project folder:
 ```bash
 npm ci
 npm run db:migrate
-npm run db:seed
 npm run build
 npm run start
 ```
@@ -24,7 +23,8 @@ npm run start
 Then open <http://127.0.0.1:3000>. If `localhost` works for you, it is fine too.
 
 - `npm run db:migrate` creates the database file and applies the schema. It is safe to repeat.
-- `npm run db:seed` adds the Job and PhD tracks. It does nothing if they already exist.
+- A new database has no tracks. Open **Tracks** and choose **Add track**: the Job template, the PhD template or a blank track. You can rename, recolour and delete tracks there too.
+- `npm run db:seed` is optional: it adds the Job and PhD tracks in one step (the same as adding both templates). It does nothing if you already have a track.
 - `npm run build` and `npm run start` are for daily use. For development use `npm run dev` instead.
 - To use another port, add `-- -p 4000`, for example `npm run start -- -p 4000`.
 
@@ -45,7 +45,7 @@ To keep the database somewhere else, do not edit `.env`. Create a file named `.e
 DATABASE_PATH=/path/to/dossier-data/dossier.db
 ```
 
-Use a full path. Run `npm run db:migrate` and `npm run db:seed` again after you change it, because that is a new, empty database.
+Use a full path. Run `npm run db:migrate` again after you change it, and add your tracks again, because that is a new, empty database.
 
 ## Localhost only
 
@@ -128,8 +128,9 @@ Then start the server again with `npm run start`. If you start a newer version b
 - **`Forbidden: Dossier answers on localhost only.`** You opened Dossier with a name other than `localhost`, `127.0.0.1` or `[::1]` (for example a computer name or a proxy). Use `http://127.0.0.1:3000`.
 - **`EADDRINUSE: address already in use`** Something already uses the port, often an old Dossier. Stop it, or start on another port: `npm run start -- -p 4000`.
 - **`DATABASE_PATH is not set`** The `.env` file is missing or you started the app from another folder. Run it from the project folder, or set `DATABASE_PATH` in `.env.local`.
-- **`Your database needs updating`** on every page. The database is behind this version of Dossier (a new version added migrations, or the database file is new and empty). Nothing was changed and nothing is lost. Stop the server, copy the database file somewhere safe, run `npm run db:migrate` (and `npm run db:seed` if the database is new), then start the server again. API requests answer `503` with the same message until then.
-- **`no such table: tracks`, or no tracks in the app.** The database is new or not migrated. Run `npm run db:migrate`, then `npm run db:seed`.
+- **`Your database needs updating`** on every page. The database is behind this version of Dossier (a new version added migrations, or the database file is new and empty). Nothing was changed and nothing is lost. Stop the server, copy the database file somewhere safe, run `npm run db:migrate`, then start the server again. API requests answer `503` with the same message until then.
+- **`no such table: tracks`.** The database is not migrated. Run `npm run db:migrate`.
+- **No tracks in the app.** That is normal for a new database. Use **Add track** on the Tracks page (or run `npm run db:seed` for the Job and PhD tracks).
 - **`Choose the files folder in Settings before uploading.`** Set the files root in **Settings → Files**.
 - **A file shows `Changed since upload` or `Missing`.** The file on disk is not the one that was stored. It was edited, replaced or deleted outside Dossier. On the application page press **Check files** to recheck every file. A changed file can still be opened from the warning page with **Open anyway**.
 - **`The files folder was not found. If you moved it, use Re-point in Settings.`** See "Moving the files folder". If the drive is just not mounted, mount it and try again.
@@ -143,7 +144,7 @@ Then start the server again with `npm run start`. If you start a newer version b
 - `npx next typegen && npx tsc --noEmit`: type check (typegen creates route types; needed on a fresh clone)
 - `npm test`: run Vitest once (temporary databases only; `npm run test:watch` to watch)
 - `npm run db:migrate`: apply `./drizzle` migrations to `DATABASE_PATH`
-- `npm run db:seed`: seed the Job and PhD tracks (idempotent)
+- `npm run db:seed`: optional; add the Job and PhD tracks from the templates (idempotent)
 - `npm run db:seed:fake -- --count 500`: add fake applications to a scratch database for performance and search checks (run `db:seed` first; options `--mix Job=80,PhD=20`, `--seed`, `--base`; each run adds another batch; refuses `./data/dossier.db` unless `--force`)
 - `npm run db:generate`: generate a migration after editing `lib/db/schema.ts`
 

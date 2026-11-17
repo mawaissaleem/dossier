@@ -8,8 +8,9 @@ export function Page({ narrow, children }: { narrow?: boolean; children: React.R
 }
 
 // The only place an <h1> is written: title, optional back link, description and actions.
-export function PageHeader({ title, back, description, actions }: {
+export function PageHeader({ title, marker, back, description, actions }: {
   title: string;
+  marker?: React.ReactNode; // a decorative tile before the title (the track page)
   back?: { href: string; label: string };
   description?: React.ReactNode;
   actions?: React.ReactNode;
@@ -27,7 +28,7 @@ export function PageHeader({ title, back, description, actions }: {
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight break-words">{title}</h1>
+          <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight break-words">{marker}<span className="min-w-0">{title}</span></h1>
           {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

@@ -29,6 +29,8 @@ export const tracks = sqliteTable(
     ...base,
     name: text("name").notNull(),
     position: integer("position").notNull(),
+    // A palette token (lib/colors.ts); null for tracks made before colours existed, which resolve to one from their id (colorOrFallback).
+    color: text("color"),
   },
   (t) => [index("tracks_user_id_position_idx").on(t.userId, t.position)],
 );

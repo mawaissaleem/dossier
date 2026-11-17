@@ -8,6 +8,7 @@ import { getOverdueAlerts, getUpcomingDeadlines, getWeeklyProgress } from "@/lib
 import { getTrackOverviews } from "@/lib/db/track-overview";
 import { getWins } from "@/lib/db/wins";
 import { listTracks } from "@/lib/db/tracks";
+import { AddTrack } from "./add-track";
 import { DashboardTiles } from "./dashboard-tiles";
 import { FollowUpsCard } from "./follow-ups-card";
 import { OverdueCard } from "./overdue-card";
@@ -30,7 +31,7 @@ async function Summary() {
 async function Cards() {
   await connection();
   if (!(await listTracks()).length) {
-    return <EmptyState title="Start here" description={<>Dossier keeps your applications in tracks. Run <code>npm run db:seed</code> to create the Job and PhD tracks, then open Tracks and add your first application.</>} />;
+    return <EmptyState title="Start here" description="Dossier keeps your applications in tracks. Add a track from the Job or PhD template, or a blank one, then add your first application."><AddTrack /></EmptyState>;
   }
   const today = localToday();
   const [overdue, { labels }, tracks] = [await getOverdueAlerts(today), await getWins(), await getTrackOverviews(today)];

@@ -83,7 +83,7 @@ export async function setWinStatuses(trackId: number, ids: unknown): Promise<Sub
 const ownsTrack = (trackId: number) =>
   getDb().select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, trackId), eq(tracks.userId, getUserId()))).get() !== undefined;
 
-// The labels a file set should have (FR-7.3). Never saved or unreadable -> empty list (no warning); the seed is the only source of defaults.
+// The labels a file set should have (FR-7.3). Never saved or unreadable -> empty list (no warning); the templates (lib/track-templates.ts) are the only source of defaults.
 export async function getExpectedLabels(trackId: number): Promise<string[]> {
   return resolveExpectedLabels(await getSetting(expectedLabelsKey(trackId)));
 }

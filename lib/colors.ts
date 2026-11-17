@@ -1,4 +1,4 @@
-// Pure: palette tokens (stored in column_options.color, same set as scripts/seed.ts) to Tailwind chip classes.
+// Pure: palette tokens (stored in column_options.color, the option colours of the track templates) to Tailwind chip classes.
 // Full static strings, so Tailwind's scanner keeps them. The colours are theme tokens (--chip-<token> and
 // --chip-<token>-foreground in app/globals.css), so each theme supplies its own AA-checked pair.
 export const CHIP_CLASSES: Record<string, string> = {

@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useId, useOptimistic, useRef, useState, useTransition } from "react";
-import { CheckIcon, GripVerticalIcon, Trash2Icon } from "lucide-react";
-import { RadioGroup } from "radix-ui";
+import { GripVerticalIcon, Trash2Icon } from "lucide-react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ColumnItem, OptionItem } from "@/lib/db/columns";
-import { PALETTE, chipClasses } from "@/lib/colors";
 import { createLatest } from "@/lib/latest";
 import { MAX_OPTION_LABEL } from "@/lib/options";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -17,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { ColorPicker } from "@/app/color-picker";
 import { OptionChip } from "@/app/option-chip";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -24,26 +23,6 @@ export type OptionPatch = { label: string; color: string };
 export type OptionImpact = { ok: true; label: string; useCount: number; archivedCount: number } | { ok: false; error: string };
 export type DeleteChoice = { confirm: true; reassignTo: number | null; expectedUseCount: number };
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
-
-// Colour picker: one swatch per palette token on the theme chip tokens. A Radix radio group, so it is one Tab stop and arrows move the choice.
-// The selected swatch has a check and a solid foreground border (not colour alone); the accessible name is the token.
-function ColorPicker({ value, onChange, name }: { value: string; onChange: (token: string) => void; name: string }) {
-  return (
-    <RadioGroup.Root value={value} onValueChange={onChange} aria-label={`Colour of option ${name}`} orientation="horizontal" className="flex items-center gap-1">
-      {PALETTE.map((t) => (
-        <RadioGroup.Item
-          key={t}
-          value={t}
-          aria-label={t}
-          title={t}
-          className={`flex size-5 items-center justify-center rounded-full border border-input outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=checked]:border-2 data-[state=checked]:border-foreground ${chipClasses(t)}`}
-        >
-          <RadioGroup.Indicator><CheckIcon aria-hidden="true" className="size-3" /></RadioGroup.Indicator>
-        </RadioGroup.Item>
-      ))}
-    </RadioGroup.Root>
-  );
-}
 
 // One option: grip handle, chip preview of the draft, label input, colour swatches, Save, Delete.
 // The parent keys the row by id+label+color, so after a save the draft resets to the stored values.
@@ -86,7 +65,7 @@ function OptionRow({ option, locked, savedRowRef, onSave, onDelete }: { option: 
         </Button>
         <span aria-hidden="true" className="w-28 shrink-0 [&>span]:max-w-full"><OptionChip option={{ label: label.trim() || "…", color }} /></span>
         <Input ref={labelInput} aria-label={`Label of option ${option.label}`} required maxLength={MAX_OPTION_LABEL} value={label} onChange={(e) => setLabel(e.target.value)} className="w-40 flex-1" />
-        <ColorPicker value={color} onChange={setColor} name={option.label} />
+        <ColorPicker value={color} onChange={setColor} label={`Colour of option ${option.label}`} />
         <Button type="submit" variant="outline" size="sm" disabled={pending} aria-label={`Save option ${option.label}`}>{pending ? "Saving…" : "Save"}</Button>
         <Button type="button" variant="ghost" size="icon-sm" disabled={locked} onClick={onDelete} aria-label={`Delete option ${option.label}`} title="Delete…" className="text-destructive hover:text-destructive">
           <Trash2Icon aria-hidden="true" />
