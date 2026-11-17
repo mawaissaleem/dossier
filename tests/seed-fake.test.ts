@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,9 +6,9 @@ import { count, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { applications, cellValues, tracks } from "@/lib/db/schema";
 import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
+import { runTsx } from "./helpers/tsx";
 
-const tsx = join(process.cwd(), "node_modules/.bin/tsx");
-const run = (args: string[], env: Record<string, string> = {}) => execFileSync(tsx, ["scripts/seed-fake.ts", ...args], { env: { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH!, ...env }, stdio: "pipe" }).toString();
+const run = (args: string[], env: Record<string, string> = {}) => runTsx(["scripts/seed-fake.ts", ...args], { env: { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH!, ...env }, stdio: "pipe" }).toString();
 
 beforeEach(() => { useTestDb(); });
 afterEach(dropTestDb);
@@ -33,7 +32,7 @@ describe("scripts/seed-fake.ts", () => {
     const cwd = mkdtempSync(join(tmpdir(), "dossier-refuse-"));
     try {
       const script = join(process.cwd(), "scripts/seed-fake.ts");
-      expect(() => execFileSync(tsx, [script, "--count", "5"], { cwd, env: { ...process.env, DATABASE_PATH: "./data/dossier.db" }, stdio: "pipe" })).toThrow(/Refusing/);
+      expect(() => runTsx([script, "--count", "5"], { cwd, env: { ...process.env, DATABASE_PATH: "./data/dossier.db" }, stdio: "pipe" })).toThrow(/Refusing/);
       expect(existsSync(join(cwd, "data/dossier.db"))).toBe(false);
     } finally {
       rmSync(cwd, { recursive: true, force: true });

@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -27,6 +26,7 @@ import { verifyStoredFile } from "@/lib/files/open";
 import { storeUploadedFile } from "@/lib/files/store";
 import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
 import { readZip } from "./helpers/zip";
+import { runTsx } from "./helpers/tsx";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
 
@@ -34,7 +34,6 @@ vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
 //   AT-12: the data path (500 fake applications, search by company, the latest submission). The 30 s wall time is a manual measurement.
 //   AT-13: the wipe is an empty install (no tracks, no columns), not just deleted applications, so columns and cell values must come from the zip.
 //   AT-14: both ways in a row (Move, then Re-point), then Open and the per-application zip after each.
-const tsx = join(process.cwd(), "node_modules/.bin/tsx");
 const SLOW = 60_000; // each test spawns tsx scripts and writes files; the default 5 s is too tight on a loaded machine
 let work: string;
 let db: ReturnType<typeof useTestDb>;
@@ -61,7 +60,7 @@ const asReq = (url: string) => new NextRequest(`http://localhost:3000${url}`, { 
 describe("AT-12: search a company name with 500 applications loaded", () => {
   it("the right application is found and its latest submission is what the page lists first", async () => {
     runSeed();
-    execFileSync(tsx, ["scripts/seed-fake.ts", "--count", "500"], { env: { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH! }, stdio: "pipe" }); // the same script the manual run uses
+    runTsx(["scripts/seed-fake.ts", "--count", "500"], { env: { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH! }, stdio: "pipe" }); // the same script the manual run uses
     expect(currentCounts().applications).toBe(500);
     await setFilesRoot(sub("root"));
 
@@ -93,7 +92,7 @@ describe("AT-12: search a company name with 500 applications loaded", () => {
 
   it("every known company name finds its own application first, and a spread of others are found too", async () => {
     runSeed();
-    execFileSync(tsx, ["scripts/seed-fake.ts", "--count", "500"], { env: { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH! }, stdio: "pipe" });
+    runTsx(["scripts/seed-fake.ts", "--count", "500"], { env: { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH! }, stdio: "pipe" });
     for (const company of KNOWN_COMPANIES) {
       const hits = await searchApplications(company);
       expect(hits[0].title.startsWith(company), company).toBe(true);
@@ -110,7 +109,7 @@ describe("AT-12: search a company name with 500 applications loaded", () => {
 describe("AT-13: back up, delete the app data, restore (into an empty install)", () => {
   it("applications, columns, cell values, files, submissions and notes come back identical", async () => {
     runSeed();
-    execFileSync(tsx, ["scripts/seed-fake.ts", "--count", "40"], { env: { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH! }, stdio: "pipe" });
+    runTsx(["scripts/seed-fake.ts", "--count", "40"], { env: { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH! }, stdio: "pipe" });
     const root = sub("root");
     const dest = sub("backups");
     await setFilesRoot(root);

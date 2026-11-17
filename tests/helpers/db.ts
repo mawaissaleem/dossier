@@ -1,9 +1,9 @@
-import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { closeDb, getDb } from "@/lib/db/client";
+import { runTsx } from "./tsx";
 
 let dir: string | undefined;
 
@@ -28,7 +28,7 @@ export function dropTestDb() {
 // Runs the real scripts/seed.ts against the current test DB (it reads DATABASE_PATH from the env we pass).
 export function runSeed() {
   if (!dir) throw new Error("useTestDb() first");
-  execFileSync(join(process.cwd(), "node_modules/.bin/tsx"), ["scripts/seed.ts"], {
+  runTsx(["scripts/seed.ts"], {
     env: { ...process.env, DATABASE_PATH: join(dir, "test.db") },
     stdio: "pipe",
   });

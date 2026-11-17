@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
@@ -34,7 +34,7 @@ let work: string, root: string, dest: string, db: ReturnType<typeof useTestDb>;
 const sharedTmp = process.env.TMPDIR;
 beforeEach(() => {
   db = useTestDb();
-  work = mkdtempSync(join(tmpdir(), "dossier-bk-"));
+  work = realpathSync(mkdtempSync(join(tmpdir(), "dossier-bk-"))); // long form: Windows tmpdir() can be an 8.3 short path (RUNNER~1), the app returns real paths
   // a private temp folder, so the "no temp folder left" checks do not see other test files' backups running in parallel
   mkdirSync(join(work, "tmp"));
   process.env.TMPDIR = join(work, "tmp");

@@ -1,6 +1,6 @@
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { refresh } from "next/cache";
 import { backUpNow, saveBackupDestination } from "@/app/actions/backup";
@@ -14,7 +14,7 @@ let work: string, root: string, dest: string;
 beforeEach(() => {
   vi.mocked(refresh).mockClear();
   useTestDb();
-  work = mkdtempSync(join(tmpdir(), "dossier-bka-"));
+  work = realpathSync(mkdtempSync(join(tmpdir(), "dossier-bka-"))); // long form: Windows tmpdir() can be an 8.3 short path (RUNNER~1), the app returns real paths
   root = join(work, "files");
   dest = join(work, "out");
   mkdirSync(root);
@@ -74,7 +74,7 @@ describe("backUpNow", () => {
     const r = await backUpNow();
     expect(r).toMatchObject({ ok: true, fileCount: 1 });
     if (!r.ok) return;
-    expect(readdirSync(dest)).toEqual([r.path.split("/").pop()]);
+    expect(readdirSync(dest)).toEqual([basename(r.path)]);
     expect(await getLastBackupAt()).toBe(r.createdAt);
     expect(refresh).toHaveBeenCalledTimes(1);
   });
