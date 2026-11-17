@@ -100,9 +100,9 @@ Listed honestly so you know what you are getting.
 
 ## Requirements
 
-- **Node.js 22 LTS** (or 24) with npm.
-- Linux or Windows: CI runs every check on Ubuntu and Windows with Node 22. macOS should work but is not tested.
-- With Node 22 or 24, `npm ci` downloads a ready-made binary for the database library, `better-sqlite3`. On another version (Node 20 included) it has to build it, and that needs Python 3 and a C++ compiler (Visual Studio Build Tools on Windows).
+- **Node.js 24 LTS** with npm (22 also works).
+- Linux or Windows: CI runs every check on Ubuntu and Windows with Node 24. macOS should work but is not tested.
+- With Node 22, 24 or 26, `npm ci` downloads a ready-made binary for the database library, `better-sqlite3`. On another version (Node 20 included) it has to build it, and that needs Python 3 and a C++ compiler (Visual Studio Build Tools on Windows).
 
 
 ## Install and run
