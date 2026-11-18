@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
@@ -72,7 +72,7 @@ async function populate() {
 beforeEach(async () => {
   db = useTestDb();
   runSeed();
-  work = mkdtempSync(join(tmpdir(), "dossier-rst-"));
+  work = realpathSync.native(mkdtempSync(join(tmpdir(), "dossier-rst-"))); // long form, not a Windows 8.3 short path
   root = join(work, "files");
   dest = join(work, "out");
   mkdirSync(root);
@@ -153,7 +153,7 @@ describe("AT-13: back up, wipe, restore", () => {
     const r = await restore();
     expect(r.ok && r.safetyBackupPath).toMatch(/dossier-backup-\d{8}-\d{4}\.zip$/);
     if (!r.ok) return;
-    expect(readdirSync(dest)).toEqual([r.safetyBackupPath.split("/").pop()]);
+    expect(readdirSync(dest)).toEqual([basename(r.safetyBackupPath)]);
     const z = readZip(r.safetyBackupPath);
     // exactly the state before the restore: the junk file, and not the staged copy of the incoming backup
     expect([...z.keys()].filter((n) => n.startsWith("files/"))).toEqual(["files/junk.txt"]);

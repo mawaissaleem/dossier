@@ -10,6 +10,7 @@ import { files, tracks } from "@/lib/db/schema";
 import { getFilesRoot, setFilesRoot } from "@/lib/db/settings";
 import { storeFileUnlocked, storeUploadedFile } from "@/lib/files/store";
 import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
+import { multipart } from "./helpers/multipart";
 
 // Hooks into the file calls of lib/files/store.ts; null = the real call.
 const fsHooks = vi.hoisted(() => ({ link: null as null | (() => Promise<void>), onChmod: null as null | ((path: string, mode: number) => void) }));
@@ -36,12 +37,13 @@ async function mkApp(title = "T", track = "Job") {
 }
 
 type Part = [name: string, content: Buffer | string];
-function post(id: number | string, parts: Part[], fields: Record<string, string> = { label: "CV", uploadDate: DATE }, headers: Record<string, string> = {}) {
+async function post(id: number | string, parts: Part[], fields: Record<string, string> = { label: "CV", uploadDate: DATE }, headers: Record<string, string> = {}) {
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.set(k, v);
   for (const [name, content] of parts) form.append("files", new File([new Uint8Array(typeof content === "string" ? Buffer.from(content) : content)], name));
+  const { body, contentType } = await multipart(form);
   return POST(
-    new NextRequest(`http://localhost:3000/api/applications/${id}/files`, { method: "POST", body: form, headers: { host: "localhost:3000", origin: "http://localhost:3000", ...headers } }),
+    new NextRequest(`http://localhost:3000/api/applications/${id}/files`, { method: "POST", body, headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": contentType, ...headers } }),
     { params: Promise.resolve({ id: String(id) }) } as never,
   );
 }
@@ -49,7 +51,7 @@ function post(id: number | string, parts: Part[], fields: Record<string, string>
 let n = 0;
 const upload = (name: string, content: Buffer | string = `content ${++n}`, fields?: Record<string, string>) => post(appId, [[name, content]], fields);
 const rows = () => db.select().from(files).all();
-const allEntries = () => readdirSync(root, { recursive: true }).map(String);
+const allEntries = () => readdirSync(root, { recursive: true }).map((e) => String(e).replaceAll("\\", "/")); // Windows lists with backslashes
 
 beforeEach(async () => {
   db = useTestDb();
@@ -133,13 +135,18 @@ describe("POST /api/applications/:id/files", () => {
       expect((await post(appId, [["a.pdf", "x"]], undefined, { host: "evil.example" })).status).toBe(403);
       expect((await post(appId, [["a.pdf", "x"]], undefined, { origin: "http://evil.example" })).status).toBe(403);
       expect((await post(appId, [["a.pdf", "x"]], undefined, { origin: "http://localhost:3001" })).status).toBe(403);
-      const noOrigin = new NextRequest("http://localhost:3000/api/applications/1/files", { method: "POST", body: new FormData(), headers: { host: "localhost:3000" } });
+      const empty = await multipart(new FormData());
+      const noOrigin = new NextRequest("http://localhost:3000/api/applications/1/files", { method: "POST", body: empty.body, headers: { host: "localhost:3000", "content-type": empty.contentType } });
       expect((await POST(noOrigin, { params: Promise.resolve({ id: String(appId) }) } as never)).status).toBe(403);
       expect(rows()).toHaveLength(0);
       expect(allEntries()).toEqual([]);
     });
     it("accepts Sec-Fetch-Site: same-origin when no Origin is sent", async () => {
-      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, { method: "POST", body: (() => { const f = new FormData(); f.set("label", "CV"); f.append("files", new File(["x"], "a.pdf")); return f; })(), headers: { host: "localhost:3000", "sec-fetch-site": "same-origin" } });
+      const f = new FormData();
+      f.set("label", "CV");
+      f.append("files", new File(["x"], "a.pdf"));
+      const { body, contentType } = await multipart(f);
+      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, { method: "POST", body, headers: { host: "localhost:3000", "sec-fetch-site": "same-origin", "content-type": contentType } });
       expect((await POST(req, { params: Promise.resolve({ id: String(appId) }) } as never)).status).toBe(201);
     });
     it("413 over 50 MB (real body, no Content-Length) and writes nothing", async () => {
@@ -195,7 +202,8 @@ describe("POST /api/applications/:id/files", () => {
       const form = new FormData();
       form.set("label", "CV");
       form.append("files", "not a file");
-      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, { method: "POST", body: form, headers: { host: "localhost:3000", origin: "http://localhost:3000" } });
+      const { body, contentType } = await multipart(form);
+      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, { method: "POST", body, headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": contentType } });
       expect((await POST(req, { params: Promise.resolve({ id: String(appId) }) } as never)).status).toBe(400);
     });
   });
@@ -356,7 +364,7 @@ describe("serialising and the counter race", () => {
   it("concurrent uploads of the same base/date/ext never share a seq (no per-application queue: EEXIST and unique-index retry)", async () => {
     await upload("CV.pdf", "first"); // the folder exists, so only the counter is raced
     const rs = await Promise.all(Array.from({ length: 8 }, (_, i) => storeFileUnlocked({ applicationId: appId, file: new File([`c${i}`], "CV.pdf"), label: "CV", uploadDate: DATE })));
-    expect(rs.every((r) => r.ok)).toBe(true);
+    expect(rs.filter((r) => !r.ok)).toEqual([]); // lists the failures, if any
     expect(rows().map((r) => r.seq).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(readdirSync(join(root, "Acme_Robotics_2026-11")).sort()).toEqual(rows().map((r) => r.storedName).sort());
     for (const r of rows()) expect(sha(readFileSync(join(root, r.relativePath)))).toBe(r.sha256);

@@ -228,7 +228,7 @@ describe("GET /api/files/:id", () => {
       expect(html).toContain(`<a href="/applications/${appId}" target="_top">Back to the application</a>`);
       return html;
     };
-    if (process.getuid?.() !== 0) { // root reads anything, so the unreadable case cannot be made
+    if (process.platform !== "win32" && process.getuid?.() !== 0) { // root reads anything and Windows ignores chmod 000, so the unreadable case cannot be made there
       chmodSync(abs, 0o000);
       await page(await get(f.id, asFrame), 500, "This file could not be read");
     }
