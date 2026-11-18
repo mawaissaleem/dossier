@@ -4,7 +4,7 @@ A local-first tracker for job and PhD applications that keeps the exact files yo
 
 Add an application, attach your CV and cover letter, and record a submission when you send it. Months later, when a recruiter calls back, open the application and the exact files you sent are one click away: not "CV_final_v3_really_final.pdf", but the copy that went to that company on that day.
 
-> **Version 0.1.0.** Dossier is a single-user app that runs on your own computer. There are no accounts, no sync and no cloud. It is usable every day, and it does not try to be a hosted product. Read [Not implemented yet](#not-implemented-yet) and [Known issues](#known-issues) before you start.
+> **Version 0.1.0.** Dossier is a personal tool, built for its author's own applications and shared as is. It is a single-user app that runs on your own computer, with no accounts, no sync and no cloud. Setup needs Node and a terminal; there is no installer, and none is planned. Read [Not implemented yet](#not-implemented-yet) and [Known issues](#known-issues) before you start.
 
 ![Dossier: search, open an application and find the files that were sent](docs/media/demo.gif)
 
