@@ -191,6 +191,8 @@ From the terminal instead: stop the server, copy the database file somewhere saf
 
 The interactive version, with links from each box to its source, is [docs/architecture/architecture.html](docs/architecture/architecture.html) (download it and open it in a browser).
 
+The requirements spec Dossier was built from is [docs/requirements.md](docs/requirements.md); code comments cite its IDs (FR-n, NFR-n, AT-n). It was written before the build, so where the app differs (for example, tracks are now added by the user rather than shipped as Job and PhD), this README describes the app as it is.
+
 ```
 app/            Pages, server actions (app/actions/) and API routes (app/api/)
 ├── api/        File upload, file serving, zip download, CSV export, search
