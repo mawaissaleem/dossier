@@ -16,9 +16,14 @@ async function realTarget(abs: string): Promise<string | null> {
     try {
       return join(await realpath(p), ...tail);
     } catch {
-      // realpath failed. If the entry itself exists it is a dangling or looping symlink: writing through it could land anywhere.
-      const exists = await lstat(p).then(() => true, (e: NodeJS.ErrnoException) => (e.code === "ENOENT" || e.code === "ENOTDIR" ? false : true));
-      if (exists || dirname(p) === p) return null;
+      // realpath failed. A symlink here is dangling or looping: writing through it could land anywhere, so refuse (as for an entry
+      // that cannot be checked). A plain entry is fine: its real path is its parent's plus its name. It shows up when it was created
+      // between the two calls (a concurrent upload taking the same name), or when Windows briefly fails realpath on a busy file.
+      const kind = await lstat(p).then(
+        (s) => (s.isSymbolicLink() ? "link" : "plain"),
+        (e: NodeJS.ErrnoException) => (e.code === "ENOENT" || e.code === "ENOTDIR" ? "missing" : "unknown"),
+      );
+      if (kind === "link" || kind === "unknown" || dirname(p) === p) return null;
       tail.unshift(basename(p));
     }
   }
