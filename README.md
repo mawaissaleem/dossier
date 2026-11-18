@@ -95,7 +95,7 @@ Listed honestly so you know what you are getting.
 
 - File preview uses your browser's built-in PDF viewer, so what it shows depends on the browser. **Open** and **Download** always work.
 - Board drag and drop on touch screens has had little testing. The **Move to** menu on each card works everywhere.
-- A backup interrupted by a crash or power loss leaves an unfinished zip behind. It does not open, and Dossier does not clean it up.
+- A backup interrupted by a crash or power loss leaves a `.zip.partial` file in the backup folder. It is not a backup; delete it.
 
 
 ## Requirements
@@ -128,7 +128,7 @@ Open <http://127.0.0.1:3000>.
 
 To use another port: `npm run start -- -p 4000`.
 
-**Localhost only.** Always start Dossier with the npm scripts. They bind to `127.0.0.1`. Running `next start` or `next dev` directly listens on every network interface. As a second guard, every request must carry a `localhost`, `127.0.0.1` or `[::1]` Host name; anything else gets `Forbidden: Dossier answers on localhost only.`
+**Localhost only.** Always start Dossier with the npm scripts. They bind to `127.0.0.1`, so only your own computer can reach it. Running `next start` or `next dev` directly listens on every network interface, and then anyone on the same network can open Dossier: there is no login, and the Host check below does not stop them, because they can send `Host: localhost` themselves. Every request must carry a `localhost`, `127.0.0.1` or `[::1]` Host name (anything else gets `Forbidden: Dossier answers on localhost only.`); that protects against web pages in your browser (DNS rebinding), not against other machines.
 
 
 ## Where your data lives
@@ -285,7 +285,7 @@ npm run db:seed:fake   Fake applications for a scratch database (--count, --mix,
 
 Dossier holds personal documents, so a few things are deliberate:
 
-- The server binds to `127.0.0.1`, and every request must carry a localhost Host name. That also blocks DNS-rebinding attacks from a web page.
+- The server binds to `127.0.0.1`, which is what keeps other machines out. Every request must also carry a localhost Host name, which blocks DNS-rebinding attacks from a web page; it is not a guard against other machines, since they can set that header themselves.
 - Uploads and file actions also require a same-origin request.
 - A file path from the database is resolved inside the files root and checked. A stored path cannot point outside it, and zip downloads use stored names only.
 - Uploaded files are served with `X-Content-Type-Options: nosniff`, and only safe types are shown inline.

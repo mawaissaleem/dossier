@@ -157,6 +157,18 @@ describe("createBackup", () => {
     expect(readFileSync(join(dest, "dossier-backup-20261110-1432.zip"), "utf8")).toBe("precious");
   });
 
+  it("writes to a .partial name and renames it when complete; a .partial left by a crash is skipped, not touched", async () => {
+    writeFileSync(join(dest, "dossier-backup-20261110-1432.zip.partial"), "interrupted");
+    const r = await ok();
+    expect(r.path).toBe(join(dest, "dossier-backup-20261110-1432-2.zip"));
+    expect(readdirSync(dest).sort()).toEqual([
+      "dossier-backup-20261110-1432-2.zip",
+      "dossier-backup-20261110-1432.zip.partial",
+    ]);
+    expect(readFileSync(join(dest, "dossier-backup-20261110-1432.zip.partial"), "utf8")).toBe("interrupted");
+    expect(readZip(r.path).size).toBeGreaterThan(0);
+  });
+
   it("with no files root configured: database only, said so in the manifest", async () => {
     const r = await ok();
     expect(r).toMatchObject({ fileCount: 0, filesRoot: null });

@@ -4,14 +4,16 @@
 //  5. record the time in settings (only after the zip is complete).
 // Destination refusals: not a full path, not an existing folder, not writable, inside the files root (the zip would contain itself),
 // or inside the project folder / database folder (the same set the files root refuses): a backup next to the live data is lost with it.
-// The zip name is claimed with O_EXCL, so an existing file is never overwritten. Any failure deletes the zip and the temp folder.
-// Limits: a crash (power loss, kill) mid-write leaves an unfinished zip that does not open; nothing sweeps it. The files root is read
+// The zip is written as <name>.zip.partial (claimed with O_EXCL, for a name whose .zip does not exist yet) and renamed to <name>.zip only
+// when complete, so a .zip in the folder is always a whole backup and an existing file is never overwritten. Backups run one at a time
+// (lock.ts), so no other backup can take that name in between. Any failure deletes the .partial file and the temp folder.
+// Limits: a crash (power loss, kill) mid-write leaves a .zip.partial file; nothing sweeps it (it sits in the user's folder). The files root is read
 // with lstat and symlinks are skipped, so nothing outside the root is read; a file replaced by a symlink (or a folder) during the
 // backup fails it, so files/ only ever holds regular files.
 // turbopackIgnore comments on three fs calls: without them Next warns that the build traces the whole project (they take user-typed paths on purpose).
 // Errors name their source: an unwritable destination, an unreadable file or folder in the files root (with its relative path),
 // or a generic failure (e.g. the database copy).
-import { mkdtemp, lstat, open, readdir, realpath, rm, stat } from "node:fs/promises";
+import { access, mkdtemp, lstat, open, readdir, realpath, rename, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { once } from "node:events";
 import { join, relative, resolve } from "node:path";
@@ -79,11 +81,20 @@ async function listFiles(root: string, skip: string[]): Promise<Found[]> {
   return out;
 }
 
+const PARTIAL_SUFFIX = ".partial";
+const exists = (p: string) =>
+  access(p).then(
+    () => true,
+    (e) => code(e) !== "ENOENT",
+  );
+
+// The first name whose .zip does not exist, with its .partial file claimed (a leftover .partial from a crash skips that name too).
 async function claimZip(dir: string, now: Date) {
   for (let n = 1; n <= MAX_NAME_TRIES; n++) {
     const path = join(dir, backupFileName(now, n));
+    if (await exists(path)) continue;
     try {
-      return { path, handle: await open(path, "wx") };
+      return { path, partial: path + PARTIAL_SUFFIX, handle: await open(path + PARTIAL_SUFFIX, "wx") };
     } catch (e) {
       if (code(e) !== "EEXIST") throw e;
     }
@@ -154,7 +165,8 @@ export async function createBackup(destination: unknown, now: Date = new Date())
   if (!checked.ok) return checked;
   const { dest, root, rootReal, skip } = checked;
 
-  let zipPath: string | undefined;
+  let partialPath: string | undefined;
+  let zipPath: string | undefined; // set once the .partial is renamed: a later failure (recording the time) deletes it too
   const tmp = await mkdtemp(join(tmpdir(), "dossier-backup-"));
   try {
     const found = rootReal ? await listFiles(rootReal, skip) : [];
@@ -179,8 +191,8 @@ export async function createBackup(destination: unknown, now: Date = new Date())
           : `The backup failed: ${(e as Error).message}`,
       );
     }
-    const { path, handle } = claimed;
-    zipPath = path;
+    const { path, partial, handle } = claimed;
+    partialPath = partial;
     const out = handle.createWriteStream();
     const archive = new ZipArchive({ zlib: { level: 6 } });
     const written = new Promise<void>((resolve, reject) => {
@@ -210,6 +222,9 @@ export async function createBackup(destination: unknown, now: Date = new Date())
       if (!out.closed) await once(out, "close").catch(() => {}); // release the fd before the zip is deleted (Windows refuses to delete an open file)
       throw e;
     }
+    await rename(partial, path);
+    partialPath = undefined;
+    zipPath = path;
 
     const sizeBytes = (await stat(/*turbopackIgnore: true*/ path)).size;
     await recordBackup(now);
@@ -223,7 +238,7 @@ export async function createBackup(destination: unknown, now: Date = new Date())
       createdAt: manifest.createdAt,
     };
   } catch (e) {
-    if (zipPath) await rm(zipPath, { force: true }).catch(() => {});
+    for (const p of [partialPath, zipPath]) if (p) await rm(p, { force: true }).catch(() => {});
     return fail(explain(e, rootReal));
   } finally {
     await rm(tmp, { recursive: true, force: true }).catch(() => {});
