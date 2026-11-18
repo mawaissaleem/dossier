@@ -264,6 +264,8 @@ Measured on a production build with a test database of 500 applications:
 
 ## Development
 
+This project was built with AI-assisted coding.
+
 ```
 npm run dev            Development server on 127.0.0.1:3000
 npm run build          Production build
