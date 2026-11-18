@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { BAD_DATE, buildCreateValues, buildValues, defaultState, changedState, errorField, errorNamesColumn, initialState, inputKind, isPriority, splitEssentials } from "@/lib/application-form";
+import {
+  BAD_DATE,
+  buildCreateValues,
+  buildValues,
+  defaultState,
+  changedState,
+  errorField,
+  errorNamesColumn,
+  initialState,
+  inputKind,
+  isPriority,
+  splitEssentials,
+} from "@/lib/application-form";
 import type { ColumnType } from "@/lib/db/schema";
 
 describe("inputKind", () => {
@@ -15,8 +27,10 @@ describe("inputKind", () => {
 
 describe("buildValues", () => {
   const cols = [
-    { id: 1, type: "text" as const, options: [] }, { id: 2, type: "single_select" as const, options: [{ id: 7 }] },
-    { id: 3, type: "checkbox" as const, options: [] }, { id: 4, type: "number" as const, options: [] },
+    { id: 1, type: "text" as const, options: [] },
+    { id: 2, type: "single_select" as const, options: [{ id: 7 }] },
+    { id: 3, type: "checkbox" as const, options: [] },
+    { id: 4, type: "number" as const, options: [] },
   ];
 
   it("omits untouched columns", () => {
@@ -25,13 +39,19 @@ describe("buildValues", () => {
 
   it("sends blank as null, select as a number, checkbox as a boolean, text as typed", () => {
     expect(buildValues(cols, { 1: "  ", 2: "7", 3: false, 4: "4.5" })).toEqual([
-      { columnId: 1, value: null }, { columnId: 2, value: 7 }, { columnId: 3, value: false }, { columnId: 4, value: "4.5" },
+      { columnId: 1, value: null },
+      { columnId: 2, value: 7 },
+      { columnId: 3, value: false },
+      { columnId: 4, value: "4.5" },
     ]);
     expect(buildValues(cols, { 2: "" })).toEqual([{ columnId: 2, value: null }]);
   });
 
   it("drops state of columns that no longer exist and follows column order, not state order", () => {
-    expect(buildValues(cols, { 99: "x", 3: true, 1: "a" })).toEqual([{ columnId: 1, value: "a" }, { columnId: 3, value: true }]);
+    expect(buildValues(cols, { 99: "x", 3: true, 1: "a" })).toEqual([
+      { columnId: 1, value: "a" },
+      { columnId: 3, value: true },
+    ]);
   });
 
   it("sends a select option deleted while the form was open as blank, like the select shows", () => {
@@ -43,25 +63,44 @@ describe("buildValues", () => {
 
 describe("splitEssentials", () => {
   let n = 0;
-  const col = (name: string, type: ColumnType = "text", o: { hidden?: boolean; isStatus?: boolean } = {}) =>
-    ({ id: ++n, name, type, hidden: false, isStatus: false, ...o });
+  const col = (name: string, type: ColumnType = "text", o: { hidden?: boolean; isStatus?: boolean } = {}) => ({
+    id: ++n,
+    name,
+    type,
+    hidden: false,
+    isStatus: false,
+    ...o,
+  });
   const names = (cs: { name: string }[]) => cs.map((c) => c.name);
 
   it("puts status, priority, deadline first in that fixed order, the rest in column order", () => {
-    const cols = [col("Company"), col("Deadline", "date"), col("Notes"), col("Priority", "single_select"), col("Stage", "single_select", { isStatus: true })];
+    const cols = [
+      col("Company"),
+      col("Deadline", "date"),
+      col("Notes"),
+      col("Priority", "single_select"),
+      col("Stage", "single_select", { isStatus: true }),
+    ];
     const { essentials, rest } = splitEssentials(cols);
     expect(names(essentials)).toEqual(["Stage", "Priority", "Deadline"]);
     expect(names(rest)).toEqual(["Company", "Notes"]);
   });
 
   it("matches names case-insensitively and trimmed, but requires the expected type", () => {
-    const { essentials, rest } = splitEssentials([col("  PRIORITY ", "single_select"), col("deadline", "text"), col("Priority", "text")]);
+    const { essentials, rest } = splitEssentials([
+      col("  PRIORITY ", "single_select"),
+      col("deadline", "text"),
+      col("Priority", "text"),
+    ]);
     expect(names(essentials)).toEqual(["  PRIORITY "]);
     expect(names(rest)).toEqual(["deadline", "Priority"]);
   });
 
   it("uses the isStatus flag, not the name", () => {
-    const { essentials, rest } = splitEssentials([col("Status", "single_select"), col("Phase", "single_select", { isStatus: true })]);
+    const { essentials, rest } = splitEssentials([
+      col("Status", "single_select"),
+      col("Phase", "single_select", { isStatus: true }),
+    ]);
     expect(names(essentials)).toEqual(["Phase"]);
     expect(names(rest)).toEqual(["Status"]);
   });
@@ -73,7 +112,11 @@ describe("splitEssentials", () => {
   });
 
   it("keeps hidden columns in rest even when they match a rule", () => {
-    const { essentials, rest } = splitEssentials([col("Priority", "single_select", { hidden: true }), col("Deadline", "date", { hidden: true }), col("S", "single_select", { isStatus: true, hidden: true })]);
+    const { essentials, rest } = splitEssentials([
+      col("Priority", "single_select", { hidden: true }),
+      col("Deadline", "date", { hidden: true }),
+      col("S", "single_select", { isStatus: true, hidden: true }),
+    ]);
     expect(essentials).toEqual([]);
     expect(rest).toHaveLength(3);
   });
@@ -102,14 +145,31 @@ describe("errorNamesColumn", () => {
 
 describe("initialState and changedState", () => {
   const cols = [
-    { id: 1, type: "text" as const, options: [] }, { id: 2, type: "number" as const, options: [] }, { id: 3, type: "checkbox" as const, options: [] },
-    { id: 4, type: "single_select" as const, options: [{ id: 9, label: "Offer", color: "blue", position: 0 }] }, { id: 5, type: "date" as const, options: [] },
+    { id: 1, type: "text" as const, options: [] },
+    { id: 2, type: "number" as const, options: [] },
+    { id: 3, type: "checkbox" as const, options: [] },
+    { id: 4, type: "single_select" as const, options: [{ id: 9, label: "Offer", color: "blue", position: 0 }] },
+    { id: 5, type: "date" as const, options: [] },
     { id: 6, type: "link" as const, options: [] },
   ];
 
   it("fills every column from the loaded values: blank is empty, a blank checkbox is unchecked, a select is its option id", () => {
-    expect(initialState(cols, { 1: "hi", 2: 5e-7, 3: null, 4: 9, 5: null, 6: "https://a.example/" })).toEqual({ 1: "hi", 2: "0.0000005", 3: false, 4: "9", 5: "", 6: "https://a.example/" });
-    expect(initialState(cols, { 1: null, 2: 0, 3: false, 4: null, 5: "2026-03-04", 6: null })).toEqual({ 1: "", 2: "0", 3: false, 4: "", 5: "2026-03-04", 6: "" });
+    expect(initialState(cols, { 1: "hi", 2: 5e-7, 3: null, 4: 9, 5: null, 6: "https://a.example/" })).toEqual({
+      1: "hi",
+      2: "0.0000005",
+      3: false,
+      4: "9",
+      5: "",
+      6: "https://a.example/",
+    });
+    expect(initialState(cols, { 1: null, 2: 0, 3: false, 4: null, 5: "2026-03-04", 6: null })).toEqual({
+      1: "",
+      2: "0",
+      3: false,
+      4: "",
+      5: "2026-03-04",
+      6: "",
+    });
   });
 
   it("returns nothing when nothing changed, even after retyping the same text or checking and unchecking a box", () => {
@@ -120,13 +180,20 @@ describe("initialState and changedState", () => {
 
   it("returns only the changed columns, with the state value, including clears and unchecking", () => {
     const init = initialState(cols, { 1: "hi", 2: 3, 3: true, 4: 9, 5: "2026-03-04", 6: null });
-    expect(changedState(cols, { ...init, 1: "", 3: false, 4: "", 6: "x.example" }, init)).toEqual({ 1: "", 3: false, 4: "", 6: "x.example" });
+    expect(changedState(cols, { ...init, 1: "", 3: false, 4: "", 6: "x.example" }, init)).toEqual({
+      1: "",
+      3: false,
+      4: "",
+      6: "x.example",
+    });
     expect(changedState(cols, { ...init, 2: "3.0" }, init)).toEqual({ 2: "3.0" }); // compared as text
   });
 
   it("a date the browser reported as bad input is a change and is sent as is (never as blank)", () => {
     const init = initialState(cols, { 1: null, 2: null, 3: null, 4: null, 5: "2026-03-04", 6: null });
-    expect(buildValues(cols, changedState(cols, { ...init, 5: BAD_DATE }, init))).toEqual([{ columnId: 5, value: BAD_DATE }]);
+    expect(buildValues(cols, changedState(cols, { ...init, 5: BAD_DATE }, init))).toEqual([
+      { columnId: 5, value: BAD_DATE },
+    ]);
   });
 
   it("ignores state of columns that are not in the list, and columns missing from initial count as blank", () => {
@@ -136,42 +203,87 @@ describe("initialState and changedState", () => {
 });
 
 describe("defaultState", () => {
-  const col = (id: number, type: ColumnType, defaultValue: string | null, options: number[] = []) =>
-    ({ id, type, defaultValue, options: options.map((o) => ({ id: o, label: "x", color: "blue", position: o })) });
+  const col = (id: number, type: ColumnType, defaultValue: string | null, options: number[] = []) => ({
+    id,
+    type,
+    defaultValue,
+    options: options.map((o) => ({ id: o, label: "x", color: "blue", position: o })),
+  });
 
   it("shows each type's default as its input value", () => {
-    const cols = [col(1, "text", "Remote"), col(2, "number", "4.5"), col(3, "date", "2026-03-04"), col(4, "link", "https://a.com/"), col(5, "checkbox", "true"), col(6, "checkbox", "false"), col(7, "single_select", "9", [8, 9])];
-    expect(defaultState(cols)).toEqual({ 1: "Remote", 2: "4.5", 3: "2026-03-04", 4: "https://a.com/", 5: true, 6: false, 7: "9" });
+    const cols = [
+      col(1, "text", "Remote"),
+      col(2, "number", "4.5"),
+      col(3, "date", "2026-03-04"),
+      col(4, "link", "https://a.com/"),
+      col(5, "checkbox", "true"),
+      col(6, "checkbox", "false"),
+      col(7, "single_select", "9", [8, 9]),
+    ];
+    expect(defaultState(cols)).toEqual({
+      1: "Remote",
+      2: "4.5",
+      3: "2026-03-04",
+      4: "https://a.com/",
+      5: true,
+      6: false,
+      7: "9",
+    });
   });
 
   it("leaves out no-default, invalid and dangling defaults (they show blank)", () => {
-    const cols = [col(1, "text", null), col(2, "number", "abc"), col(3, "date", "2026-13-40"), col(4, "checkbox", "yes"), col(5, "single_select", "99", [8]), col(6, "single_select", "x", [8])];
+    const cols = [
+      col(1, "text", null),
+      col(2, "number", "abc"),
+      col(3, "date", "2026-13-40"),
+      col(4, "checkbox", "yes"),
+      col(5, "single_select", "99", [8]),
+      col(6, "single_select", "x", [8]),
+    ];
     expect(defaultState(cols)).toEqual({});
   });
 });
 
 describe("buildCreateValues", () => {
   const cols = [
-    { id: 1, type: "text" as const, defaultValue: "Remote", options: [] }, { id: 2, type: "checkbox" as const, defaultValue: "true", options: [] },
-    { id: 3, type: "single_select" as const, defaultValue: "7", options: [{ id: 7, label: "A", color: "blue", position: 0 }] },
-    { id: 4, type: "date" as const, defaultValue: null, options: [] }, { id: 5, type: "checkbox" as const, defaultValue: null, options: [] },
+    { id: 1, type: "text" as const, defaultValue: "Remote", options: [] },
+    { id: 2, type: "checkbox" as const, defaultValue: "true", options: [] },
+    {
+      id: 3,
+      type: "single_select" as const,
+      defaultValue: "7",
+      options: [{ id: 7, label: "A", color: "blue", position: 0 }],
+    },
+    { id: 4, type: "date" as const, defaultValue: null, options: [] },
+    { id: 5, type: "checkbox" as const, defaultValue: null, options: [] },
   ];
 
   it("sends every column with the shown value: defaults when untouched, blank when no default", () => {
     expect(buildCreateValues(cols, {})).toEqual([
-      { columnId: 1, value: "Remote" }, { columnId: 2, value: true }, { columnId: 3, value: 7 }, { columnId: 4, value: null }, { columnId: 5, value: null },
+      { columnId: 1, value: "Remote" },
+      { columnId: 2, value: true },
+      { columnId: 3, value: 7 },
+      { columnId: 4, value: null },
+      { columnId: 5, value: null },
     ]);
   });
 
   it("a cleared or changed pre-filled field is sent as shown", () => {
     expect(buildCreateValues(cols, { 1: "", 2: false, 3: "" })).toEqual([
-      { columnId: 1, value: null }, { columnId: 2, value: false }, { columnId: 3, value: null }, { columnId: 4, value: null }, { columnId: 5, value: null },
+      { columnId: 1, value: null },
+      { columnId: 2, value: false },
+      { columnId: 3, value: null },
+      { columnId: 4, value: null },
+      { columnId: 5, value: null },
     ]);
   });
 });
 
 describe("errorField", () => {
-  const cols = [{ id: 4, name: "Deadline" }, { id: 9, name: "Salary" }];
+  const cols = [
+    { id: 4, name: "Deadline" },
+    { id: 9, name: "Salary" },
+  ];
   it("finds the column a server error names, or the title", () => {
     expect(errorField("Salary: Enter a number.", cols)).toBe(9);
     expect(errorField("Title is required.", cols)).toBe("title");

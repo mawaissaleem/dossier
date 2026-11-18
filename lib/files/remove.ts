@@ -55,7 +55,8 @@ const asWrite = async <T>(fn: () => Promise<T>): Promise<T | { ok: false; error:
   }
 };
 
-export const deleteApplicationWithFiles = (id: number, expected: Expected): Promise<DeleteWithFilesResult> => asWrite(() => deleteApplicationUnlocked(id, expected));
+export const deleteApplicationWithFiles = (id: number, expected: Expected): Promise<DeleteWithFilesResult> =>
+  asWrite(() => deleteApplicationUnlocked(id, expected));
 
 async function deleteApplicationUnlocked(id: number, expected: Expected): Promise<DeleteWithFilesResult> {
   const paths = await listApplicationFilePaths(id);
@@ -66,20 +67,29 @@ async function deleteApplicationUnlocked(id: number, expected: Expected): Promis
 
   const root = await getFilesRoot();
   const realRoot = root ? await realpath(root).catch(() => null) : null;
-  if (!root || !realRoot) return { ...r, warning: `Deleted, but the files folder is not set or cannot be reached, so ${plural(paths.length)} in ${where} ${paths.length === 1 ? "was" : "were"} left on disk.` };
+  if (!root || !realRoot)
+    return {
+      ...r,
+      warning: `Deleted, but the files folder is not set or cannot be reached, so ${plural(paths.length)} in ${where} ${paths.length === 1 ? "was" : "were"} left on disk.`,
+    };
 
-  let failed = 0, missing = 0;
+  let failed = 0,
+    missing = 0;
   for (const p of paths) {
     try {
       await unlinkStored(root, realRoot, p);
     } catch (e) {
-      if (code(e) === "ENOENT") { missing++; continue; } // already gone: nothing left to remove
+      if (code(e) === "ENOENT") {
+        missing++;
+        continue;
+      } // already gone: nothing left to remove
       failed++;
       console.error("Could not remove file of deleted application", p, e);
     }
   }
 
-  const kept: string[] = [], stuck: string[] = [];
+  const kept: string[] = [],
+    stuck: string[] = [];
   for (const f of folders) {
     try {
       const t = await resolveInRoot(root, f);
@@ -104,10 +114,15 @@ async function deleteApplicationUnlocked(id: number, expected: Expected): Promis
   const notes = [
     ...(missing > 0 ? [`${plural(missing)} ${missing === 1 ? "was" : "were"} already missing from disk.`] : []),
     // With failed files the folder is not empty anyway, so "files Dossier did not store" might not be true.
-    ...(kept.length > 0 && failed === 0 ? [`The folder ${kept.join(", ")} was kept because it holds files Dossier did not store.`] : []),
+    ...(kept.length > 0 && failed === 0
+      ? [`The folder ${kept.join(", ")} was kept because it holds files Dossier did not store.`]
+      : []),
   ];
   if (problems.length === 0 && notes.length === 0) return r;
-  return { ...r, warning: [problems.length > 0 ? `Deleted, but ${problems.join(" and ")}.` : "Deleted.", ...notes].join(" ") };
+  return {
+    ...r,
+    warning: [problems.length > 0 ? `Deleted, but ${problems.join(" and ")}.` : "Deleted.", ...notes].join(" "),
+  };
 }
 
 // Deletes ONE stored file (8.8, FR-5.8). The user has already confirmed (and, for a submitted file, ticked the extra warning) in the UI;
@@ -123,7 +138,8 @@ async function deleteApplicationUnlocked(id: number, expected: Expected): Promis
 // except through the "missing" state the integrity check already reports, and never bytes without a row.
 export type DeleteFileResult = { ok: true; kept: boolean } | { ok: false; error: string };
 
-export const deleteStoredFile = (id: number, expectedSubmissions: number): Promise<DeleteFileResult> => asWrite(() => deleteStoredFileUnlocked(id, expectedSubmissions));
+export const deleteStoredFile = (id: number, expectedSubmissions: number): Promise<DeleteFileResult> =>
+  asWrite(() => deleteStoredFileUnlocked(id, expectedSubmissions));
 
 async function deleteStoredFileUnlocked(id: number, expectedSubmissions: number): Promise<DeleteFileResult> {
   const begin = await beginFileDelete(id, expectedSubmissions);
@@ -134,13 +150,16 @@ async function deleteStoredFileUnlocked(id: number, expectedSubmissions: number)
   };
   const root = await getFilesRoot();
   const realRoot = root ? await realpath(root).catch(() => null) : null;
-  if (!root || !realRoot) return undo("The files folder is not set or cannot be reached, so the file was not deleted. Check it in Settings.");
+  if (!root || !realRoot)
+    return undo("The files folder is not set or cannot be reached, so the file was not deleted. Check it in Settings.");
   try {
     await unlinkStored(root, realRoot, begin.relativePath);
   } catch (e) {
     if (code(e) !== "ENOENT" && code(e) !== "ENOTDIR") {
       console.error("Could not remove file", begin.relativePath, e);
-      return undo("The file could not be removed from the files folder, so nothing was deleted. Check its permissions and try again.");
+      return undo(
+        "The file could not be removed from the files folder, so nothing was deleted. Check its permissions and try again.",
+      );
     }
   }
   const kept = await finishFileDelete(id);
@@ -155,5 +174,7 @@ async function rmdirQuietly(root: string, realRoot: string, fileRel: string): Pr
   try {
     const t = await resolveInRoot(root, folder);
     if (t.ok && (await plainStat(realRoot, folder, t.path))?.isDirectory()) await rmdir(t.path);
-  } catch { /* not empty, gone, or not ours to remove */ }
+  } catch {
+    /* not empty, gone, or not ours to remove */
+  }
 }

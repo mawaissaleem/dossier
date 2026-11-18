@@ -7,11 +7,18 @@ import { toggleFilter, type Filter } from "@/lib/filter";
 import { optionCounts } from "@/lib/quick-filter";
 import { cn } from "@/lib/utils";
 
-const btn = "inline-flex h-7 items-center gap-1.5 rounded-full border px-1.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const btn =
+  "inline-flex h-7 items-center gap-1.5 rounded-full border px-1.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 // One row of toggle chips per quick column (Status, Priority): "All" clears that column's filter, a chip toggles its option via toggleFilter.
 // Counts ignore the column's own filter but respect the others (lib/quick-filter.ts). `columns` is every single-select column (the filter scope).
-export function QuickFilters({ quick, columns, rows, filters, onChange }: {
+export function QuickFilters({
+  quick,
+  columns,
+  rows,
+  filters,
+  onChange,
+}: {
   quick: ColumnItem[];
   columns: ColumnItem[];
   rows: ApplicationRow[];
@@ -24,13 +31,24 @@ export function QuickFilters({ quick, columns, rows, filters, onChange }: {
         const counts = optionCounts(rows, columns, filters, c);
         const active = filters.find((f) => f.id === c.id);
         return (
-          <div key={c.id} role="group" aria-label={`Quick filter: ${c.name}`} className="flex min-w-0 flex-wrap items-center gap-1">
+          <div
+            key={c.id}
+            role="group"
+            aria-label={`Quick filter: ${c.name}`}
+            className="flex min-w-0 flex-wrap items-center gap-1"
+          >
             <span className="mr-1 text-xs font-medium text-muted-foreground">{c.name}</span>
             <button
               type="button"
               aria-pressed={!active}
               onClick={() => onChange(filters.filter((f) => f.id !== c.id))}
-              className={cn(btn, "font-medium", active ? "border-transparent text-muted-foreground hover:bg-muted" : "border-foreground bg-muted text-foreground")}
+              className={cn(
+                btn,
+                "font-medium",
+                active
+                  ? "border-transparent text-muted-foreground hover:bg-muted"
+                  : "border-foreground bg-muted text-foreground",
+              )}
             >
               All
             </button>

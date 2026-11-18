@@ -22,11 +22,16 @@ export function TrackNavLinks({ tracks }: { tracks: { id: number; name: string; 
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative flex items-center justify-between gap-2 rounded-md px-3 py-1.5 text-sm transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                  active ? "bg-muted font-semibold text-foreground before:absolute before:inset-y-1.5 before:-left-2.5 before:w-0.75 before:rounded-full before:bg-linear-to-b before:from-accent before:to-accent-to" : "text-muted-foreground",
+                  active
+                    ? "bg-muted font-semibold text-foreground before:absolute before:inset-y-1.5 before:-left-2.5 before:w-0.75 before:rounded-full before:bg-linear-to-b before:from-accent before:to-accent-to"
+                    : "text-muted-foreground",
                 )}
               >
                 <span className="truncate">{t.name}</span>
-                <span className="text-xs font-normal tabular-nums text-muted-foreground">{t.count}<span className="sr-only"> applications</span></span>
+                <span className="text-xs font-normal tabular-nums text-muted-foreground">
+                  {t.count}
+                  <span className="sr-only"> applications</span>
+                </span>
               </Link>
             </li>
           );

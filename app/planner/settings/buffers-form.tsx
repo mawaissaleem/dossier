@@ -37,8 +37,12 @@ function BufferRow({ slot, option }: { slot: BufferSlot; option: BufferOption })
   return (
     <li>
       <form onSubmit={submit} noValidate className="flex flex-wrap items-center gap-2">
-        <span className="w-40 shrink-0"><OptionChip option={option} /></span>
-        <Label htmlFor={id} className="sr-only">Buffer days for {SLOT_DEFS[slot].label}: {option.label}</Label>
+        <span className="w-40 shrink-0">
+          <OptionChip option={option} />
+        </span>
+        <Label htmlFor={id} className="sr-only">
+          Buffer days for {SLOT_DEFS[slot].label}: {option.label}
+        </Label>
         <Input
           id={id}
           type="text"
@@ -46,14 +50,28 @@ function BufferRow({ slot, option }: { slot: BufferSlot; option: BufferOption })
           placeholder="0"
           className="max-w-24"
           value={value}
-          onChange={(e) => { setValue(e.target.value); setSaved(false); setError(null); }}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setSaved(false);
+            setError(null);
+          }}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-err` : undefined}
         />
         <span className="text-sm text-muted-foreground">days</span>
-        <Button type="submit" variant="outline" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
-        {error && <p id={`${id}-err`} role="alert" className="text-sm text-destructive">{error}</p>}
-        {saved && <p role="status" className="text-sm text-muted-foreground">Saved.</p>}
+        <Button type="submit" variant="outline" disabled={pending}>
+          {pending ? "Saving…" : "Save"}
+        </Button>
+        {error && (
+          <p id={`${id}-err`} role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {saved && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Saved.
+          </p>
+        )}
       </form>
     </li>
   );
@@ -69,13 +87,20 @@ export function BuffersForm({ trackName, buffers }: { trackName: string; buffers
           const label = SLOT_DEFS[slot].label;
           return (
             <div key={slot}>
-              <p className="mb-1.5 text-sm font-medium text-muted-foreground">{label}{b && b.column.trim().toLowerCase() !== label.toLowerCase() ? ` (${b.column})` : ""}</p>
+              <p className="mb-1.5 text-sm font-medium text-muted-foreground">
+                {label}
+                {b && b.column.trim().toLowerCase() !== label.toLowerCase() ? ` (${b.column})` : ""}
+              </p>
               {!b ? (
                 <p className="text-sm text-muted-foreground">No {label} column chosen in Engine slots.</p>
               ) : b.options.length === 0 ? (
                 <p className="text-sm text-muted-foreground">This column has no options yet.</p>
               ) : (
-                <ul className="flex flex-col gap-2">{b.options.map((o) => <BufferRow key={o.id} slot={slot} option={o} />)}</ul>
+                <ul className="flex flex-col gap-2">
+                  {b.options.map((o) => (
+                    <BufferRow key={o.id} slot={slot} option={o} />
+                  ))}
+                </ul>
               )}
             </div>
           );

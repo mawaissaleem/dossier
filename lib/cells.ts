@@ -55,7 +55,8 @@ export function parseCell(type: ColumnType, raw: unknown): ParsedCell {
       return raw.trim().length > MAX_TEXT ? tooLong("Text") : good(raw.trim());
     case "number": {
       // Plain decimals only: Number() would also take "0x10" (16) and "1e3" (1000), which surprise someone typing into a cell.
-      const n = typeof raw === "number" ? raw : typeof raw === "string" && DECIMAL.test(raw.trim()) ? Number(raw.trim()) : NaN;
+      const n =
+        typeof raw === "number" ? raw : typeof raw === "string" && DECIMAL.test(raw.trim()) ? Number(raw.trim()) : NaN;
       return Number.isFinite(n) ? good(n) : bad("Enter a valid number.");
     }
     case "date": {

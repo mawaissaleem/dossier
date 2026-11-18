@@ -7,7 +7,16 @@ import { listActivity } from "@/lib/db/activity";
 import { createApplication, updateApplication } from "@/lib/db/applications";
 import { setCellValue } from "@/lib/db/cells";
 import { deleteOption } from "@/lib/db/options";
-import { activityEvents, applications, cellValues, columnOptions, columns, files, submissions, tracks } from "@/lib/db/schema";
+import {
+  activityEvents,
+  applications,
+  cellValues,
+  columnOptions,
+  columns,
+  files,
+  submissions,
+  tracks,
+} from "@/lib/db/schema";
 import { insertFileRow } from "@/lib/db/files";
 import { createManualSubmission, createSubmission, submitWithStatus } from "@/lib/db/submissions";
 import { getFilesRoot, setFilesRoot } from "@/lib/db/settings";
@@ -20,7 +29,8 @@ let db: ReturnType<typeof useTestDb>;
 let trackId: number, statusCol: number, other: number, appId: number;
 let opts: Record<string, number>;
 let n = 0;
-const events = (id = appId) => db.select().from(activityEvents).where(eq(activityEvents.applicationId, id)).orderBy(activityEvents.id).all();
+const events = (id = appId) =>
+  db.select().from(activityEvents).where(eq(activityEvents.applicationId, id)).orderBy(activityEvents.id).all();
 const kinds = (id = appId) => events(id).map((e) => e.kind);
 const mkApp = async (values: { columnId: number; value: unknown }[] = []) => {
   const r = await createApplication({ title: "T", trackId, values });
@@ -29,8 +39,20 @@ const mkApp = async (values: { columnId: number; value: unknown }[] = []) => {
 };
 const fileRow = (over = {}) => {
   n++;
-  return { applicationId: appId, label: "CV", originalName: `cv${n}.docx`, storedName: `CV_${n}.docx`, relativePath: `job/a/CV_${n}.docx`, sha256: String(n).padStart(64, "0"),
-    sizeBytes: 1, uploadDate: "2026-11-05", baseName: "CV", extension: "docx", seq: n, ...over };
+  return {
+    applicationId: appId,
+    label: "CV",
+    originalName: `cv${n}.docx`,
+    storedName: `CV_${n}.docx`,
+    relativePath: `job/a/CV_${n}.docx`,
+    sha256: String(n).padStart(64, "0"),
+    sizeBytes: 1,
+    uploadDate: "2026-11-05",
+    baseName: "CV",
+    extension: "docx",
+    seq: n,
+    ...over,
+  };
 };
 const mkFile = () => insertFileRow(fileRow());
 
@@ -39,9 +61,24 @@ beforeEach(async () => {
   n = 0;
   runSeed();
   trackId = db.select().from(tracks).where(eq(tracks.name, "Job")).get()!.id;
-  statusCol = db.select().from(columns).where(and(eq(columns.trackId, trackId), eq(columns.isStatus, true))).get()!.id;
-  opts = Object.fromEntries(db.select().from(columnOptions).where(eq(columnOptions.columnId, statusCol)).all().map((o) => [o.label, o.id]));
-  other = db.insert(columns).values({ userId: "local", trackId, name: "Stage", type: "single_select", position: 99 }).returning().get().id;
+  statusCol = db
+    .select()
+    .from(columns)
+    .where(and(eq(columns.trackId, trackId), eq(columns.isStatus, true)))
+    .get()!.id;
+  opts = Object.fromEntries(
+    db
+      .select()
+      .from(columnOptions)
+      .where(eq(columnOptions.columnId, statusCol))
+      .all()
+      .map((o) => [o.label, o.id]),
+  );
+  other = db
+    .insert(columns)
+    .values({ userId: "local", trackId, name: "Stage", type: "single_select", position: 99 })
+    .returning()
+    .get().id;
   appId = await mkApp([{ columnId: statusCol, value: null }]); // explicit blank: no default status
 });
 afterEach(dropTestDb);
@@ -57,14 +94,39 @@ describe("status_changed", () => {
     await setCellValue(appId, statusCol, null);
     const d = (await listActivity(appId)).reverse().map((e) => e.details);
     expect(d).toEqual([
-      { kind: "status_changed", columnId: statusCol, fromOptionId: null, fromLabel: null, toOptionId: opts[a], toLabel: a },
-      { kind: "status_changed", columnId: statusCol, fromOptionId: opts[a], fromLabel: a, toOptionId: opts[b], toLabel: b },
-      { kind: "status_changed", columnId: statusCol, fromOptionId: opts[b], fromLabel: b, toOptionId: null, toLabel: null },
+      {
+        kind: "status_changed",
+        columnId: statusCol,
+        fromOptionId: null,
+        fromLabel: null,
+        toOptionId: opts[a],
+        toLabel: a,
+      },
+      {
+        kind: "status_changed",
+        columnId: statusCol,
+        fromOptionId: opts[a],
+        fromLabel: a,
+        toOptionId: opts[b],
+        toLabel: b,
+      },
+      {
+        kind: "status_changed",
+        columnId: statusCol,
+        fromOptionId: opts[b],
+        fromLabel: b,
+        toOptionId: null,
+        toLabel: null,
+      },
     ]);
   });
 
   it("a non-status column logs nothing", async () => {
-    const o = db.insert(columnOptions).values({ userId: "local", columnId: other, label: "X", color: "blue", position: 0 }).returning().get().id;
+    const o = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: other, label: "X", color: "blue", position: 0 })
+      .returning()
+      .get().id;
     await setCellValue(appId, other, o);
     expect(events()).toHaveLength(0);
   });
@@ -77,7 +139,16 @@ describe("status_changed", () => {
 
   it("createApplication logs one event from blank for an initial status (submitted or default) and none for a blank one", async () => {
     const id = await mkApp([{ columnId: statusCol, value: opts[b] }]);
-    expect((await listActivity(id)).map((e) => e.details)).toEqual([{ kind: "status_changed", columnId: statusCol, fromOptionId: null, fromLabel: null, toOptionId: opts[b], toLabel: b }]);
+    expect((await listActivity(id)).map((e) => e.details)).toEqual([
+      {
+        kind: "status_changed",
+        columnId: statusCol,
+        fromOptionId: null,
+        fromLabel: null,
+        toOptionId: opts[b],
+        toLabel: b,
+      },
+    ]);
     const withDefault = await mkApp(); // the seeded Status default "To apply" applies
     expect((await listActivity(withDefault)).map((e) => e.details)).toMatchObject([{ toLabel: a, fromOptionId: null }]);
     expect(events(appId)).toHaveLength(0);
@@ -104,17 +175,35 @@ describe("status_changed", () => {
     const before = [x, y, z].map((i) => events(i).length);
     expect(await deleteOption(opts[a], opts[b], 2)).toEqual({ ok: true });
     expect([x, y, z].map((i) => events(i).length)).toEqual([before[0] + 1, before[1] + 1, before[2]]);
-    expect((await listActivity(x))[0].details).toEqual({ kind: "status_changed", columnId: statusCol, fromOptionId: opts[a], fromLabel: a, toOptionId: opts[b], toLabel: b });
+    expect((await listActivity(x))[0].details).toEqual({
+      kind: "status_changed",
+      columnId: statusCol,
+      fromOptionId: opts[a],
+      fromLabel: a,
+      toOptionId: opts[b],
+      toLabel: b,
+    });
     // the option is gone but the snapshot still reads
     expect(db.select().from(columnOptions).where(eq(columnOptions.id, opts[a])).get()).toBeUndefined();
 
     expect(await deleteOption(opts[b], null, 3)).toEqual({ ok: true }); // x, y (moved here) and z
-    expect((await listActivity(z))[0].details).toEqual({ kind: "status_changed", columnId: statusCol, fromOptionId: opts[b], fromLabel: b, toOptionId: null, toLabel: null });
+    expect((await listActivity(z))[0].details).toEqual({
+      kind: "status_changed",
+      columnId: statusCol,
+      fromOptionId: opts[b],
+      fromLabel: b,
+      toOptionId: null,
+      toLabel: null,
+    });
     expect([x, y, z].map((i) => events(i).length)).toEqual([before[0] + 2, before[1] + 2, before[2] + 1]);
   });
 
   it("deleting an option of a non-status column writes no events", async () => {
-    const o = db.insert(columnOptions).values({ userId: "local", columnId: other, label: "X", color: "blue", position: 0 }).returning().get().id;
+    const o = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: other, label: "X", color: "blue", position: 0 })
+      .returning()
+      .get().id;
     await setCellValue(appId, other, o);
     expect(await deleteOption(o, null, 1)).toEqual({ ok: true });
     expect(events()).toHaveLength(0);
@@ -129,10 +218,23 @@ describe("status_changed", () => {
 
 describe("file_uploaded", () => {
   it("is written with the file row, linked, with the user-editable upload date only in the details", async () => {
-    const id = await insertFileRow(fileRow({ originalName: "My CV.docx", storedName: "01-20250101-My_CV.docx", uploadDate: "2025-01-01" }));
+    const id = await insertFileRow(
+      fileRow({ originalName: "My CV.docx", storedName: "01-20250101-My_CV.docx", uploadDate: "2025-01-01" }),
+    );
     const [e] = await listActivity(appId);
-    expect(e).toMatchObject({ kind: "file_uploaded", fileId: id, submissionId: null,
-      details: { kind: "file_uploaded", fileId: id, originalName: "My CV.docx", storedName: "01-20250101-My_CV.docx", label: "CV", uploadDate: "2025-01-01" } });
+    expect(e).toMatchObject({
+      kind: "file_uploaded",
+      fileId: id,
+      submissionId: null,
+      details: {
+        kind: "file_uploaded",
+        fileId: id,
+        originalName: "My CV.docx",
+        storedName: "01-20250101-My_CV.docx",
+        label: "CV",
+        uploadDate: "2025-01-01",
+      },
+    });
     expect(Math.abs(e.occurredAt.getTime() - Date.now())).toBeLessThan(60_000);
   });
 
@@ -149,13 +251,24 @@ describe("file_uploaded", () => {
     try {
       await setFilesRoot(root);
       expect(await getFilesRoot()).toBe(root);
-      const up = () => storeUploadedFile({ applicationId: appId, label: "CV", uploadDate: "2026-11-08", file: new File(["same bytes"], "cv.docx") });
+      const up = () =>
+        storeUploadedFile({
+          applicationId: appId,
+          label: "CV",
+          uploadDate: "2026-11-08",
+          file: new File(["same bytes"], "cv.docx"),
+        });
       const first = await up();
       expect(first).toMatchObject({ ok: true, file: { id: expect.any(Number) } });
       expect(await up()).toMatchObject({ ok: true, duplicateOf: expect.anything() });
       const list = await listActivity(appId);
       expect(list).toHaveLength(1);
-      expect(list[0].details).toMatchObject({ kind: "file_uploaded", originalName: "cv.docx", label: "CV", uploadDate: "2026-11-08" });
+      expect(list[0].details).toMatchObject({
+        kind: "file_uploaded",
+        originalName: "cv.docx",
+        label: "CV",
+        uploadDate: "2026-11-08",
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -177,7 +290,16 @@ describe("submission_created", () => {
     if (!s.ok) throw new Error(s.error);
     const ev = (await listActivity(appId)).filter((e) => e.kind === "submission_created");
     expect(ev).toHaveLength(1);
-    expect(ev[0]).toMatchObject({ submissionId: s.id, details: { kind: "submission_created", submissionId: s.id, date: "2026-11-10", fileCount: 2, fileNames: ["CV_2.docx", "CV_1.docx"] } });
+    expect(ev[0]).toMatchObject({
+      submissionId: s.id,
+      details: {
+        kind: "submission_created",
+        submissionId: s.id,
+        date: "2026-11-10",
+        fileCount: 2,
+        fileNames: ["CV_2.docx", "CV_1.docx"],
+      },
+    });
     await createSubmission(appId, [], "2026-11-10", null); // zero files allowed
     const m = await createManualSubmission(appId, [f1], "2026-11-10", "n", null);
     expect(m.ok).toBe(true);
@@ -199,7 +321,13 @@ describe("submission_created", () => {
   it("an event failure rolls the status cell change back", async () => {
     db.run(sql`CREATE TRIGGER no_events BEFORE INSERT ON activity_events BEGIN SELECT RAISE(ABORT, 'no'); END`);
     await expect(setCellValue(appId, statusCol, opts["To apply"])).rejects.toThrow();
-    expect(db.select().from(cellValues).where(and(eq(cellValues.applicationId, appId), eq(cellValues.columnId, statusCol))).get()).toBeUndefined();
+    expect(
+      db
+        .select()
+        .from(cellValues)
+        .where(and(eq(cellValues.applicationId, appId), eq(cellValues.columnId, statusCol)))
+        .get(),
+    ).toBeUndefined();
   });
 
   it("a backdated submission sorts by its date, below events written later", async () => {
@@ -216,7 +344,11 @@ describe("submission_created", () => {
 describe("listActivity", () => {
   it("orders newest first by occurred_at then id, and only returns the user's events", async () => {
     const mk = (kind: "status_changed", occurredAt: number, userId = "local") =>
-      db.insert(activityEvents).values({ userId, applicationId: appId, kind, occurredAt: new Date(occurredAt), details: "{}" }).returning().get().id;
+      db
+        .insert(activityEvents)
+        .values({ userId, applicationId: appId, kind, occurredAt: new Date(occurredAt), details: "{}" })
+        .returning()
+        .get().id;
     const [i1, i2, i3] = [mk("status_changed", 2000), mk("status_changed", 1000), mk("status_changed", 2000)];
     mk("status_changed", 9000, "someone-else");
     const list = await listActivity(appId);

@@ -2,12 +2,34 @@
 
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // The shared confirm step (DESIGN.md "Dialogs and menus"). The description says what will be lost; Cancel takes the initial focus;
 // `busy` locks Escape and Cancel so a late result never lands on a closed dialog. Pass `trigger` (a Button) to open it from a button
 // (Radix returns focus to it); without one, the opener sets `open` and Radix returns focus to whatever had it.
-export function ConfirmDialog({ open, onOpenChange, trigger, title, description, children, error, confirmLabel, busyLabel, confirmDisabled, busy, onConfirm, onCloseAutoFocus }: {
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  trigger,
+  title,
+  description,
+  children,
+  error,
+  confirmLabel,
+  busyLabel,
+  confirmDisabled,
+  busy,
+  onConfirm,
+  onCloseAutoFocus,
+}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trigger?: React.ReactNode;
@@ -40,10 +62,18 @@ export function ConfirmDialog({ open, onOpenChange, trigger, title, description,
           <DialogDescription className="text-foreground">{description}</DialogDescription>
         </DialogHeader>
         {children}
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <DialogFooter>
-          <Button ref={cancel} type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="button" variant="destructive" disabled={busy || confirmDisabled} onClick={onConfirm}>{busy ? busyLabel : confirmLabel}</Button>
+          <Button ref={cancel} type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="button" variant="destructive" disabled={busy || confirmDisabled} onClick={onConfirm}>
+            {busy ? busyLabel : confirmLabel}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

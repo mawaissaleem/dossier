@@ -13,8 +13,20 @@ import { usePinRow } from "./row-pins";
 
 // Click-to-edit text/number/date/link cell. A link with a safe `href` shows as an anchor (new tab) plus an Edit button; an unsafe or blank one is plain text. Edit state is local to this component, and the table keys it by application id + column id.
 // Enter or blur saves, Escape cancels. The server validates (no rules here beyond the input type) and its error is shown with the typed text kept.
-export function EditableCell({ applicationId, columnId, text, label, kind, href = null }: {
-  applicationId: number; columnId: number; text: string; label: string; kind: EditorKind; href?: string | null;
+export function EditableCell({
+  applicationId,
+  columnId,
+  text,
+  label,
+  kind,
+  href = null,
+}: {
+  applicationId: number;
+  columnId: number;
+  text: string;
+  label: string;
+  kind: EditorKind;
+  href?: string | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -53,13 +65,26 @@ export function EditableCell({ applicationId, columnId, text, label, kind, href 
   function commit() {
     if (locked.current) return; // a second save while one is in flight
     // A date input reports "" for a half-typed date; saving that would silently clear the stored date.
-    if (input.current?.validity.badInput) { setError("Enter a valid date as YYYY-MM-DD."); return; }
-    if (draft.trim() === text) { setEditing(false); setError(null); return; } // unchanged: no server call
+    if (input.current?.validity.badInput) {
+      setError("Enter a valid date as YYYY-MM-DD.");
+      return;
+    }
+    if (draft.trim() === text) {
+      setEditing(false);
+      setError(null);
+      return;
+    } // unchanged: no server call
     locked.current = true;
     startTransition(async () => {
       try {
         const r = await updateCell(applicationId, columnId, draft);
-        if (r.ok) { setEditing(false); setError(null); } else { refocus.current = false; setError(r.error); }
+        if (r.ok) {
+          setEditing(false);
+          setError(null);
+        } else {
+          refocus.current = false;
+          setError(r.error);
+        }
       } catch {
         refocus.current = false;
         setError("Could not save. Try again.");
@@ -73,10 +98,24 @@ export function EditableCell({ applicationId, columnId, text, label, kind, href 
     return (
       <span className="flex h-8 items-center gap-1">
         {/* Never fetched or previewed (NFR-2): the browser only follows it on click. */}
-        <a href={href} target="_blank" rel="noopener noreferrer" title={href} className="truncate rounded-sm text-accent underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={href}
+          className="truncate rounded-sm text-accent underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           {linkLabel(href)}
         </a>
-        <Button ref={trigger} type="button" variant="ghost" size="icon-xs" onClick={start} aria-label={`Edit ${label}`} className="text-muted-foreground">
+        <Button
+          ref={trigger}
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={start}
+          aria-label={`Edit ${label}`}
+          className="text-muted-foreground"
+        >
           <PencilIcon aria-hidden="true" />
         </Button>
       </span>
@@ -84,7 +123,18 @@ export function EditableCell({ applicationId, columnId, text, label, kind, href 
   }
   if (!editing) {
     return (
-      <button ref={trigger} type="button" onClick={start} aria-label={`${label}: ${text || "empty"}`} title={text || undefined} className={cn("block h-8 w-full min-w-24 max-w-72 cursor-text truncate rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring", num && "ml-auto", num)}>
+      <button
+        ref={trigger}
+        type="button"
+        onClick={start}
+        aria-label={`${label}: ${text || "empty"}`}
+        title={text || undefined}
+        className={cn(
+          "block h-8 w-full min-w-24 max-w-72 cursor-text truncate rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          num && "ml-auto",
+          num,
+        )}
+      >
         {text}
       </button>
     );
@@ -105,14 +155,20 @@ export function EditableCell({ applicationId, columnId, text, label, kind, href 
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === "Enter") { refocus.current = true; commit(); }
-          else if (e.key === "Escape" && !locked.current) cancel(); // ignored while saving, so a failed save's error is never hidden
+          if (e.key === "Enter") {
+            refocus.current = true;
+            commit();
+          } else if (e.key === "Escape" && !locked.current) cancel(); // ignored while saving, so a failed save's error is never hidden
         }}
         style={{ minWidth: EDITOR_MIN_WIDTH }}
         className={cn("px-1.5 text-sm", num)}
       />
       {/* w-0 min-w-full: the message wraps inside the column instead of widening it. */}
-      {error && <p role="alert" className="mt-1 w-0 min-w-full text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-1 w-0 min-w-full text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </>
   );
 }

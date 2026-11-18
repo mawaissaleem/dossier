@@ -5,7 +5,8 @@ import { applications, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
 let db: ReturnType<typeof useTestDb>;
-const get = (qs: string, host = "localhost:3000") => GET(new NextRequest(`http://localhost:3000/api/search${qs}`, { headers: { host } }));
+const get = (qs: string, host = "localhost:3000") =>
+  GET(new NextRequest(`http://localhost:3000/api/search${qs}`, { headers: { host } }));
 
 beforeEach(() => {
   db = useTestDb();

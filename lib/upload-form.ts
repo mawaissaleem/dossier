@@ -8,15 +8,19 @@ export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 // Label list used until the `file_labels` setting exists (seeded with the same list by `npm run db:seed`).
 export const DEFAULT_FILE_LABELS = ["CV", "Cover letter", "SOP", "Transcript", "Writing sample"];
 export type UploadFields = { label: string; uploadDate: string };
-export type UploadFieldsResult = { ok: true; fields: UploadFields } | { ok: false; errors: { label?: string; uploadDate?: string } };
+export type UploadFieldsResult =
+  { ok: true; fields: UploadFields } | { ok: false; errors: { label?: string; uploadDate?: string } };
 
 // A missing or blank date means today (server local time); a missing label is an error.
 export function parseUploadFields(label: unknown, date: unknown, today: string = todayLocal()): UploadFieldsResult {
   const errors: { label?: string; uploadDate?: string } = {};
   const l = typeof label === "string" ? label.trim() : "";
   if (l === "") errors.label = "Choose a label.";
-  else if (l.length > MAX_LABEL || /[\u0000-\u001f\u007f-\u009f]/.test(l)) errors.label = `Label must be one line of at most ${MAX_LABEL} characters.`;
+  else if (l.length > MAX_LABEL || /[\u0000-\u001f\u007f-\u009f]/.test(l))
+    errors.label = `Label must be one line of at most ${MAX_LABEL} characters.`;
   const d = date === null || date === undefined || (typeof date === "string" && date.trim() === "") ? today : date;
   if (typeof d !== "string" || !isValidDate(d)) errors.uploadDate = "Use a real date as YYYY-MM-DD.";
-  return Object.keys(errors).length ? { ok: false, errors } : { ok: true, fields: { label: l, uploadDate: d as string } };
+  return Object.keys(errors).length
+    ? { ok: false, errors }
+    : { ok: true, fields: { label: l, uploadDate: d as string } };
 }

@@ -11,7 +11,11 @@ let city: number;
 let site: number;
 let salary: number;
 const app = (title: string, over: Partial<typeof applications.$inferInsert> = {}) =>
-  db.insert(applications).values({ userId: "local", trackId: job, title, ...over }).returning().get().id;
+  db
+    .insert(applications)
+    .values({ userId: "local", trackId: job, title, ...over })
+    .returning()
+    .get().id;
 const cell = (applicationId: number, columnId: number, valueText: string, userId = "local") =>
   db.insert(cellValues).values({ userId, applicationId, columnId, valueText }).run();
 const note = (applicationId: number, body: string, userId = "local", createdAt = new Date()) =>
@@ -34,13 +38,25 @@ describe("searchApplications", () => {
   it("finds by title and by text and link cells, across tracks, with track and matched field", async () => {
     const a = app("Acme Robotics");
     const b = app("Other", { trackId: phd });
-    const phdCity = db.insert(columns).values({ userId: "local", trackId: phd, name: "Lab", type: "text", position: 0 }).returning().get().id;
+    const phdCity = db
+      .insert(columns)
+      .values({ userId: "local", trackId: phd, name: "Lab", type: "text", position: 0 })
+      .returning()
+      .get().id;
     cell(b, phdCity, "Northvale robotics lab");
     cell(a, site, "https://careers.acme.example/jobs/42");
     const hits = await searchApplications("robotics");
     expect(hits.map((h) => h.id)).toEqual([a, b]); // title match first
-    expect(hits[0]).toMatchObject({ title: "Acme Robotics", archived: false, track: { id: job, name: "Job" }, matched: { kind: "title", column: null } });
-    expect(hits[1]).toMatchObject({ track: { id: phd, name: "PhD" }, matched: { kind: "cell", column: "Lab", snippet: "Northvale robotics lab" } });
+    expect(hits[0]).toMatchObject({
+      title: "Acme Robotics",
+      archived: false,
+      track: { id: job, name: "Job" },
+      matched: { kind: "title", column: null },
+    });
+    expect(hits[1]).toMatchObject({
+      track: { id: phd, name: "PhD" },
+      matched: { kind: "cell", column: "Lab", snippet: "Northvale robotics lab" },
+    });
     expect((await searchApplications("careers.acme"))[0].matched).toMatchObject({ column: "Site" });
     expect(Object.keys(hits[0]).sort()).toEqual(["archived", "id", "matched", "title", "track"]); // no internal tier leaks
   });
@@ -89,7 +105,11 @@ describe("searchApplications", () => {
 
   it("never returns another user's data", async () => {
     const other = db.insert(tracks).values({ userId: "someone", name: "Theirs", position: 0 }).returning().get().id;
-    const oc = db.insert(columns).values({ userId: "someone", trackId: other, name: "City", type: "text", position: 0 }).returning().get().id;
+    const oc = db
+      .insert(columns)
+      .values({ userId: "someone", trackId: other, name: "City", type: "text", position: 0 })
+      .returning()
+      .get().id;
     const theirs = app("Acme secret", { userId: "someone", trackId: other });
     cell(theirs, oc, "acme", "someone");
     const mine = app("Acme");
@@ -139,7 +159,9 @@ describe("searchApplications", () => {
     note(app("Theirs", { userId: "someone", trackId: other }), "wombat", "someone");
     const gone = app("Gone");
     note(gone, "quokka");
-    expect(await searchApplications("wombat")).toMatchObject([{ title: "Mine", archived: true, matched: { kind: "note" } }]);
+    expect(await searchApplications("wombat")).toMatchObject([
+      { title: "Mine", archived: true, matched: { kind: "note" } },
+    ]);
     expect(await titles("secretword")).toEqual([]);
     expect(await titles("quokka")).toEqual(["Gone"]);
     db.delete(applications).where(eq(applications.id, gone)).run();
@@ -162,9 +184,22 @@ describe("searchApplications", () => {
   });
 
   it("runs a fixed 3 queries and stays fast at 2000 applications", async () => {
-    const ids = db.insert(applications).values(Array.from({ length: 2000 }, (_, i) => ({ userId: "local", trackId: job, title: `Company ${i}` }))).returning({ id: applications.id }).all();
+    const ids = db
+      .insert(applications)
+      .values(Array.from({ length: 2000 }, (_, i) => ({ userId: "local", trackId: job, title: `Company ${i}` })))
+      .returning({ id: applications.id })
+      .all();
     for (let at = 0; at < ids.length; at += 200)
-      db.insert(cellValues).values(ids.slice(at, at + 200).map(({ id }) => ({ userId: "local", applicationId: id, columnId: city, valueText: `City of ${id} Zürich` }))).run();
+      db.insert(cellValues)
+        .values(
+          ids.slice(at, at + 200).map(({ id }) => ({
+            userId: "local",
+            applicationId: id,
+            columnId: city,
+            valueText: `City of ${id} Zürich`,
+          })),
+        )
+        .run();
     const prepare = vi.spyOn(db.$client, "prepare");
     const started = performance.now();
     const hits = await searchApplications("zurich company 1999");

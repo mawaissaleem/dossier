@@ -4,7 +4,9 @@ import { getFilesRoot, getSetting, setFilesRoot, setSetting } from "@/lib/db/set
 import { dropTestDb, useTestDb } from "./helpers/db";
 
 let db: ReturnType<typeof useTestDb>;
-beforeEach(() => { db = useTestDb(); });
+beforeEach(() => {
+  db = useTestDb();
+});
 afterEach(dropTestDb);
 
 describe("settings data layer", () => {

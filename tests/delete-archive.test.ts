@@ -1,7 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { refresh } from "next/cache";
-import { archiveApplication as archiveAction, deleteApplication as deleteAction, fetchDeleteImpact as fetchImpact } from "@/app/actions/application-state";
-import { archiveApplication, deleteApplication, getApplicationDetail, getDeleteImpact, listApplicationRows } from "@/lib/db/applications";
+import {
+  archiveApplication as archiveAction,
+  deleteApplication as deleteAction,
+  fetchDeleteImpact as fetchImpact,
+} from "@/app/actions/application-state";
+import {
+  archiveApplication,
+  deleteApplication,
+  getApplicationDetail,
+  getDeleteImpact,
+  listApplicationRows,
+} from "@/lib/db/applications";
 import { setCellValue } from "@/lib/db/cells";
 import { applications, cellValues, columns, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
@@ -12,11 +22,16 @@ let db: ReturnType<typeof useTestDb>;
 let trackId: number;
 let textCol: number;
 let numCol: number;
-const mkApp = (title: string) => db.insert(applications).values({ userId: "local", trackId, title }).returning().get().id;
+const mkApp = (title: string) =>
+  db.insert(applications).values({ userId: "local", trackId, title }).returning().get().id;
 // Another user's track, application and cell value.
 function otherUsersApp() {
   const t = db.insert(tracks).values({ userId: "other", name: "X", position: 0 }).returning().get().id;
-  const c = db.insert(columns).values({ userId: "other", trackId: t, name: "c", type: "text", position: 0 }).returning().get().id;
+  const c = db
+    .insert(columns)
+    .values({ userId: "other", trackId: t, name: "c", type: "text", position: 0 })
+    .returning()
+    .get().id;
   const a = db.insert(applications).values({ userId: "other", trackId: t, title: "Theirs" }).returning().get().id;
   db.insert(cellValues).values({ userId: "other", applicationId: a, columnId: c, valueText: "v" }).run();
   return a;
@@ -26,8 +41,16 @@ beforeEach(() => {
   vi.mocked(refresh).mockClear();
   db = useTestDb();
   trackId = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-  textCol = db.insert(columns).values({ userId: "local", trackId, name: "t", type: "text", position: 0 }).returning().get().id;
-  numCol = db.insert(columns).values({ userId: "local", trackId, name: "n", type: "number", position: 1 }).returning().get().id;
+  textCol = db
+    .insert(columns)
+    .values({ userId: "local", trackId, name: "t", type: "text", position: 0 })
+    .returning()
+    .get().id;
+  numCol = db
+    .insert(columns)
+    .values({ userId: "local", trackId, name: "n", type: "number", position: 1 })
+    .returning()
+    .get().id;
 });
 afterEach(dropTestDb);
 
@@ -45,12 +68,21 @@ describe("archive", () => {
     const theirs = otherUsersApp();
     expect(await archiveApplication(theirs, true)).toBe(false);
     expect(await archiveApplication(9999, true)).toBe(false);
-    expect(db.select().from(applications).all().find((a) => a.id === theirs)?.archived).toBe(false);
+    expect(
+      db
+        .select()
+        .from(applications)
+        .all()
+        .find((a) => a.id === theirs)?.archived,
+    ).toBe(false);
   });
 
   it("action validates arguments and refreshes only on success", async () => {
     const id = mkApp("A");
-    expect(await archiveAction(id, "yes" as unknown as boolean)).toEqual({ ok: false, error: "Application not found." });
+    expect(await archiveAction(id, "yes" as unknown as boolean)).toEqual({
+      ok: false,
+      error: "Application not found.",
+    });
     expect(await archiveAction(0, true)).toEqual({ ok: false, error: "Application not found." });
     expect(await archiveAction(9999, true)).toEqual({ ok: false, error: "Application not found." });
     expect(refresh).not.toHaveBeenCalled();
@@ -62,11 +94,23 @@ describe("archive", () => {
 describe("getDeleteImpact", () => {
   it("counts stored cell values (blank = none), files are 0, title included", async () => {
     const id = mkApp("Acme");
-    expect(await getDeleteImpact(id)).toEqual({ title: "Acme", cellCount: 0, fileCount: 0, submissionCount: 0, noteCount: 0 });
+    expect(await getDeleteImpact(id)).toEqual({
+      title: "Acme",
+      cellCount: 0,
+      fileCount: 0,
+      submissionCount: 0,
+      noteCount: 0,
+    });
     await setCellValue(id, textCol, "x");
     await setCellValue(id, numCol, "3");
     await setCellValue(id, numCol, ""); // blank deletes the row
-    expect(await getDeleteImpact(id)).toEqual({ title: "Acme", cellCount: 1, fileCount: 0, submissionCount: 0, noteCount: 0 });
+    expect(await getDeleteImpact(id)).toEqual({
+      title: "Acme",
+      cellCount: 1,
+      fileCount: 0,
+      submissionCount: 0,
+      noteCount: 0,
+    });
   });
 
   it("is null for another user's or a missing application", async () => {
@@ -81,17 +125,36 @@ describe("delete", () => {
     const keep = mkApp("B");
     await setCellValue(id, textCol, "x");
     await setCellValue(keep, textCol, "y");
-    expect(await deleteApplication(id, { cellCount: 1, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual({ ok: true, trackId });
+    expect(await deleteApplication(id, { cellCount: 1, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual({
+      ok: true,
+      trackId,
+    });
     expect(await getApplicationDetail(id)).toBeNull();
-    expect(db.select().from(cellValues).all().map((c) => c.applicationId)).toEqual([keep]);
+    expect(
+      db
+        .select()
+        .from(cellValues)
+        .all()
+        .map((c) => c.applicationId),
+    ).toEqual([keep]);
   });
 
   it("does not delete another user's or a missing application", async () => {
     const theirs = otherUsersApp();
     const missing = { ok: false, error: "Application not found." };
-    expect(await deleteApplication(theirs, { cellCount: 1, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual(missing);
-    expect(await deleteApplication(9999, { cellCount: 0, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual(missing);
-    expect(db.select().from(applications).all().some((a) => a.id === theirs)).toBe(true);
+    expect(await deleteApplication(theirs, { cellCount: 1, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual(
+      missing,
+    );
+    expect(await deleteApplication(9999, { cellCount: 0, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual(
+      missing,
+    );
+    expect(
+      db
+        .select()
+        .from(applications)
+        .all()
+        .some((a) => a.id === theirs),
+    ).toBe(true);
     expect(db.select().from(cellValues).all()).toHaveLength(1);
   });
 
@@ -100,10 +163,24 @@ describe("delete", () => {
     await setCellValue(id, textCol, "x");
     const shown = { cellCount: 1, fileCount: 0, submissionCount: 0, noteCount: 0 };
     for (const bad of [false, undefined, "true", 1, null, {}]) {
-      expect(await deleteAction(id, bad as unknown as boolean, shown)).toEqual({ ok: false, error: "Deleting must be confirmed." });
+      expect(await deleteAction(id, bad as unknown as boolean, shown)).toEqual({
+        ok: false,
+        error: "Deleting must be confirmed.",
+      });
     }
-    for (const bad of [undefined, null, {}, { cellCount: 1 }, { cellCount: -1, fileCount: 0, submissionCount: 0, noteCount: 0 }, { cellCount: 1.5, fileCount: 0, submissionCount: 0, noteCount: 0 }, { cellCount: "1", fileCount: 0, submissionCount: 0, noteCount: 0 }]) {
-      expect(await deleteAction(id, true, bad as unknown as typeof shown), JSON.stringify(bad)).toEqual({ ok: false, error: "Deleting must be confirmed." });
+    for (const bad of [
+      undefined,
+      null,
+      {},
+      { cellCount: 1 },
+      { cellCount: -1, fileCount: 0, submissionCount: 0, noteCount: 0 },
+      { cellCount: 1.5, fileCount: 0, submissionCount: 0, noteCount: 0 },
+      { cellCount: "1", fileCount: 0, submissionCount: 0, noteCount: 0 },
+    ]) {
+      expect(await deleteAction(id, true, bad as unknown as typeof shown), JSON.stringify(bad)).toEqual({
+        ok: false,
+        error: "Deleting must be confirmed.",
+      });
     }
     expect(await getApplicationDetail(id)).not.toBeNull();
     expect(db.select().from(cellValues).all()).toHaveLength(1);
@@ -112,7 +189,10 @@ describe("delete", () => {
   it("action with confirmation deletes and returns the track id; bad ids and other users fail", async () => {
     const id = mkApp("A");
     const none = { cellCount: 0, fileCount: 0, submissionCount: 0, noteCount: 0 };
-    expect(await deleteAction("1" as unknown as number, true, none)).toEqual({ ok: false, error: "Application not found." });
+    expect(await deleteAction("1" as unknown as number, true, none)).toEqual({
+      ok: false,
+      error: "Application not found.",
+    });
     expect(await deleteAction(otherUsersApp(), true, none)).toEqual({ ok: false, error: "Application not found." });
     expect(await deleteAction(id, true, none)).toEqual({ ok: true, trackId });
     expect(await deleteAction(id, true, none)).toEqual({ ok: false, error: "Application not found." });
@@ -129,12 +209,21 @@ describe("stale delete impact (NFR-4: never delete more than the dialog stated)"
     const shown = await fetchImpact(id);
     expect(shown).toEqual({ ok: true, title: "A", cellCount: 1, fileCount: 0, submissionCount: 0, noteCount: 0 });
     await setCellValue(id, numCol, "3"); // another tab fills a cell while the dialog is open
-    expect(await deleteAction(id, true, { cellCount: 1, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual(STALE);
-    expect(await deleteAction(id, true, { cellCount: 3, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual(STALE);
-    expect(await deleteAction(id, true, { cellCount: 2, fileCount: 1, submissionCount: 0, noteCount: 0 })).toEqual(STALE);
+    expect(await deleteAction(id, true, { cellCount: 1, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual(
+      STALE,
+    );
+    expect(await deleteAction(id, true, { cellCount: 3, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual(
+      STALE,
+    );
+    expect(await deleteAction(id, true, { cellCount: 2, fileCount: 1, submissionCount: 0, noteCount: 0 })).toEqual(
+      STALE,
+    );
     expect(await getApplicationDetail(id)).not.toBeNull();
     expect(db.select().from(cellValues).all()).toHaveLength(2);
-    expect(await deleteAction(id, true, { cellCount: 2, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual({ ok: true, trackId }); // after re-fetching the fresh count
+    expect(await deleteAction(id, true, { cellCount: 2, fileCount: 0, submissionCount: 0, noteCount: 0 })).toEqual({
+      ok: true,
+      trackId,
+    }); // after re-fetching the fresh count
   });
 
   it("fetchDeleteImpact validates the id and hides other users' applications", async () => {

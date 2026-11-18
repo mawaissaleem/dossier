@@ -31,21 +31,41 @@ export function CapacityForm({ initial }: { initial: number }) {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3">
-      <Label htmlFor="capacity-input">Applications per week ({MIN_CAPACITY} to {MAX_CAPACITY})</Label>
+    <form
+      onSubmit={submit}
+      noValidate
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3"
+    >
+      <Label htmlFor="capacity-input">
+        Applications per week ({MIN_CAPACITY} to {MAX_CAPACITY})
+      </Label>
       <Input
         id="capacity-input"
         type="text"
         inputMode="numeric"
         className="max-w-24"
         value={value}
-        onChange={(e) => { setValue(e.target.value); setSaved(false); setError(null); }}
+        onChange={(e) => {
+          setValue(e.target.value);
+          setSaved(false);
+          setError(null);
+        }}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "capacity-err" : undefined}
       />
-      <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
-      {error && <p id="capacity-err" role="alert" className="text-sm text-destructive">{error}</p>}
-      {saved && <p role="status" className="text-sm text-muted-foreground">Saved.</p>}
+      <Button type="submit" disabled={pending}>
+        {pending ? "Saving…" : "Save"}
+      </Button>
+      {error && (
+        <p id="capacity-err" role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      {saved && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Saved.
+        </p>
+      )}
     </form>
   );
 }

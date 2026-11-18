@@ -1,4 +1,15 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
@@ -25,8 +36,14 @@ vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
 
 let db: ReturnType<typeof useTestDb>;
 let base: string, root: string, dest: string, appA: number, appB: number;
-const sub = (name: string) => { const p = join(base, name); mkdirSync(p); return p; };
-const exdev = async () => { throw Object.assign(new Error("cross-device"), { code: "EXDEV" }); };
+const sub = (name: string) => {
+  const p = join(base, name);
+  mkdirSync(p);
+  return p;
+};
+const exdev = async () => {
+  throw Object.assign(new Error("cross-device"), { code: "EXDEV" });
+};
 
 async function mkApp(title: string) {
   const r = await createApplication({ title, trackId: db.select().from(tracks).all()[0].id, values: [] });
@@ -34,11 +51,20 @@ async function mkApp(title: string) {
   return r.id;
 }
 async function store(app: number, name: string, content: string, date = "2026-11-08") {
-  const r = await storeUploadedFile({ applicationId: app, file: new File([content], name), label: "CV", uploadDate: date });
+  const r = await storeUploadedFile({
+    applicationId: app,
+    file: new File([content], name),
+    label: "CV",
+    uploadDate: date,
+  });
   if (!r.ok || !("file" in r)) throw new Error("store failed");
   return r.file;
 }
-const impact = async () => { const r = await fetchMoveImpact(); if (!r.ok) throw new Error(r.error); return { fileCount: r.fileCount, totalBytes: r.totalBytes }; };
+const impact = async () => {
+  const r = await fetchMoveImpact();
+  if (!r.ok) throw new Error(r.error);
+  return { fileCount: r.fileCount, totalBytes: r.totalBytes };
+};
 const move = async (to: string) => moveFilesRoot(to, await impact());
 const rows = () => db.select().from(files).all();
 
@@ -62,7 +88,8 @@ afterEach(() => {
 });
 
 const asReq = (url: string) => new NextRequest(`http://localhost:3000${url}`, { headers: { host: "localhost:3000" } });
-const open = (id: number) => getFile(asReq(`/api/files/${id}`), { params: Promise.resolve({ id: String(id) }) } as never);
+const open = (id: number) =>
+  getFile(asReq(`/api/files/${id}`), { params: Promise.resolve({ id: String(id) }) } as never);
 
 describe("Move (AT-14, first way)", () => {
   it("moves by rename, switches the root, removes the old folders, and Open, zip and backup still work", async () => {
@@ -75,7 +102,9 @@ describe("Move (AT-14, first way)", () => {
 
     expect((await open(f1.id)).status).toBe(200);
     expect(await verifyStoredFile(f1.id)).toMatchObject({ ok: true });
-    const z = await getZip(asReq(`/api/applications/${appB}/zip`), { params: Promise.resolve({ id: String(appB) }) } as never);
+    const z = await getZip(asReq(`/api/applications/${appB}/zip`), {
+      params: Promise.resolve({ id: String(appB) }),
+    } as never);
     expect(z.status).toBe(200);
     writeFileSync(join(base, "z.zip"), Buffer.from(await z.arrayBuffer()));
     expect([...readZip(join(base, "z.zip")).values()].map(String)).toEqual(["bravo bravo"]);
@@ -103,7 +132,9 @@ describe("Move (AT-14, first way)", () => {
     const badCopy = (async (_src: string, dst: string) => writeFileSync(dst, "garbled")) as never;
     const r = await moveStoredFiles(to, await impact(), { rename: exdev as never, copyFile: badCopy });
     expect(r.ok).toBe(false);
-    expect(!r.ok && r.error).toMatch(/did not copy correctly: the copy differs from the original.*Your files folder was not changed/);
+    expect(!r.ok && r.error).toMatch(
+      /did not copy correctly: the copy differs from the original.*Your files folder was not changed/,
+    );
     expect(readdirSync(to)).toEqual([]);
     expect(await getFilesRoot()).toBe(root);
     expect(readFileSync(join(root, f1.relativePath), "utf8")).toBe("alpha");
@@ -125,7 +156,10 @@ describe("Move (AT-14, first way)", () => {
   it("a rename that fails half way puts the first file back and leaves the old root in use", async () => {
     const to = sub("new");
     let n = 0;
-    const flaky = (async (a: string, b: string) => { if (++n === 2) throw new Error("disk says no"); return (await import("node:fs/promises")).rename(a, b); }) as never;
+    const flaky = (async (a: string, b: string) => {
+      if (++n === 2) throw new Error("disk says no");
+      return (await import("node:fs/promises")).rename(a, b);
+    }) as never;
     const r = await moveStoredFiles(to, await impact(), { rename: flaky });
     expect(!r.ok && r.error).toMatch(/disk says no.*not changed/);
     expect(readdirSync(to)).toEqual([]);
@@ -155,8 +189,14 @@ describe("Move (AT-14, first way)", () => {
     mkdirSync(join(root, "inside"));
     await saveBackupDestination(dest);
     const cases: [string, RegExp][] = [
-      [full, /not empty/], [join(root, "inside"), /outside the current/], [root, /outside the current/], [base, /does not contain/],
-      [dest, /backup folder/], [join(base, "nope"), /does not exist/], ["rel/dir", /full path/], ["   ", /full path/],
+      [full, /not empty/],
+      [join(root, "inside"), /outside the current/],
+      [root, /outside the current/],
+      [base, /does not contain/],
+      [dest, /backup folder/],
+      [join(base, "nope"), /does not exist/],
+      ["rel/dir", /full path/],
+      ["   ", /full path/],
     ];
     for (const [to, re] of cases) {
       const r = await move(to);
@@ -167,13 +207,20 @@ describe("Move (AT-14, first way)", () => {
     expect(!r.ok && r.error).toMatch(/changed since the confirmation/);
     expect((await moveFilesRoot(sub("e2"), undefined)).ok).toBe(false);
     expect(await getFilesRoot()).toBe(root);
-    expect(rows().map((x) => x.relativePath).sort()).toEqual([f1.relativePath, f2.relativePath].sort());
+    expect(
+      rows()
+        .map((x) => x.relativePath)
+        .sort(),
+    ).toEqual([f1.relativePath, f2.relativePath].sort());
     expect(existsSync(join(root, f1.relativePath))).toBe(true);
   });
 
   it("refuses when the current folder is gone (points to Re-point) or a stored file is missing", async () => {
     rmSync(join(root, f1.relativePath));
-    expect(await move(sub("new"))).toMatchObject({ ok: false, error: expect.stringMatching(/missing from the current files folder/) });
+    expect(await move(sub("new"))).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/missing from the current files folder/),
+    });
     expect(readdirSync(join(base, "new"))).toEqual([]);
     renameSync(root, join(base, "moved"));
     expect(await move(sub("new2"))).toMatchObject({ ok: false, error: expect.stringMatching(/Re-point/) });
@@ -230,7 +277,10 @@ describe("Re-point (AT-14, second way)", () => {
     writeFileSync(join(to, f2.relativePath), "x");
     expect(await repointFilesRoot(to)).toMatchObject({ ok: true, path: to, checked: 2, changed: 1 });
     expect(await getFilesRoot()).toBe(to);
-    expect(rows().map((r) => [r.id, r.integrity])).toEqual([[f1.id, "ok"], [f2.id, "mismatch"]]);
+    expect(rows().map((r) => [r.id, r.integrity])).toEqual([
+      [f1.id, "ok"],
+      [f2.id, "mismatch"],
+    ]);
     expect((await open(f2.id)).status).toBe(409); // Open shows the changed page
   });
 
@@ -280,7 +330,8 @@ describe("the shared lock", () => {
     if (!held.ok) throw new Error("lock");
     const to = sub("new");
     const e = await impact();
-    for (const r of [await moveFilesRoot(to, e), await repointFilesRoot(to), await saveFilesRoot(to)]) expect(!r.ok && r.error).toMatch(/backup or restore is running/);
+    for (const r of [await moveFilesRoot(to, e), await repointFilesRoot(to), await saveFilesRoot(to)])
+      expect(!r.ok && r.error).toMatch(/backup or restore is running/);
     expect(await getFilesRoot()).toBe(root);
     held.release();
 
@@ -289,7 +340,10 @@ describe("the shared lock", () => {
     await saveBackupDestination(dest);
     expect(await backUpNow()).toEqual({ ok: false, error: expect.stringMatching(/files folder is being changed/) });
     expect(readdirSync(dest)).toEqual([]);
-    expect(await moveFilesRoot(to, e)).toMatchObject({ ok: false, error: expect.stringMatching(/already being changed/) });
+    expect(await moveFilesRoot(to, e)).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/already being changed/),
+    });
     mv.release();
     expect((await backUpNow()).ok).toBe(true);
     expect((await moveFilesRoot(to, e)).ok).toBe(true); // released
@@ -298,14 +352,22 @@ describe("the shared lock", () => {
   it("uploads are refused during a move, and a move waits for running uploads", async () => {
     const mv = tryLock("move");
     if (!mv.ok) throw new Error("lock");
-    const r = await storeUploadedFile({ applicationId: appA, file: new File(["z"], "z.pdf"), label: "CV", uploadDate: "2026-11-08" });
+    const r = await storeUploadedFile({
+      applicationId: appA,
+      file: new File(["z"], "z.pdf"),
+      label: "CV",
+      uploadDate: "2026-11-08",
+    });
     expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/being changed/) });
     mv.release();
 
     const w = beginWrite();
     if (!w.ok) throw new Error("write");
     const to = sub("new");
-    expect(await moveFilesRoot(to, await impact())).toMatchObject({ ok: false, error: expect.stringMatching(/upload or delete is in progress/) });
+    expect(await moveFilesRoot(to, await impact())).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/upload or delete is in progress/),
+    });
     w.end();
     expect((await moveFilesRoot(to, await impact())).ok).toBe(true);
     expect(rows().length).toBe(2); // the refused upload left no row
@@ -315,9 +377,20 @@ describe("the shared lock", () => {
     for (const job of ["restore", "move"] as const) {
       const held = tryLock(job);
       if (!held.ok) throw new Error("lock");
-      const up = await storeUploadedFile({ applicationId: appA, file: new File(["z"], "z.pdf"), label: "CV", uploadDate: "2026-11-08" });
-      expect(up).toMatchObject({ ok: false, error: expect.stringMatching(job === "restore" ? /restore is running/ : /being changed/) });
-      const lockMessage = { ok: false, error: expect.stringMatching(job === "restore" ? /restore is running/ : /being changed/) };
+      const up = await storeUploadedFile({
+        applicationId: appA,
+        file: new File(["z"], "z.pdf"),
+        label: "CV",
+        uploadDate: "2026-11-08",
+      });
+      expect(up).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(job === "restore" ? /restore is running/ : /being changed/),
+      });
+      const lockMessage = {
+        ok: false,
+        error: expect.stringMatching(job === "restore" ? /restore is running/ : /being changed/),
+      };
       expect(await deleteStoredFile(f1.id, 0)).toMatchObject(lockMessage);
       // appB's real counts, so only the lock can be what refuses this (a wrong count would be refused as stale)
       expect(await deleteApplicationWithFiles(appB, (await getDeleteImpact(appB))!)).toMatchObject(lockMessage);
@@ -329,7 +402,11 @@ describe("the shared lock", () => {
 
     const w = beginWrite(); // a running upload or delete
     if (!w.ok) throw new Error("write");
-    for (const job of ["restore", "move"] as const) expect(tryLock(job)).toMatchObject({ ok: false, error: expect.stringMatching(/upload or delete is in progress/) });
+    for (const job of ["restore", "move"] as const)
+      expect(tryLock(job)).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(/upload or delete is in progress/),
+      });
     const b = tryLock("backup"); // a backup does not wait for writes
     expect(b.ok).toBe(true);
     if (b.ok) b.release();

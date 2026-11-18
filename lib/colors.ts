@@ -13,7 +13,8 @@ export const CHIP_CLASSES: Record<string, string> = {
 };
 
 // Unknown token (hasOwn, so "constructor" is unknown too) falls back to gray.
-export const chipClasses = (token: string): string => (Object.hasOwn(CHIP_CLASSES, token) ? CHIP_CLASSES[token] : CHIP_CLASSES.gray);
+export const chipClasses = (token: string): string =>
+  Object.hasOwn(CHIP_CLASSES, token) ? CHIP_CLASSES[token] : CHIP_CLASSES.gray;
 
 export const PALETTE: string[] = Object.keys(CHIP_CLASSES);
 export const isPaletteToken = (t: unknown): t is string => typeof t === "string" && Object.hasOwn(CHIP_CLASSES, t);

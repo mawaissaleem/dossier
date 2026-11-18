@@ -25,13 +25,26 @@ async function mkApp(title: string) {
   return r.id;
 }
 async function store(name: string, content: string, date = "2026-11-08", app = appId) {
-  const r = await storeUploadedFile({ applicationId: app, file: new File([content], name), label: "CV", uploadDate: date });
+  const r = await storeUploadedFile({
+    applicationId: app,
+    file: new File([content], name),
+    label: "CV",
+    uploadDate: date,
+  });
   if (!r.ok || !("file" in r)) throw new Error("store failed");
   return r.file;
 }
-const edit = (rel: string, content: string) => { chmodSync(join(root, rel), 0o644); writeFileSync(join(root, rel), content); };
+const edit = (rel: string, content: string) => {
+  chmodSync(join(root, rel), 0o644);
+  writeFileSync(join(root, rel), content);
+};
 const get = (id: number | string, query = "", headers: Record<string, string> = {}) =>
-  GET(new NextRequest(`http://localhost:3000/api/applications/${id}/zip${query}`, { headers: { host: "localhost:3000", ...headers } }), { params: Promise.resolve({ id: String(id) }) } as never);
+  GET(
+    new NextRequest(`http://localhost:3000/api/applications/${id}/zip${query}`, {
+      headers: { host: "localhost:3000", ...headers },
+    }),
+    { params: Promise.resolve({ id: String(id) }) } as never,
+  );
 // Reads the response body into a temp file and parses it back with the test zip reader.
 async function unzip(res: Response) {
   const f = join(base, "out.zip");
@@ -71,7 +84,9 @@ describe("GET /api/applications/:id/zip", () => {
     const res = await get(appId);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("application/zip");
-    expect(res.headers.get("content-disposition")).toMatch(/^attachment; filename="[a-z0-9-]+-files-\d{8}\.zip"; filename\*=UTF-8''/);
+    expect(res.headers.get("content-disposition")).toMatch(
+      /^attachment; filename="[a-z0-9-]+-files-\d{8}\.zip"; filename\*=UTF-8''/,
+    );
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(res.headers.get("cross-origin-resource-policy")).toBe("same-origin");
@@ -112,7 +127,9 @@ describe("GET /api/applications/:id/zip", () => {
     expect(html).not.toContain(b.storedName);
     expect(html).toContain(`/api/applications/${appId}/zip?anyway=1`);
     expect(html).toContain(`<a href="/applications/${appId}" target="_top">Back to the application</a>`);
-    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
+    expect(res.headers.get("content-security-policy")).toBe(
+      "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'",
+    );
     expect(integrityOf(a.id)).toBe("mismatch");
     const z = await unzip(await get(appId, "?anyway=1"));
     expect(z.get(a.storedName)!.toString()).toBe("tampered");
@@ -188,7 +205,11 @@ describe("GET /api/applications/:id/zip", () => {
   });
   it("403 for a non-local Host or a cross-site fetch, and 409 when the files folder is unset; all carry CORP", async () => {
     await store("a.pdf", "1");
-    for (const r of [await get(appId, "", { host: "evil.example" }), await get(appId, "", { "sec-fetch-site": "cross-site" }), await get(appId, "", { "sec-fetch-site": "same-site" })]) {
+    for (const r of [
+      await get(appId, "", { host: "evil.example" }),
+      await get(appId, "", { "sec-fetch-site": "cross-site" }),
+      await get(appId, "", { "sec-fetch-site": "same-site" }),
+    ]) {
       expect(r.status).toBe(403);
       expect(r.headers.get("cross-origin-resource-policy")).toBe("same-origin");
     }

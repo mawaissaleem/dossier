@@ -16,7 +16,9 @@ export async function archiveApplication(id: number, archived: boolean): Promise
 }
 
 // Read on each dialog open so the counts are never stale page data.
-export async function fetchDeleteImpact(id: number): Promise<({ ok: true } & DeleteImpact) | { ok: false; error: string }> {
+export async function fetchDeleteImpact(
+  id: number,
+): Promise<({ ok: true } & DeleteImpact) | { ok: false; error: string }> {
   if (!isId(id)) return { ok: false, error: "Application not found." };
   const impact = await getDeleteImpact(id);
   return impact ? { ok: true, ...impact } : { ok: false, error: "Application not found." };
@@ -28,10 +30,27 @@ const count = (n: unknown) => Number.isSafeInteger(n) && (n as number) >= 0;
 // the dialog showed; the data layer refuses if it changed since.
 // The application's files are removed from disk too; a leftover is returned as `warning` (lib/files/remove.ts).
 // No refresh(): the detail page would re-render as a 404 before the client navigates to the track page (trackId).
-export async function deleteApplication(id: number, confirm: boolean, expected: { cellCount: number; fileCount: number; submissionCount: number; noteCount: number }): Promise<DeleteWithFilesResult> {
-  if (confirm !== true || typeof expected !== "object" || expected === null || !count(expected.cellCount) || !count(expected.fileCount) || !count(expected.submissionCount) || !count(expected.noteCount)) {
+export async function deleteApplication(
+  id: number,
+  confirm: boolean,
+  expected: { cellCount: number; fileCount: number; submissionCount: number; noteCount: number },
+): Promise<DeleteWithFilesResult> {
+  if (
+    confirm !== true ||
+    typeof expected !== "object" ||
+    expected === null ||
+    !count(expected.cellCount) ||
+    !count(expected.fileCount) ||
+    !count(expected.submissionCount) ||
+    !count(expected.noteCount)
+  ) {
     return { ok: false, error: "Deleting must be confirmed." };
   }
   if (!isId(id)) return { ok: false, error: "Application not found." };
-  return deleteApplicationWithFiles(id, { cellCount: expected.cellCount, fileCount: expected.fileCount, submissionCount: expected.submissionCount, noteCount: expected.noteCount });
+  return deleteApplicationWithFiles(id, {
+    cellCount: expected.cellCount,
+    fileCount: expected.fileCount,
+    submissionCount: expected.submissionCount,
+    noteCount: expected.noteCount,
+  });
 }

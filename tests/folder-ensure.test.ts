@@ -22,7 +22,23 @@ async function mkApp(trackName: string, vals: Record<string, string>, title = "T
 }
 let n = 0;
 const addFile = (applicationId: number, relativePath: string) =>
-  db.insert(files).values({ userId: "local", applicationId, label: "CV", originalName: "cv.pdf", storedName: "cv.pdf", relativePath, sha256: "a".repeat(64), sizeBytes: 1, uploadDate: "2026-10-15", baseName: "CV", extension: "pdf", seq: ++n }).run();
+  db
+    .insert(files)
+    .values({
+      userId: "local",
+      applicationId,
+      label: "CV",
+      originalName: "cv.pdf",
+      storedName: "cv.pdf",
+      relativePath,
+      sha256: "a".repeat(64),
+      sizeBytes: 1,
+      uploadDate: "2026-10-15",
+      baseName: "CV",
+      extension: "pdf",
+      seq: ++n,
+    })
+    .run();
 
 beforeEach(async () => {
   db = useTestDb();
@@ -41,15 +57,23 @@ describe("ensureApplicationFolder", () => {
   it("creates Company_Role_YYYY-MM under the root on the first upload", async () => {
     const id = await mkApp("Job", { Company: "Acme Corp", Role: "Data Engineer" });
     const r = await ensureApplicationFolder(id, "2026-10-15");
-    expect(r).toEqual({ ok: true, relativePath: "Acme_Corp_Data_Engineer_2026-10", absolutePath: join(root, "Acme_Corp_Data_Engineer_2026-10") });
+    expect(r).toEqual({
+      ok: true,
+      relativePath: "Acme_Corp_Data_Engineer_2026-10",
+      absolutePath: join(root, "Acme_Corp_Data_Engineer_2026-10"),
+    });
     expect(readdirSync(root)).toEqual(["Acme_Corp_Data_Engineer_2026-10"]);
   });
 
   it("PhD uses University and Program; a blank value uses the title", async () => {
     const a = await mkApp("PhD", { University: "ETH Zürich", Program: "CS" });
-    expect((await ensureApplicationFolder(a, "2026-11-01") as { relativePath: string }).relativePath).toBe("ETH_Zürich_CS_2026-11");
+    expect(((await ensureApplicationFolder(a, "2026-11-01")) as { relativePath: string }).relativePath).toBe(
+      "ETH_Zürich_CS_2026-11",
+    );
     const b = await mkApp("Job", { Company: "Acme" }, "Cold email");
-    expect((await ensureApplicationFolder(b, "2026-11-01") as { relativePath: string }).relativePath).toBe("Cold_email_2026-11");
+    expect(((await ensureApplicationFolder(b, "2026-11-01")) as { relativePath: string }).relativePath).toBe(
+      "Cold_email_2026-11",
+    );
   });
 
   it("is stable: once files exist, the folder is theirs even after the company is renamed", async () => {
@@ -95,7 +119,10 @@ describe("ensureApplicationFolder", () => {
     const rb = await ensureApplicationFolder(b, "2026-10-02");
     expect(rb).toMatchObject({ ok: true, relativePath: "ACME_dev_2026-10_2" });
     addFile(b, "ACME_dev_2026-10_2/CV_1.pdf");
-    expect(await ensureApplicationFolder(c, "2026-10-03")).toMatchObject({ ok: true, relativePath: "Acme_Dev_2026-10_3" });
+    expect(await ensureApplicationFolder(c, "2026-10-03")).toMatchObject({
+      ok: true,
+      relativePath: "Acme_Dev_2026-10_3",
+    });
   });
 
   it("is unique against a folder already on disk (manual, FR-5.11), case-insensitively", async () => {

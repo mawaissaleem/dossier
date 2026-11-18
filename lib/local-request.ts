@@ -9,7 +9,8 @@ export function isLocalHost(headers: Headers): boolean {
 
 // Fetch-metadata guard for reads that must not be embedded by another page (GET /api/files/:id). Refuses a request the browser marks
 // cross-site, or same-site (another localhost port is same-site). same-origin, none (typed URL, new tab) and a missing header (curl, old clients) pass.
-export const isCrossSiteFetch = (headers: Headers): boolean => ["cross-site", "same-site"].includes((headers.get("sec-fetch-site") ?? "").toLowerCase());
+export const isCrossSiteFetch = (headers: Headers): boolean =>
+  ["cross-site", "same-site"].includes((headers.get("sec-fetch-site") ?? "").toLowerCase());
 
 // CSRF guard for requests that change data: a cross-site page can POST a multipart form to localhost with a valid Host.
 // Browsers always send Origin on such a POST; it must be this server's own origin (same host and port as Host).
@@ -19,7 +20,10 @@ export function isSameOrigin(headers: Headers): boolean {
   if (origin === null) return headers.get("sec-fetch-site") === "same-origin";
   try {
     const u = new URL(origin);
-    return (u.protocol === "http:" || u.protocol === "https:") && u.host.toLowerCase() === (headers.get("host") ?? "").toLowerCase();
+    return (
+      (u.protocol === "http:" || u.protocol === "https:") &&
+      u.host.toLowerCase() === (headers.get("host") ?? "").toLowerCase()
+    );
   } catch {
     return false;
   }

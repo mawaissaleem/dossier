@@ -18,7 +18,10 @@ export const features = tableFeatures({});
 const helper = createColumnHelper<typeof features, ApplicationRow>();
 
 // Read-only display text for one cell. A missing or null value is blank (FR-2.1), including a column added after the rows were read.
-export function formatCell(col: Pick<ColumnItem, "type" | "options">, v: string | number | boolean | null | undefined): string {
+export function formatCell(
+  col: Pick<ColumnItem, "type" | "options">,
+  v: string | number | boolean | null | undefined,
+): string {
   if (v === null || v === undefined) return "";
   switch (col.type) {
     case "checkbox":

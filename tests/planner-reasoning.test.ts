@@ -9,7 +9,8 @@ import { reasoning } from "@/lib/planner";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
 const p = (label: string | null, buffer: number) => ({ label, buffer });
-const dated = (daysLeft: number, pr = p("Priority", 3), ef = p(null, 0)) => reasoning({ priority: pr, effort: ef, daysLeft, daysUntouched: null });
+const dated = (daysLeft: number, pr = p("Priority", 3), ef = p(null, 0)) =>
+  reasoning({ priority: pr, effort: ef, daysLeft, daysUntouched: null });
 
 describe("reasoning", () => {
   it("the build-plan example, verbatim", () => {
@@ -22,11 +23,19 @@ describe("reasoning", () => {
     expect(dated(2, p(null, 0))).toBe("No priority (+0), due in 2 days");
   });
   it("due today, tomorrow, singular and plural, overdue", () => {
-    expect([0, 1, 2].map((n) => dated(n))).toEqual(["Priority (+3), due today", "Priority (+3), due tomorrow", "Priority (+3), due in 2 days"]);
-    expect([-1, -4].map((n) => dated(n))).toEqual(["Priority (+3), overdue by 1 day", "Priority (+3), overdue by 4 days"]);
+    expect([0, 1, 2].map((n) => dated(n))).toEqual([
+      "Priority (+3), due today",
+      "Priority (+3), due tomorrow",
+      "Priority (+3), due in 2 days",
+    ]);
+    expect([-1, -4].map((n) => dated(n))).toEqual([
+      "Priority (+3), overdue by 1 day",
+      "Priority (+3), overdue by 4 days",
+    ]);
   });
   it("no deadline: last, and stale with today, 1 day, N days", () => {
-    const u = (daysUntouched: number | null) => reasoning({ priority: p("Low", 0), effort: p("Light", 0), daysLeft: null, daysUntouched });
+    const u = (daysUntouched: number | null) =>
+      reasoning({ priority: p("Low", 0), effort: p("Light", 0), daysLeft: null, daysUntouched });
     expect(u(null)).toBe("Low (+0), Light effort (+0), no deadline");
     expect([0, 1, 9].map(u)).toEqual([
       "Low (+0), Light effort (+0), no deadline, untouched today",
@@ -38,7 +47,9 @@ describe("reasoning", () => {
 
 describe("reasoning through the database (AT-11)", () => {
   let db: ReturnType<typeof useTestDb>;
-  beforeEach(() => { db = useTestDb(); });
+  beforeEach(() => {
+    db = useTestDb();
+  });
   afterEach(dropTestDb);
 
   const TODAY = "2026-11-12";
@@ -46,14 +57,38 @@ describe("reasoning through the database (AT-11)", () => {
 
   function setup() {
     const tr = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-    const col = (name: string, type: ColumnType, position: number, isStatus = false) => db.insert(columns).values({ userId: "local", trackId: tr, name, type, position, isStatus }).returning().get().id;
-    const [status, pr, ef, dl, notes] = [col("Status", "single_select", 0, true), col("Priority", "single_select", 1), col("Effort", "single_select", 2), col("Deadline", "date", 3), col("Notes", "text", 4)];
-    const opt = (columnId: number, label: string, position: number, bufferDays: number) => db.insert(columnOptions).values({ userId: "local", columnId, label, color: "blue", position, bufferDays }).returning().get().id;
+    const col = (name: string, type: ColumnType, position: number, isStatus = false) =>
+      db.insert(columns).values({ userId: "local", trackId: tr, name, type, position, isStatus }).returning().get().id;
+    const [status, pr, ef, dl, notes] = [
+      col("Status", "single_select", 0, true),
+      col("Priority", "single_select", 1),
+      col("Effort", "single_select", 2),
+      col("Deadline", "date", 3),
+      col("Notes", "text", 4),
+    ];
+    const opt = (columnId: number, label: string, position: number, bufferDays: number) =>
+      db
+        .insert(columnOptions)
+        .values({ userId: "local", columnId, label, color: "blue", position, bufferDays })
+        .returning()
+        .get().id;
     const todo = opt(status, "To apply", 0, 0);
-    const priority = opt(pr, "Priority", 0, 3), good = opt(pr, "Good-to-have", 1, 0), heavy = opt(ef, "Heavy", 0, 2);
-    const add = (title: string, deadline: string | null, p: number | null, e: number | null = null, updatedAt = new Date()) => {
+    const priority = opt(pr, "Priority", 0, 3),
+      good = opt(pr, "Good-to-have", 1, 0),
+      heavy = opt(ef, "Heavy", 0, 2);
+    const add = (
+      title: string,
+      deadline: string | null,
+      p: number | null,
+      e: number | null = null,
+      updatedAt = new Date(),
+    ) => {
       const a = db.insert(applications).values({ userId: "local", trackId: tr, title, updatedAt }).returning().get().id;
-      const set = (columnId: number, v: { valueOptionId?: number; valueDate?: string }) => db.insert(cellValues).values({ userId: "local", applicationId: a, columnId, ...v }).run();
+      const set = (columnId: number, v: { valueOptionId?: number; valueDate?: string }) =>
+        db
+          .insert(cellValues)
+          .values({ userId: "local", applicationId: a, columnId, ...v })
+          .run();
       set(status, { valueOptionId: todo });
       if (p !== null) set(pr, { valueOptionId: p });
       if (e !== null) set(ef, { valueOptionId: e });
@@ -70,7 +105,10 @@ describe("reasoning through the database (AT-11)", () => {
     let r = (await getPlannerRanking(TODAY)).ranked;
     expect(r.map((x) => x.title)).toEqual(["prio", "good"]);
     expect(r.map((x) => x.reasoning)).toEqual(["Priority (+3), due in 2 days", "Good-to-have (+0), due tomorrow"]);
-    db.update(cellValues).set({ valueDate: dayPlus(6) }).where(eqCell(a, dl)).run();
+    db.update(cellValues)
+      .set({ valueDate: dayPlus(6) })
+      .where(eqCell(a, dl))
+      .run();
     r = (await getPlannerRanking(TODAY)).ranked;
     expect(r.map((x) => x.title)).toEqual(["good", "prio"]);
     expect(r[1].reasoning).toBe("Priority (+3), due in 6 days");
@@ -84,13 +122,19 @@ describe("reasoning through the database (AT-11)", () => {
     expect(out.ranked[0]).toMatchObject({ overdue: true, reasoning: "No priority (+0), overdue by 3 days" });
     expect(out.undated[0].reasoning).toBe("Good-to-have (+0), no deadline");
     await setRankingRules("pin", "stale");
-    expect((await getPlannerRanking(TODAY)).undated[0].reasoning).toBe("Good-to-have (+0), no deadline, untouched for 3 days");
+    expect((await getPlannerRanking(TODAY)).undated[0].reasoning).toBe(
+      "Good-to-have (+0), no deadline, untouched for 3 days",
+    );
   });
 
   // Every edit counts as touched: a table/board cell write and an edit-form save of a plain field both reset days untouched.
   it.each([
     ["a table/board cell write", (id: number, col: number) => setCellValue(id, col, "Berlin")],
-    ["an edit-form save of a plain field", (id: number, col: number) => updateApplication({ id, title: "nodate", values: [{ columnId: col, value: "Berlin" }] })],
+    [
+      "an edit-form save of a plain field",
+      (id: number, col: number) =>
+        updateApplication({ id, title: "nodate", values: [{ columnId: col, value: "Berlin" }] }),
+    ],
   ])("%s bumps updated_at, so the application reads as untouched today", async (_, edit) => {
     const { add, notes } = setup();
     const id = add("nodate", null, null, null, new Date(Date.now() - 10 * 86_400_000));
@@ -98,8 +142,12 @@ describe("reasoning through the database (AT-11)", () => {
     const today = localToday();
     expect((await getPlannerRanking(today)).undated[0].daysUntouched).toBeGreaterThanOrEqual(9);
     expect(await edit(id, notes)).toMatchObject({ ok: true });
-    expect((await getPlannerRanking(today)).undated[0]).toMatchObject({ daysUntouched: 0, reasoning: "No priority (+0), no deadline, untouched today" });
+    expect((await getPlannerRanking(today)).undated[0]).toMatchObject({
+      daysUntouched: 0,
+      reasoning: "No priority (+0), no deadline, untouched today",
+    });
   });
 });
 
-const eqCell = (applicationId: number, columnId: number) => and(eq(cellValues.applicationId, applicationId), eq(cellValues.columnId, columnId));
+const eqCell = (applicationId: number, columnId: number) =>
+  and(eq(cellValues.applicationId, applicationId), eq(cellValues.columnId, columnId));

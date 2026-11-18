@@ -12,8 +12,14 @@ export function UpdateDatabaseForm() {
   return (
     <form action={action} className="mt-3">
       <input type="hidden" name="returnTo" value={pathname} />
-      <Button type="submit" disabled={pending}>{pending ? "Updating…" : "Back up and update"}</Button>
-      {state && <p role="alert" className="mt-3 rounded-md border border-destructive bg-card p-3 text-sm break-words">{state.error}</p>}
+      <Button type="submit" disabled={pending}>
+        {pending ? "Updating…" : "Back up and update"}
+      </Button>
+      {state && (
+        <p role="alert" className="mt-3 rounded-md border border-destructive bg-card p-3 text-sm break-words">
+          {state.error}
+        </p>
+      )}
     </form>
   );
 }

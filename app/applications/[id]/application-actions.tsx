@@ -51,7 +51,12 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
 
   function confirmDelete() {
     if (!impact?.ok) return;
-    const expected = { cellCount: impact.cellCount, fileCount: impact.fileCount, submissionCount: impact.submissionCount, noteCount: impact.noteCount };
+    const expected = {
+      cellCount: impact.cellCount,
+      fileCount: impact.fileCount,
+      submissionCount: impact.submissionCount,
+      noteCount: impact.noteCount,
+    };
     setDelError(null);
     startTransition(async () => {
       try {
@@ -87,7 +92,16 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
           }
           setOpen(o);
         }}
-        trigger={<Button type="button" variant="outline" disabled={pending} className="border-destructive text-destructive hover:text-destructive">Delete…</Button>}
+        trigger={
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            className="border-destructive text-destructive hover:text-destructive"
+          >
+            Delete…
+          </Button>
+        }
         title={done ? "Application deleted" : "Delete this application?"}
         description={
           done ? (
@@ -95,9 +109,17 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
           ) : impact === null ? (
             "Counting values…"
           ) : impact.ok ? (
-            <>This permanently deletes <strong>{impact.title}</strong>, its {plural(impact.cellCount, "filled cell value")}, {plural(impact.fileCount, "file")}, {plural(impact.submissionCount, "submission")} and {plural(impact.noteCount, "note")}.{impact.fileCount > 0 && " The files are also removed from the files folder on disk."} This cannot be undone.</>
+            <>
+              This permanently deletes <strong>{impact.title}</strong>, its{" "}
+              {plural(impact.cellCount, "filled cell value")}, {plural(impact.fileCount, "file")},{" "}
+              {plural(impact.submissionCount, "submission")} and {plural(impact.noteCount, "note")}.
+              {impact.fileCount > 0 && " The files are also removed from the files folder on disk."} This cannot be
+              undone.
+            </>
           ) : (
-            <span role="alert" className="text-destructive">{impact.error}</span>
+            <span role="alert" className="text-destructive">
+              {impact.error}
+            </span>
           )
         }
         error={delError}
@@ -107,7 +129,11 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
         busy={pending}
         onConfirm={done ? () => leave(done.trackId) : confirmDelete}
       />
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

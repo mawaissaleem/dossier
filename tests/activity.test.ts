@@ -2,12 +2,39 @@ import { describe, expect, it } from "vitest";
 import { buildActivityDetails, type ActivityDetails, parseActivityDetails, submissionOccurredAt } from "@/lib/activity";
 
 describe("activity details", () => {
-  const status: ActivityDetails = { kind: "status_changed", columnId: 1, fromOptionId: null, fromLabel: null, toOptionId: 2, toLabel: "Applied" };
-  const file: ActivityDetails = { kind: "file_uploaded", fileId: 3, originalName: "cv.docx", storedName: "01-20261105-cv.docx", label: "CV", uploadDate: "2026-11-05" };
-  const sub: ActivityDetails = { kind: "submission_created", submissionId: 4, date: "2026-11-05", fileCount: 1, fileNames: ["a.docx"] };
+  const status: ActivityDetails = {
+    kind: "status_changed",
+    columnId: 1,
+    fromOptionId: null,
+    fromLabel: null,
+    toOptionId: 2,
+    toLabel: "Applied",
+  };
+  const file: ActivityDetails = {
+    kind: "file_uploaded",
+    fileId: 3,
+    originalName: "cv.docx",
+    storedName: "01-20261105-cv.docx",
+    label: "CV",
+    uploadDate: "2026-11-05",
+  };
+  const sub: ActivityDetails = {
+    kind: "submission_created",
+    submissionId: 4,
+    date: "2026-11-05",
+    fileCount: 1,
+    fileNames: ["a.docx"],
+  };
 
-  const del: ActivityDetails = { kind: "file_deleted", fileId: 3, originalName: "cv.docx", storedName: "01-20261105-cv.docx", label: "CV", submissionCount: 2,
-    counter: { baseName: "cv", uploadDate: "2026-11-05", extension: "docx", seq: 1 } };
+  const del: ActivityDetails = {
+    kind: "file_deleted",
+    fileId: 3,
+    originalName: "cv.docx",
+    storedName: "01-20261105-cv.docx",
+    label: "CV",
+    submissionCount: 2,
+    counter: { baseName: "cv", uploadDate: "2026-11-05", extension: "docx", seq: 1 },
+  };
 
   it.each([status, file, sub, del])("round-trips $kind", (d) => {
     expect(parseActivityDetails(d.kind, buildActivityDetails(d))).toEqual(d);
@@ -16,8 +43,12 @@ describe("activity details", () => {
   it("file_deleted: the counter is optional (older events), but a bad one is refused", () => {
     const { counter, ...old } = del as Extract<ActivityDetails, { kind: "file_deleted" }>;
     expect(parseActivityDetails("file_deleted", JSON.stringify(old))).toStrictEqual(old);
-    expect(parseActivityDetails("file_deleted", JSON.stringify({ ...old, counter: { ...counter, seq: "1" } }))).toEqual({ kind: "unknown" });
-    expect(parseActivityDetails("file_deleted", JSON.stringify({ ...old, counter: null }))).toEqual({ kind: "unknown" });
+    expect(parseActivityDetails("file_deleted", JSON.stringify({ ...old, counter: { ...counter, seq: "1" } }))).toEqual(
+      { kind: "unknown" },
+    );
+    expect(parseActivityDetails("file_deleted", JSON.stringify({ ...old, counter: null }))).toEqual({
+      kind: "unknown",
+    });
   });
 
   it("falls back to unknown for garbled, mistyped or wrong-kind JSON and never throws", () => {
@@ -26,7 +57,9 @@ describe("activity details", () => {
     }
     expect(parseActivityDetails("file_uploaded", buildActivityDetails(status))).toEqual({ kind: "unknown" });
     expect(parseActivityDetails("nope", buildActivityDetails(status))).toEqual({ kind: "unknown" });
-    expect(parseActivityDetails("submission_created", '{"submissionId":1,"date":"d","fileCount":1,"fileNames":[1]}')).toEqual({ kind: "unknown" });
+    expect(
+      parseActivityDetails("submission_created", '{"submissionId":1,"date":"d","fileCount":1,"fileNames":[1]}'),
+    ).toEqual({ kind: "unknown" });
   });
 
   it("refuses to build details that would not parse", () => {

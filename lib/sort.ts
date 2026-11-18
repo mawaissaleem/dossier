@@ -12,7 +12,11 @@ export type Sort = { id: string; dir: SortDir };
 const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 
 // Reads ?sort=<id>&dir=asc|desc. Anything unknown, half-given or not a visible column means default order (null), never an error.
-export function parseSort(sort: string | null | undefined, dir: string | null | undefined, visible: Pick<ColumnItem, "id">[]): Sort | null {
+export function parseSort(
+  sort: string | null | undefined,
+  dir: string | null | undefined,
+  visible: Pick<ColumnItem, "id">[],
+): Sort | null {
   if (dir !== "asc" && dir !== "desc") return null;
   if (sort !== "title" && !visible.some((c) => columnId(c) === sort)) return null;
   return { id: sort as string, dir };
@@ -63,7 +67,14 @@ export function sortRows(rows: ApplicationRow[], visible: ColumnItem[], sort: So
     if (a.v === null || b.v === null) {
       if (a.v !== b.v) return a.v === null ? 1 : -1;
     } else if (a.v !== b.v) {
-      const c = typeof a.v === "number" && typeof b.v === "number" ? a.v - b.v : plain ? (a.v < b.v ? -1 : 1) : collator.compare(String(a.v), String(b.v));
+      const c =
+        typeof a.v === "number" && typeof b.v === "number"
+          ? a.v - b.v
+          : plain
+            ? a.v < b.v
+              ? -1
+              : 1
+            : collator.compare(String(a.v), String(b.v));
       if (c !== 0) return sign * c;
     }
     return b.row.id - a.row.id;

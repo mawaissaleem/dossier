@@ -17,7 +17,9 @@ async function main() {
   const userId = getUserId();
   const seeded = db.transaction((tx) => {
     if (tx.select({ id: tracks.id }).from(tracks).where(eq(tracks.userId, userId)).limit(1).all().length) return false;
-    tx.insert(settings).values({ userId, key: "file_labels", value: JSON.stringify(DEFAULT_FILE_LABELS) }).run();
+    tx.insert(settings)
+      .values({ userId, key: "file_labels", value: JSON.stringify(DEFAULT_FILE_LABELS) })
+      .run();
     // The same code as the Add track dialog; colours in palette order, which is what defaultTrackColor picks for the first two tracks.
     [TEMPLATES.job, TEMPLATES.phd].forEach((t, i) => insertTrackFromTemplate(t.defaultName, t, PALETTE[i]));
     return true;

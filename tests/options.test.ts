@@ -3,7 +3,10 @@ import { PALETTE, isPaletteToken, nextColor } from "@/lib/colors";
 import { MAX_OPTION_LABEL, checkOptionLabel, findOption, isSameIdSet, labelTaken } from "@/lib/options";
 import { formatCell } from "@/lib/table";
 
-const opts = [{ id: 1, label: "Applied", color: "blue", position: 0 }, { id: 2, label: "Offer", color: "green", position: 1 }];
+const opts = [
+  { id: 1, label: "Applied", color: "blue", position: 0 },
+  { id: 2, label: "Offer", color: "green", position: 1 },
+];
 
 describe("findOption", () => {
   it("finds by id and is undefined for unknown or non-number ids", () => {
@@ -51,6 +54,7 @@ describe("isSameIdSet", () => {
     expect(isSameIdSet([], [])).toBe(true);
   });
   it("rejects missing, extra, duplicate, foreign and non-array lists", () => {
-    for (const bad of [[1, 2], [1, 2, 3, 4], [1, 1, 2], [1, 2, 9], [1, 2, "3"], "123", null, undefined]) expect(isSameIdSet([1, 2, 3], bad)).toBe(false);
+    for (const bad of [[1, 2], [1, 2, 3, 4], [1, 1, 2], [1, 2, 9], [1, 2, "3"], "123", null, undefined])
+      expect(isSameIdSet([1, 2, 3], bad)).toBe(false);
   });
 });

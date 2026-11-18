@@ -26,8 +26,10 @@ export function AddNote({ applicationId }: { applicationId: number }) {
     setAdded(false);
     try {
       const r = await createNote(applicationId, body);
-      if (r.ok) { setBody(""); setAdded(true); }
-      else setError({ text: r.error, field: r.field === "body" });
+      if (r.ok) {
+        setBody("");
+        setAdded(true);
+      } else setError({ text: r.error, field: r.field === "body" });
     } catch {
       setError({ text: "Could not save. Try again.", field: false });
     }
@@ -37,14 +39,27 @@ export function AddNote({ applicationId }: { applicationId: number }) {
   }
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="flex flex-col gap-2">
-      <Label htmlFor={`${uid}-note`} className="sr-only">New note</Label>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+      className="flex flex-col gap-2"
+    >
+      <Label htmlFor={`${uid}-note`} className="sr-only">
+        New note
+      </Label>
       <Textarea
         ref={field}
         id={`${uid}-note`}
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.nativeEvent.isComposing) { e.preventDefault(); void submit(); } }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            void submit();
+          }
+        }}
         readOnly={busy}
         rows={3}
         maxLength={NOTE_BODY_MAX + 1000} // a soft cap on typing; the exact limit is enforced on the server and reported inline
@@ -52,10 +67,18 @@ export function AddNote({ applicationId }: { applicationId: number }) {
         aria-invalid={error?.field ? true : undefined}
         aria-describedby={error ? `${uid}-err` : undefined}
       />
-      {error && <p id={`${uid}-err`} role="alert" className="text-sm text-destructive">{error.text}</p>}
+      {error && (
+        <p id={`${uid}-err`} role="alert" className="text-sm text-destructive">
+          {error.text}
+        </p>
+      )}
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={busy}>{busy ? "Adding…" : "Add note"}</Button>
-        <p role="status" className="text-sm text-muted-foreground">{added ? "Note added." : ""}</p>
+        <Button type="submit" disabled={busy}>
+          {busy ? "Adding…" : "Add note"}
+        </Button>
+        <p role="status" className="text-sm text-muted-foreground">
+          {added ? "Note added." : ""}
+        </p>
       </div>
     </form>
   );

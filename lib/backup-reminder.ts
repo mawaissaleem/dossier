@@ -6,7 +6,12 @@ const DAY_MS = 86_400_000;
 
 // A whole number of days, MIN..MAX. A number or a typed string of digits (the form sends text); anything else is refused.
 export function parseReminderDays(input: unknown): { ok: true; days: number } | { ok: false; error: string } {
-  const n = typeof input === "number" ? input : typeof input === "string" && /^\s*\d{1,4}\s*$/.test(input) ? Number(input) : NaN;
+  const n =
+    typeof input === "number"
+      ? input
+      : typeof input === "string" && /^\s*\d{1,4}\s*$/.test(input)
+        ? Number(input)
+        : NaN;
   if (!Number.isInteger(n) || n < MIN_REMINDER_DAYS || n > MAX_REMINDER_DAYS) {
     return { ok: false, error: `Enter a whole number of days from ${MIN_REMINDER_DAYS} to ${MAX_REMINDER_DAYS}.` };
   }
@@ -26,8 +31,16 @@ export type BackupReminder = { kind: "never" } | { kind: "overdue"; days: number
 //   A last backup in the future (the clock moved back) or a garbled time is not trusted as "recent": a future time counts as just made
 //   (no reminder), a garbled one as never.
 // - Never backed up: remind only once the app holds an application (`hasApplications`); a fresh empty install has nothing to lose, so no nagging.
-export function backupReminder({ lastBackupAt, intervalDays, now, hasApplications }: {
-  lastBackupAt: string | null; intervalDays: number; now: Date; hasApplications: boolean;
+export function backupReminder({
+  lastBackupAt,
+  intervalDays,
+  now,
+  hasApplications,
+}: {
+  lastBackupAt: string | null;
+  intervalDays: number;
+  now: Date;
+  hasApplications: boolean;
 }): BackupReminder | null {
   const last = lastBackupAt === null ? NaN : Date.parse(lastBackupAt);
   if (Number.isNaN(last)) return hasApplications ? { kind: "never" } : null;
@@ -36,5 +49,7 @@ export function backupReminder({ lastBackupAt, intervalDays, now, hasApplication
 }
 
 export function reminderMessage(r: BackupReminder): string {
-  return r.kind === "never" ? "You have never backed up your data." : `Your last backup was ${r.days} ${r.days === 1 ? "day" : "days"} ago.`;
+  return r.kind === "never"
+    ? "You have never backed up your data."
+    : `Your last backup was ${r.days} ${r.days === 1 ? "day" : "days"} ago.`;
 }

@@ -10,7 +10,13 @@ import { getDb } from "./client";
 import { applications, cellValues, columns, notes, tracks } from "./schema";
 import { getUserId } from "./user";
 
-export type SearchHit = { id: number; title: string; archived: boolean; track: { id: number; name: string }; matched: Matched };
+export type SearchHit = {
+  id: number;
+  title: string;
+  archived: boolean;
+  track: { id: number; name: string };
+  matched: Matched;
+};
 
 // Current user only, all tracks. Matches the title, every text and link cell and every note (hidden columns too; a link is often the company's
 // site). Archived applications are included and flagged: the user may be answering an old email, and the UI can dim them.
@@ -22,7 +28,13 @@ export async function searchApplications(query: string, { limit }: { limit?: num
   const db = getDb();
   const userId = getUserId();
   const apps = db
-    .select({ id: applications.id, title: applications.title, archived: applications.archived, trackId: tracks.id, trackName: tracks.name })
+    .select({
+      id: applications.id,
+      title: applications.title,
+      archived: applications.archived,
+      trackId: tracks.id,
+      trackName: tracks.name,
+    })
     .from(applications)
     .innerJoin(tracks, and(eq(tracks.id, applications.trackId), eq(tracks.userId, userId)))
     .where(eq(applications.userId, userId))
@@ -31,7 +43,10 @@ export async function searchApplications(query: string, { limit }: { limit?: num
   const cells = db
     .select({ applicationId: cellValues.applicationId, column: columns.name, text: cellValues.valueText })
     .from(cellValues)
-    .innerJoin(columns, and(eq(columns.id, cellValues.columnId), eq(columns.userId, userId), inArray(columns.type, ["text", "link"])))
+    .innerJoin(
+      columns,
+      and(eq(columns.id, cellValues.columnId), eq(columns.userId, userId), inArray(columns.type, ["text", "link"])),
+    )
     .where(and(eq(cellValues.userId, userId), isNotNull(cellValues.valueText)))
     .orderBy(asc(columns.position), asc(columns.id))
     .all();
@@ -57,7 +72,20 @@ export async function searchApplications(query: string, { limit }: { limit?: num
   }
   const hits = apps.flatMap((a) => {
     const m = matchApplication(words, a.title, byApp.get(a.id) ?? [], notesByApp.get(a.id) ?? []);
-    return m ? [{ id: a.id, title: a.title, archived: a.archived, track: { id: a.trackId, name: a.trackName }, matched: m.matched, tier: m.tier }] : [];
+    return m
+      ? [
+          {
+            id: a.id,
+            title: a.title,
+            archived: a.archived,
+            track: { id: a.trackId, name: a.trackName },
+            matched: m.matched,
+            tier: m.tier,
+          },
+        ]
+      : [];
   });
-  return rankHits(hits).slice(0, clampLimit(limit)).map((h) => ({ id: h.id, title: h.title, archived: h.archived, track: h.track, matched: h.matched }));
+  return rankHits(hits)
+    .slice(0, clampLimit(limit))
+    .map((h) => ({ id: h.id, title: h.title, archived: h.archived, track: h.track, matched: h.matched }));
 }

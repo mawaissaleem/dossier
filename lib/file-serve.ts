@@ -11,7 +11,8 @@ const INLINE: Record<string, string> = {
 };
 
 // RFC 5987 value-chars: encodeURIComponent leaves ' ( ) * ! alone, so escape them too.
-const encode5987 = (s: string) => encodeURIComponent(s).replace(/['()*!]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+const encode5987 = (s: string) =>
+  encodeURIComponent(s).replace(/['()*!]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
 
 // Content-Disposition from the stored name: an ASCII-only quoted fallback (anything else becomes "_", so no quote, backslash,
 // CR/LF or non-ASCII reaches the header) plus the UTF-8 filename* form for clients that read it.
@@ -43,7 +44,8 @@ export function fileHeaders(storedName: string, sizeBytes: number, attachment = 
     "Content-Length": String(sizeBytes),
     "Content-Disposition": contentDisposition(type && !attachment ? "inline" : "attachment", storedName),
     "X-Content-Type-Options": "nosniff",
-    "Content-Security-Policy": (type === "application/pdf" ? "default-src 'none'" : "sandbox; default-src 'none'") + "; frame-ancestors 'self'",
+    "Content-Security-Policy":
+      (type === "application/pdf" ? "default-src 'none'" : "sandbox; default-src 'none'") + "; frame-ancestors 'self'",
     "Cache-Control": "no-store",
     "Cross-Origin-Resource-Policy": "same-origin", // another site cannot embed the file (img, iframe, fetch)
   });

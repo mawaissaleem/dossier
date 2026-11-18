@@ -362,7 +362,9 @@
   body {
     @apply text-base text-foreground;
     /* The one canvas gradient: a faint accent wash fading into the background (text on it is measured against both stops). */
-    background: linear-gradient(to bottom, var(--wash), var(--background) 24rem) no-repeat, var(--background);
+    background:
+      linear-gradient(to bottom, var(--wash), var(--background) 24rem) no-repeat,
+      var(--background);
   }
   html {
     @apply font-sans;

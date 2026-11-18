@@ -53,18 +53,31 @@ export async function updateDatabase(opts: { migrationsFolder?: string; now?: Da
         backupPath = path;
         break;
       } catch (e) {
-        try { rmSync(path, { force: true }); } catch {} // a partial copy, if any
+        try {
+          rmSync(path, { force: true });
+        } catch {} // a partial copy, if any
         lastError = (e as Error).message;
       }
     }
-    if (!backupPath) return { ok: false, error: `Dossier could not save a backup copy of your database (${lastError}), so it did not update it. Your data was not changed.` };
+    if (!backupPath)
+      return {
+        ok: false,
+        error: `Dossier could not save a backup copy of your database (${lastError}), so it did not update it. Your data was not changed.`,
+      };
 
     try {
       applyMigrations(opts.migrationsFolder);
     } catch (e) {
-      return { ok: false, error: `The update failed (${(e as Error).message}). Your data was not changed. A backup copy is at ${backupPath}.` };
+      return {
+        ok: false,
+        error: `The update failed (${(e as Error).message}). Your data was not changed. A backup copy is at ${backupPath}.`,
+      };
     }
-    if (pendingMigrations() !== 0) return { ok: false, error: `The update ran but updates are still pending. Your backup copy is at ${backupPath}.` };
+    if (pendingMigrations() !== 0)
+      return {
+        ok: false,
+        error: `The update ran but updates are still pending. Your backup copy is at ${backupPath}.`,
+      };
     return { ok: true, backupPath };
   } finally {
     g.__dossierUpdating = false;

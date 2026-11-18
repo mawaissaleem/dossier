@@ -36,20 +36,46 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
   const { id: raw } = await params;
   const detail = /^\d+$/.test(raw) ? await getApplicationDetail(Number(raw)) : null;
   if (!detail) notFound();
-  const [root, labels, files, subs, notes, events] = await Promise.all([getFilesRoot(), getFileLabels(), listApplicationFiles(detail.id), listSubmissions(detail.id), listNotes(detail.id), listActivity(detail.id)]);
+  const [root, labels, files, subs, notes, events] = await Promise.all([
+    getFilesRoot(),
+    getFileLabels(),
+    listApplicationFiles(detail.id),
+    listSubmissions(detail.id),
+    listNotes(detail.id),
+    listActivity(detail.id),
+  ]);
   const history = buildHistory(notes, events, new Date());
   const statusCol = detail.columns.find((c) => c.isStatus);
-  const status = statusCol ? { columnId: statusCol.id, name: statusCol.name, currentOptionId: (detail.values[statusCol.id] as number | null) ?? null, options: statusCol.options.map(({ id, label }) => ({ id, label })) } : null;
+  const status = statusCol
+    ? {
+        columnId: statusCol.id,
+        name: statusCol.name,
+        currentOptionId: (detail.values[statusCol.id] as number | null) ?? null,
+        options: statusCol.options.map(({ id, label }) => ({ id, label })),
+      }
+    : null;
   return (
     <Page narrow>
-      <EditApplication id={detail.id} title={detail.title} back={{ href: `/tracks/${detail.track.id}`, label: detail.track.name }} archived={detail.archived} columns={detail.columns} values={detail.values}>
+      <EditApplication
+        id={detail.id}
+        title={detail.title}
+        back={{ href: `/tracks/${detail.track.id}`, label: detail.track.name }}
+        archived={detail.archived}
+        columns={detail.columns}
+        values={detail.values}
+      >
         <section aria-labelledby="submissions" className="mb-8">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 id="submissions" className="text-lg font-semibold">Submissions</h2>
+            <h2 id="submissions" className="text-lg font-semibold">
+              Submissions
+            </h2>
             <NewSubmission applicationId={detail.id} status={status} />
           </div>
           {subs.length === 0 ? (
-            <EmptyState title="Nothing submitted yet" description="Use New submission to record what you sent and when. It is listed here." />
+            <EmptyState
+              title="Nothing submitted yet"
+              description="Use New submission to record what you sent and when. It is listed here."
+            />
           ) : (
             <SubmissionTimeline key={subs[0].id} items={subs} />
           )}
@@ -68,10 +94,23 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
                 </dt>
                 <dd className="min-w-0 break-words">
                   {col.type === "checkbox" ? (
-                    value === true ? <span className="inline-flex items-center gap-1.5"><CheckIcon aria-hidden className="size-4 text-accent" />Yes</span> : <span className="text-muted-foreground">No</span>
+                    value === true ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <CheckIcon aria-hidden className="size-4 text-accent" />
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">No</span>
+                    )
                   ) : href ? (
                     // Never fetched or previewed (NFR-2): the browser only follows it on click.
-                    <a href={href} target="_blank" rel="noopener noreferrer" title={href} className="rounded-sm text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={href}
+                      className="rounded-sm text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                       {linkLabel(href)}
                     </a>
                   ) : option ? (
@@ -79,7 +118,10 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
                   ) : text ? (
                     text
                   ) : (
-                    <span className="text-muted-foreground"><span aria-hidden>—</span><span className="sr-only">Empty</span></span>
+                    <span className="text-muted-foreground">
+                      <span aria-hidden>—</span>
+                      <span className="sr-only">Empty</span>
+                    </span>
                   )}
                 </dd>
               </div>
@@ -89,12 +131,16 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
       </EditApplication>
       <section aria-labelledby="files" className="mt-8">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-          <h2 id="files" tabIndex={-1} className="text-lg font-semibold outline-none">Files</h2>
+          <h2 id="files" tabIndex={-1} className="text-lg font-semibold outline-none">
+            Files
+          </h2>
           {files.length > 0 && (
             <div className="flex flex-wrap items-center gap-3">
               <CheckFiles applicationId={detail.id} />
               <Button asChild variant="outline" size="sm">
-                <a href={`/api/applications/${detail.id}/zip`}><DownloadIcon aria-hidden /> Download all (zip)</a>
+                <a href={`/api/applications/${detail.id}/zip`}>
+                  <DownloadIcon aria-hidden /> Download all (zip)
+                </a>
               </Button>
             </div>
           )}
@@ -104,9 +150,19 @@ async function ApplicationView({ params }: { params: Promise<{ id: string }> }) 
       </section>
       {/* Outside EditApplication, so notes stay usable while the Edit form is open. Below Files, so the latest submission stays on screen (AT-12). */}
       <section aria-labelledby="history" className="mt-8">
-        <h2 id="history" className="mb-2 text-lg font-semibold">History</h2>
+        <h2 id="history" className="mb-2 text-lg font-semibold">
+          History
+        </h2>
         <AddNote applicationId={detail.id} />
-        {history.length === 0 ? <EmptyState className="mt-3" title="No history yet" description="Notes, status changes, uploads and submissions are listed here with the date and time." /> : <HistoryTimeline items={history} />}
+        {history.length === 0 ? (
+          <EmptyState
+            className="mt-3"
+            title="No history yet"
+            description="Notes, status changes, uploads and submissions are listed here with the date and time."
+          />
+        ) : (
+          <HistoryTimeline items={history} />
+        )}
       </section>
       <ApplicationActions id={detail.id} archived={detail.archived} />
     </Page>

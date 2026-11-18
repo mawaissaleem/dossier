@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { parseExpected, problemsMessage, sameFiles, sumBytes, targetRefusal, type LiveFile } from "@/lib/relocate";
 
-const f = (id: number, size = 1): LiveFile => ({ id, relativePath: `a/${id}.pdf`, sha256: "0".repeat(64), sizeBytes: size });
+const f = (id: number, size = 1): LiveFile => ({
+  id,
+  relativePath: `a/${id}.pdf`,
+  sha256: "0".repeat(64),
+  sizeBytes: size,
+});
 
 describe("targetRefusal", () => {
   it("accepts a sibling folder", () => expect(targetRefusal("/data/old", "/data/new", null)).toBeNull());
@@ -29,7 +34,15 @@ describe("sameFiles / sumBytes / parseExpected / problemsMessage", () => {
   it("sums sizes", () => expect(sumBytes([f(1, 3), f(2, 4)])).toBe(7));
   it("parses only the expected shape", () => {
     expect(parseExpected({ fileCount: 2, totalBytes: 10 })).toEqual({ fileCount: 2, totalBytes: 10 });
-    for (const bad of [null, 1, {}, { fileCount: -1, totalBytes: 0 }, { fileCount: 1.5, totalBytes: 0 }, { fileCount: "1", totalBytes: 0 }]) expect(parseExpected(bad)).toBeNull();
+    for (const bad of [
+      null,
+      1,
+      {},
+      { fileCount: -1, totalBytes: 0 },
+      { fileCount: 1.5, totalBytes: 0 },
+      { fileCount: "1", totalBytes: 0 },
+    ])
+      expect(parseExpected(bad)).toBeNull();
   });
   it("lists the first few problems and counts the rest", () => {
     const m = problemsMessage(["a (missing)", "b (missing)", "c", "d", "e", "f", "g"]);

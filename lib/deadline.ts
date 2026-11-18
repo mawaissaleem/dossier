@@ -8,7 +8,9 @@ export function dayNumber(s: unknown): number | null {
   if (!m) return null;
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
   const t = new Date(Date.UTC(y, mo - 1, d));
-  return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d ? t.getTime() / 86_400_000 : null;
+  return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d
+    ? t.getTime() / 86_400_000
+    : null;
 }
 
 // The browser's local calendar day as YYYY-MM-DD.
@@ -29,6 +31,15 @@ export function deadlineInfo(value: unknown, today: string | null): Deadline | n
   const t = today === null ? null : dayNumber(today);
   if (t === null) return { date, relative: null, overdue: false };
   const diff = n - t;
-  const relative = diff === 0 ? "today" : diff === 1 ? "tomorrow" : diff === -1 ? "yesterday" : diff > 0 ? `in ${diff} days` : `${-diff} days ago`;
+  const relative =
+    diff === 0
+      ? "today"
+      : diff === 1
+        ? "tomorrow"
+        : diff === -1
+          ? "yesterday"
+          : diff > 0
+            ? `in ${diff} days`
+            : `${-diff} days ago`;
   return { date, relative, overdue: diff < 0 };
 }

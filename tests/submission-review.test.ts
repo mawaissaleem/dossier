@@ -4,7 +4,17 @@ import { refresh } from "next/cache";
 import { createApplication, updateApplication } from "@/app/actions/applications";
 import { updateCell } from "@/app/actions/cells";
 import { confirmSubmittedStatus, fetchReviewFiles } from "@/app/actions/submissions";
-import { applications, cellValues, columnOptions, columns, files, submissionFiles, submissions, tracks, type NewStoredFile } from "@/lib/db/schema";
+import {
+  applications,
+  cellValues,
+  columnOptions,
+  columns,
+  files,
+  submissionFiles,
+  submissions,
+  tracks,
+  type NewStoredFile,
+} from "@/lib/db/schema";
 import { createSubmission } from "@/lib/db/submissions";
 import { setExpectedLabels, setSubmittedStatuses } from "@/lib/db/track-settings";
 import { submissionWarnings } from "@/lib/expected-labels";
@@ -34,26 +44,63 @@ let trackId: number, statusCol: number, textCol: number;
 let toApply: number, applied: number, interview: number;
 let appId: number;
 let n = 0;
-const opt = (columnId: number, label: string, position: number) => db.insert(columnOptions).values({ userId: "local", columnId, label, color: "blue", position }).returning().get().id;
+const opt = (columnId: number, label: string, position: number) =>
+  db.insert(columnOptions).values({ userId: "local", columnId, label, color: "blue", position }).returning().get().id;
 const mkApp = () => db.insert(applications).values({ userId: "local", trackId, title: "A" }).returning().get().id;
 const mkFile = (applicationId = appId, over: Partial<NewStoredFile> = {}) => {
   n++;
-  return db.insert(files).values({
-    userId: "local", applicationId, label: "CV", originalName: `cv${n}.docx`, storedName: `CV_${n}.docx`, relativePath: `job/a/CV_${n}.docx`,
-    sha256: "a".repeat(64), sizeBytes: 10, uploadDate: "2026-11-05", baseName: "CV", extension: "docx", seq: n, ...over,
-  }).returning().get().id;
+  return db
+    .insert(files)
+    .values({
+      userId: "local",
+      applicationId,
+      label: "CV",
+      originalName: `cv${n}.docx`,
+      storedName: `CV_${n}.docx`,
+      relativePath: `job/a/CV_${n}.docx`,
+      sha256: "a".repeat(64),
+      sizeBytes: 10,
+      uploadDate: "2026-11-05",
+      baseName: "CV",
+      extension: "docx",
+      seq: n,
+      ...over,
+    })
+    .returning()
+    .get().id;
 };
-const setStatus = (optionId: number, aid = appId) => db.insert(cellValues).values({ userId: "local", applicationId: aid, columnId: statusCol, valueOptionId: optionId }).run();
-const statusOf = (aid = appId) => db.select().from(cellValues).where(and(eq(cellValues.applicationId, aid), eq(cellValues.columnId, statusCol))).get()?.valueOptionId ?? null;
+const setStatus = (optionId: number, aid = appId) =>
+  db
+    .insert(cellValues)
+    .values({ userId: "local", applicationId: aid, columnId: statusCol, valueOptionId: optionId })
+    .run();
+const statusOf = (aid = appId) =>
+  db
+    .select()
+    .from(cellValues)
+    .where(and(eq(cellValues.applicationId, aid), eq(cellValues.columnId, statusCol)))
+    .get()?.valueOptionId ?? null;
 const counts = () => [db.select().from(submissions).all().length, db.select().from(submissionFiles).all().length];
 
 beforeEach(() => {
   vi.mocked(refresh).mockClear();
   db = useTestDb();
   trackId = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-  statusCol = db.insert(columns).values({ userId: "local", trackId, name: "Status", type: "single_select", position: 0, isStatus: true }).returning().get().id;
-  textCol = db.insert(columns).values({ userId: "local", trackId, name: "Notes", type: "text", position: 1 }).returning().get().id;
-  [toApply, applied, interview] = [opt(statusCol, "To apply", 0), opt(statusCol, "Applied", 1), opt(statusCol, "Interview", 2)]; // "Applied" counts as submitted by default (6.1)
+  statusCol = db
+    .insert(columns)
+    .values({ userId: "local", trackId, name: "Status", type: "single_select", position: 0, isStatus: true })
+    .returning()
+    .get().id;
+  textCol = db
+    .insert(columns)
+    .values({ userId: "local", trackId, name: "Notes", type: "text", position: 1 })
+    .returning()
+    .get().id;
+  [toApply, applied, interview] = [
+    opt(statusCol, "To apply", 0),
+    opt(statusCol, "Applied", 1),
+    opt(statusCol, "Interview", 2),
+  ]; // "Applied" counts as submitted by default (6.1)
   appId = mkApp();
   setStatus(toApply);
 });
@@ -93,7 +140,11 @@ describe("updateCell on the status column", () => {
   });
 
   it("does not apply to a non-status single-select column", async () => {
-    const other = db.insert(columns).values({ userId: "local", trackId, name: "Stage", type: "single_select", position: 2 }).returning().get().id;
+    const other = db
+      .insert(columns)
+      .values({ userId: "local", trackId, name: "Stage", type: "single_select", position: 2 })
+      .returning()
+      .get().id;
     const o = opt(other, "Applied", 0);
     expect((await updateCell(appId, other, o)).ok).toBe(true);
   });
@@ -101,7 +152,10 @@ describe("updateCell on the status column", () => {
 
 describe("updateApplication (detail form)", () => {
   it("returns needsReview and saves nothing, title and other cells included", async () => {
-    const r = await updateApplication(appId, "New title", [{ columnId: statusCol, value: applied }, { columnId: textCol, value: "x" }]);
+    const r = await updateApplication(appId, "New title", [
+      { columnId: statusCol, value: applied },
+      { columnId: textCol, value: "x" },
+    ]);
     expect(r).toMatchObject({ ok: false, needsReview: true });
     expect(db.select().from(applications).get()!.title).toBe("A");
     expect(statusOf()).toBe(toApply);
@@ -129,9 +183,15 @@ describe("createApplication", () => {
 describe("confirmSubmittedStatus", () => {
   it("saves the status and the first submission together, and refreshes", async () => {
     const [a, b] = [mkFile(), mkFile()];
-    expect(await confirmSubmittedStatus(appId, statusCol, applied, [a, b], "2026-11-09", " sent ")).toEqual({ ok: true });
+    expect(await confirmSubmittedStatus(appId, statusCol, applied, [a, b], "2026-11-09", " sent ")).toEqual({
+      ok: true,
+    });
     expect(statusOf()).toBe(applied);
-    expect(db.select().from(submissions).get()).toMatchObject({ applicationId: appId, date: "2026-11-09", note: "sent" });
+    expect(db.select().from(submissions).get()).toMatchObject({
+      applicationId: appId,
+      date: "2026-11-09",
+      note: "sent",
+    });
     expect(counts()).toEqual([1, 2]);
     expect(refresh).toHaveBeenCalledTimes(1);
   });
@@ -143,22 +203,38 @@ describe("confirmSubmittedStatus", () => {
 
   it("either both or neither: an invalid submission leaves the status alone", async () => {
     const foreign = mkFile(mkApp());
-    for (const [ids, date] of [[[foreign], "2026-11-09"], [[], "2026-02-30"], [[], "09/11/2026"]] as const) {
+    for (const [ids, date] of [
+      [[foreign], "2026-11-09"],
+      [[], "2026-02-30"],
+      [[], "09/11/2026"],
+    ] as const) {
       const r = await confirmSubmittedStatus(appId, statusCol, applied, [...ids], date, null);
       expect(r.ok).toBe(false);
     }
-    expect((await confirmSubmittedStatus(appId, statusCol, applied, [], "2026-11-09", "x".repeat(2001))).ok).toBe(false);
+    expect((await confirmSubmittedStatus(appId, statusCol, applied, [], "2026-11-09", "x".repeat(2001))).ok).toBe(
+      false,
+    );
     expect(statusOf()).toBe(toApply);
     expect(counts()).toEqual([0, 0]);
     expect(refresh).not.toHaveBeenCalled();
   });
 
   it("refuses a status that is not submitted, a non-status column, a foreign option and an unknown application", async () => {
-    const other = db.insert(columns).values({ userId: "local", trackId, name: "Stage", type: "single_select", position: 2 }).returning().get().id;
+    const other = db
+      .insert(columns)
+      .values({ userId: "local", trackId, name: "Stage", type: "single_select", position: 2 })
+      .returning()
+      .get().id;
     const otherOpt = opt(other, "Applied", 0);
-    expect(await confirmSubmittedStatus(appId, statusCol, interview, [], "2026-11-09", null)).toEqual({ ok: false, error: "That status no longer counts as submitted. Reload the page and try again." });
+    expect(await confirmSubmittedStatus(appId, statusCol, interview, [], "2026-11-09", null)).toEqual({
+      ok: false,
+      error: "That status no longer counts as submitted. Reload the page and try again.",
+    });
     expect((await confirmSubmittedStatus(appId, other, otherOpt, [], "2026-11-09", null)).ok).toBe(false);
-    expect(await confirmSubmittedStatus(appId, statusCol, otherOpt, [], "2026-11-09", null)).toEqual({ ok: false, error: "That status no longer exists. Reload the page and try again." });
+    expect(await confirmSubmittedStatus(appId, statusCol, otherOpt, [], "2026-11-09", null)).toEqual({
+      ok: false,
+      error: "That status no longer exists. Reload the page and try again.",
+    });
     expect((await confirmSubmittedStatus(9999, statusCol, applied, [], "2026-11-09", null)).ok).toBe(false);
     expect(statusOf()).toBe(toApply);
     expect(counts()).toEqual([0, 0]);
@@ -207,11 +283,31 @@ describe("AT-9: submitted status with no CV", () => {
     const r = await fetchReviewFiles(appId);
     if (!r.ok) throw new Error(r.error);
     expect(r.expectedLabels).toEqual(["CV", "Cover letter"]);
-    expect(submissionWarnings(r.files.map((f) => f.label), r.expectedLabels)).toEqual(["No file labelled CV"]);
+    expect(
+      submissionWarnings(
+        r.files.map((f) => f.label),
+        r.expectedLabels,
+      ),
+    ).toEqual(["No file labelled CV"]);
     // 3. confirmed anyway
-    expect(await confirmSubmittedStatus(appId, statusCol, applied, r.files.map((f) => f.id), "2026-11-09", null)).toEqual({ ok: true });
+    expect(
+      await confirmSubmittedStatus(
+        appId,
+        statusCol,
+        applied,
+        r.files.map((f) => f.id),
+        "2026-11-09",
+        null,
+      ),
+    ).toEqual({ ok: true });
     expect(statusOf()).toBe(applied);
-    expect(db.select().from(submissionFiles).all().map((l) => l.fileId)).toEqual([cover]);
+    expect(
+      db
+        .select()
+        .from(submissionFiles)
+        .all()
+        .map((l) => l.fileId),
+    ).toEqual([cover]);
     expect(counts()).toEqual([1, 1]);
   });
 
@@ -226,7 +322,23 @@ describe("fetchReviewFiles", () => {
     const a = mkFile(appId, { label: "Cover letter", originalName: "cl.pdf" });
     mkFile(mkApp());
     const r = await fetchReviewFiles(appId);
-    expect(r).toEqual({ ok: true, files: [{ id: a, originalName: "cl.pdf", storedName: db.select().from(files).all().find((f) => f.id === a)!.storedName, label: "Cover letter", uploadDate: "2026-11-05" }], expectedLabels: [] });
+    expect(r).toEqual({
+      ok: true,
+      files: [
+        {
+          id: a,
+          originalName: "cl.pdf",
+          storedName: db
+            .select()
+            .from(files)
+            .all()
+            .find((f) => f.id === a)!.storedName,
+          label: "Cover letter",
+          uploadDate: "2026-11-05",
+        },
+      ],
+      expectedLabels: [],
+    });
   });
   it("refuses a bad or unknown id", async () => {
     expect((await fetchReviewFiles(0)).ok).toBe(false);

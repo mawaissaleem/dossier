@@ -1,8 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { buildStoredName, capOriginalName, formatStoredName, nextSeq, safeExtension, splitOriginalName, todayLocal, type CounterEntry } from "@/lib/filename";
+import {
+  buildStoredName,
+  capOriginalName,
+  formatStoredName,
+  nextSeq,
+  safeExtension,
+  splitOriginalName,
+  todayLocal,
+  type CounterEntry,
+} from "@/lib/filename";
 
 const D = "2026-11-08";
-const E = (baseName: string, ext: string, seq: number, uploadDate = D): CounterEntry => ({ baseName, extension: ext, uploadDate, seq });
+const E = (baseName: string, ext: string, seq: number, uploadDate = D): CounterEntry => ({
+  baseName,
+  extension: ext,
+  uploadDate,
+  seq,
+});
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
 describe("splitOriginalName", () => {
@@ -42,7 +56,8 @@ describe("formatStoredName (FR-6.5)", () => {
     expect(formatStoredName(99, D, "CV", "pdf")).toBe("99-20261108-CV.pdf");
     expect(formatStoredName(100, D, "CV", "pdf")).toBe("100-20261108-CV.pdf");
   });
-  it("omits the dot without an extension", () => expect(formatStoredName(1, D, "README", "")).toBe("01-20261108-README"));
+  it("omits the dot without an extension", () =>
+    expect(formatStoredName(1, D, "README", "")).toBe("01-20261108-README"));
 });
 
 describe("buildStoredName", () => {
@@ -138,10 +153,15 @@ describe("buildStoredName", () => {
       expect(name("01-20261001-.pdf").storedName).toBe("01-20261108-file.pdf");
       expect(name("01-20261001-01-20261002-.pdf").storedName).toBe("01-20261108-file.pdf");
     });
-    it.each(["2026-report.pdf", "1-20261001-x.pdf", "01-20261341-x.pdf", "01-2026100-x.pdf", "01-202610010-x.pdf", "01-20260230-x.pdf", "01-20261001x.pdf"])(
-      "leaves %s alone",
-      (n) => expect(name(n).baseName).toBe(n.slice(0, -4)),
-    );
+    it.each([
+      "2026-report.pdf",
+      "1-20261001-x.pdf",
+      "01-20261341-x.pdf",
+      "01-2026100-x.pdf",
+      "01-202610010-x.pdf",
+      "01-20260230-x.pdf",
+      "01-20261001x.pdf",
+    ])("leaves %s alone", (n) => expect(name(n).baseName).toBe(n.slice(0, -4)));
     it("01 20261001 CV.pdf is not a prefix: spaces become underscores", () => {
       expect(name("01 20261001 CV.pdf").storedName).toBe("01-20261108-01_20261001_CV.pdf");
     });
@@ -160,7 +180,12 @@ describe("buildStoredName", () => {
     });
     it("AT-6: the stored name never holds two prefixes", () => {
       // Counts prefix-shaped runs; none of these inputs has one inside its real base.
-      for (const n of ["01-20261108-CV.pdf", "01-20261001-02-20261002-CV.pdf", " 01-20261001-CV.pdf", "99-20260101-01-20260102-02-20260103-x.docx"]) {
+      for (const n of [
+        "01-20261108-CV.pdf",
+        "01-20261001-02-20261002-CV.pdf",
+        " 01-20261001-CV.pdf",
+        "99-20260101-01-20260102-02-20260103-x.docx",
+      ]) {
         const stored = name(n).storedName;
         expect(stored.match(/(^|-)\d{2,}-\d{8}-/g)).toHaveLength(1);
       }

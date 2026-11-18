@@ -5,9 +5,11 @@ export type LiveFile = { id: number; relativePath: string; sha256: string; sizeB
 
 // Why `target` cannot receive the files of `current`, or null. All three are real (symlink-resolved) absolute paths.
 export function targetRefusal(current: string, target: string, backup: string | null): string | null {
-  if (isInside(target, current)) return "Choose a folder outside the current files folder (the new folder is the current one or inside it).";
+  if (isInside(target, current))
+    return "Choose a folder outside the current files folder (the new folder is the current one or inside it).";
   if (isInside(current, target)) return "Choose a folder that does not contain the current files folder.";
-  if (backup && (isInside(target, backup) || isInside(backup, target))) return "Choose a folder that is not the backup folder and does not contain it or sit inside it, or backups and files would mix.";
+  if (backup && (isInside(target, backup) || isInside(backup, target)))
+    return "Choose a folder that is not the backup folder and does not contain it or sit inside it, or backups and files would mix.";
   return null;
 }
 
@@ -30,6 +32,12 @@ export function problemsMessage(problems: string[], max = 5): string {
 
 export const parseExpected = (v: unknown): { fileCount: number; totalBytes: number } | null => {
   const o = v as { fileCount?: unknown; totalBytes?: unknown } | null;
-  return o && typeof o === "object" && Number.isSafeInteger(o.fileCount) && Number.isSafeInteger(o.totalBytes) && (o.fileCount as number) >= 0 && (o.totalBytes as number) >= 0
-    ? { fileCount: o.fileCount as number, totalBytes: o.totalBytes as number } : null;
+  return o &&
+    typeof o === "object" &&
+    Number.isSafeInteger(o.fileCount) &&
+    Number.isSafeInteger(o.totalBytes) &&
+    (o.fileCount as number) >= 0 &&
+    (o.totalBytes as number) >= 0
+    ? { fileCount: o.fileCount as number, totalBytes: o.totalBytes as number }
+    : null;
 };

@@ -4,7 +4,9 @@ import { NoteTime } from "./note-time";
 export function NoteItem({ body, at }: { body: string; at: Date }) {
   return (
     <li className="rounded-lg border border-border bg-card px-3 py-2">
-      <p className="text-xs text-muted-foreground"><NoteTime iso={at.toISOString()} /></p>
+      <p className="text-xs text-muted-foreground">
+        <NoteTime iso={at.toISOString()} />
+      </p>
       <p className="mt-1 text-sm break-words whitespace-pre-wrap">{body}</p>
     </li>
   );

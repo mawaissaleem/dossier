@@ -40,7 +40,11 @@ export function trackCsv(cols: Col[], rows: Row[]): string {
 
 // dossier-<track>-YYYYMMDD.csv from the local date; the track name is cut to letters and digits joined by "-".
 export function exportFilename(trackName: string, now: Date): string {
-  const slug = trackName.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "track";
+  const slug =
+    trackName
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-|-$/g, "") || "track";
   const p = (n: number) => String(n).padStart(2, "0");
   return `dossier-${slug}-${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}.csv`;
 }

@@ -22,12 +22,19 @@ export async function DatabaseGate({ children }: { children: React.ReactNode }) 
           <TriangleAlertIcon aria-hidden className="size-4 shrink-0 text-warning" />
           {pending} {pending === 1 ? "update" : "updates"} to apply
         </p>
-        <p className="mt-2 break-words">Dossier will first save a backup copy of your database to <span className="font-medium">{folder}</span>, then update it. This takes a few seconds.</p>
+        <p className="mt-2 break-words">
+          Dossier will first save a backup copy of your database to <span className="font-medium">{folder}</span>, then
+          update it. This takes a few seconds.
+        </p>
         <UpdateDatabaseForm />
         <details className="mt-4">
-          <summary className="w-fit cursor-pointer rounded-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring">Prefer the terminal?</summary>
+          <summary className="w-fit cursor-pointer rounded-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            Prefer the terminal?
+          </summary>
           <ol className="mt-2 list-decimal space-y-1 pl-9">
-            {UPDATE_STEPS.map((s) => <li key={s}>{s}</li>)}
+            {UPDATE_STEPS.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
           </ol>
         </details>
       </div>

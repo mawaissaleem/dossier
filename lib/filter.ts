@@ -52,7 +52,12 @@ export function withFilters(search: string, filters: Filter[]): string {
 export function toggleFilter(filters: Filter[], id: number, token: Token): Filter[] {
   const cur = filters.find((f) => f.id === id) ?? { id, options: [], blank: false };
   const next: Filter =
-    token === "blank" ? { ...cur, blank: !cur.blank } : { ...cur, options: cur.options.includes(token) ? cur.options.filter((o) => o !== token) : [...cur.options, token] };
+    token === "blank"
+      ? { ...cur, blank: !cur.blank }
+      : {
+          ...cur,
+          options: cur.options.includes(token) ? cur.options.filter((o) => o !== token) : [...cur.options, token],
+        };
   const rest = filters.filter((f) => f.id !== id);
   if (!next.options.length && !next.blank) return rest;
   return filters.some((f) => f.id === id) ? filters.map((f) => (f.id === id ? next : f)) : [...rest, next];
@@ -63,7 +68,9 @@ export function toggleFilter(filters: Filter[], id: number, token: Token): Filte
 export function filterRows(rows: ApplicationRow[], columns: Col[], filters: Filter[]): ApplicationRow[] {
   const active = filters.flatMap((f) => {
     const col = selectCol(columns, f.id);
-    return col ? [{ id: f.id, pick: new Set(f.options), blank: f.blank, known: new Set(col.options.map((o) => o.id)) }] : [];
+    return col
+      ? [{ id: f.id, pick: new Set(f.options), blank: f.blank, known: new Set(col.options.map((o) => o.id)) }]
+      : [];
   });
   if (active.length === 0) return rows;
   return rows.filter((r) =>

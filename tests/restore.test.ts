@@ -1,5 +1,17 @@
 import { createHash } from "node:crypto";
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import Database from "better-sqlite3";
@@ -9,7 +21,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { backUpNow, restoreBackup } from "@/app/actions/backup";
 import { addSubmission } from "@/app/actions/submissions";
 import { createApplication } from "@/lib/db/applications";
-import { getBackupDestination, getLastBackupAt, getReminderDays, REMINDER_DAYS_KEY, setBackupDestination, setReminderDays } from "@/lib/db/backup";
+import {
+  getBackupDestination,
+  getLastBackupAt,
+  getReminderDays,
+  REMINDER_DAYS_KEY,
+  setBackupDestination,
+  setReminderDays,
+} from "@/lib/db/backup";
 import { getDb } from "@/lib/db/client";
 import { addNote } from "@/lib/db/notes";
 import * as dbRestore from "@/lib/db/restore";
@@ -25,7 +44,18 @@ import { readZip, rewriteZip, writeZip, type ZipSpec } from "./helpers/zip";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
 
-const TABLES = ["tracks", "columns", "column_options", "applications", "cell_values", "files", "submissions", "submission_files", "notes", "activity_events"];
+const TABLES = [
+  "tracks",
+  "columns",
+  "column_options",
+  "applications",
+  "cell_values",
+  "files",
+  "submissions",
+  "submission_files",
+  "notes",
+  "activity_events",
+];
 let work: string, root: string, dest: string, good: string;
 let db: ReturnType<typeof useTestDb>;
 
@@ -41,15 +71,28 @@ function walk(dir: string, prefix = ""): Record<string, string> {
 }
 // Everything a restore may change, so "nothing changed" is one toEqual.
 const snapshot = (withSettings = false) => ({
-  tables: Object.fromEntries([...TABLES, ...(withSettings ? ["settings"] : [])].map((t) => [t, getDb().$client.prepare(`SELECT * FROM ${t} ORDER BY id`).all()])),
+  tables: Object.fromEntries(
+    [...TABLES, ...(withSettings ? ["settings"] : [])].map((t) => [
+      t,
+      getDb().$client.prepare(`SELECT * FROM ${t} ORDER BY id`).all(),
+    ]),
+  ),
   files: walk(root),
   dbFolder: readdirSync(dirname(process.env.DATABASE_PATH!)),
   backups: existsSync(dest) ? readdirSync(dest) : null,
 });
 
 async function populate() {
-  const trackId = db.select().from(tracks).all().find((t) => t.name === "Job")!.id;
-  const company = db.select().from(columns).all().find((c) => c.trackId === trackId && c.name === "Company")!.id;
+  const trackId = db
+    .select()
+    .from(tracks)
+    .all()
+    .find((t) => t.name === "Job")!.id;
+  const company = db
+    .select()
+    .from(columns)
+    .all()
+    .find((c) => c.trackId === trackId && c.name === "Company")!.id;
   const ids: number[] = [];
   for (const title of ["Acme Robotics", "Beta Labs"]) {
     const r = await createApplication({ title, trackId, values: [{ columnId: company, value: `${title} Inc` }] });
@@ -57,7 +100,12 @@ async function populate() {
     ids.push(r.id);
   }
   const up = async (name: string, content: string, appId = ids[0]) => {
-    const r = await storeUploadedFile({ applicationId: appId, file: new File([content], name), label: "CV", uploadDate: "2026-11-08" });
+    const r = await storeUploadedFile({
+      applicationId: appId,
+      file: new File([content], name),
+      label: "CV",
+      uploadDate: "2026-11-08",
+    });
     if (!r.ok || !("file" in r)) throw new Error(JSON.stringify(r));
     return r.file;
   };
@@ -94,7 +142,15 @@ afterEach(() => {
 });
 
 const createdAt = () => new Date(2026, 10, 9, 10, 0).toISOString();
-const integrity = () => Object.fromEntries((getDb().$client.prepare("SELECT relative_path, integrity FROM files").all() as { relative_path: string; integrity: string }[]).map((r) => [r.relative_path, r.integrity]));
+const integrity = () =>
+  Object.fromEntries(
+    (
+      getDb().$client.prepare("SELECT relative_path, integrity FROM files").all() as {
+        relative_path: string;
+        integrity: string;
+      }[]
+    ).map((r) => [r.relative_path, r.integrity]),
+  );
 const restore = (zip = good) => restoreFromBackup(zip, { createdAt: createdAt(), counts: dbRestore.currentCounts() });
 const wipe = () => {
   getDb().delete(applications).run();
@@ -105,12 +161,26 @@ const wipe = () => {
 // A variant of the good zip. `files/` entries may be changed; the manifest is recomputed unless `keepManifest`.
 function craft(name: string, change: (m: Map<string, Buffer>) => void, extra: ZipSpec[] = [], keepManifest = false) {
   const out = join(work, name);
-  rewriteZip(good, out, (m) => {
-    change(m);
-    if (keepManifest) return;
-    const files = [...m].filter(([n]) => n.startsWith("files/"));
-    m.set("manifest.json", Buffer.from(JSON.stringify({ ...JSON.parse(m.get("manifest.json")!.toString()), fileCount: files.length, filesBytes: files.reduce((s, [, d]) => s + d.length, 0) })));
-  }, extra);
+  rewriteZip(
+    good,
+    out,
+    (m) => {
+      change(m);
+      if (keepManifest) return;
+      const files = [...m].filter(([n]) => n.startsWith("files/"));
+      m.set(
+        "manifest.json",
+        Buffer.from(
+          JSON.stringify({
+            ...JSON.parse(m.get("manifest.json")!.toString()),
+            fileCount: files.length,
+            filesBytes: files.reduce((s, [, d]) => s + d.length, 0),
+          }),
+        ),
+      );
+    },
+    extra,
+  );
   return out;
 }
 async function refused(zip: string, re: RegExp, alsoCheck = true) {
@@ -133,15 +203,32 @@ describe("AT-13: back up, wipe, restore", () => {
     expect(snapshot().tables.applications).toEqual([]);
 
     const c = await checkBackup(good);
-    expect(c).toMatchObject({ ok: true, info: { createdAt: createdAt(), fileCount: 3, extraFiles: 0, schemaOlder: false, counts: { applications: 2, files: 3, submissions: 1, notes: 1 } } });
+    expect(c).toMatchObject({
+      ok: true,
+      info: {
+        createdAt: createdAt(),
+        fileCount: 3,
+        extraFiles: 0,
+        schemaOlder: false,
+        counts: { applications: 2, files: 3, submissions: 1, notes: 1 },
+      },
+    });
 
     const r = await restore();
-    expect(r).toMatchObject({ ok: true, createdAt: createdAt(), counts: { applications: 2, files: 3, submissions: 1, notes: 1 }, warnings: [] });
+    expect(r).toMatchObject({
+      ok: true,
+      createdAt: createdAt(),
+      counts: { applications: 2, files: 3, submissions: 1, notes: 1 },
+      warnings: [],
+    });
     const after = snapshot();
     expect(after.tables).toEqual(before.tables);
     expect(after.files).toEqual(before.files); // same paths, same hashes; the junk file is gone
     for (const rel of Object.keys(after.files)) expect(statSync(join(root, rel)).mode & 0o222).toBe(0);
-    for (const row of getDb().$client.prepare("SELECT relative_path, sha256 FROM files").all() as { relative_path: string; sha256: string }[]) {
+    for (const row of getDb().$client.prepare("SELECT relative_path, sha256 FROM files").all() as {
+      relative_path: string;
+      sha256: string;
+    }[]) {
       expect(sha(join(root, row.relative_path))).toBe(row.sha256);
     }
     expect(existsSync(join(root, "junk.txt"))).toBe(false);
@@ -181,7 +268,11 @@ describe("AT-13: back up, wipe, restore", () => {
   });
 
   it("brings back the win statuses saved in the backup (FR-9.7), not the ones saved since", async () => {
-    const job = db.select().from(tracks).all().find((t) => t.name === "Job")!.id;
+    const job = db
+      .select()
+      .from(tracks)
+      .all()
+      .find((t) => t.name === "Job")!.id;
     const saved = winStatusIds(job);
     expect(saved).toHaveLength(2); // seeded: Interview and Offer
     expect(await setWinStatuses(job, [])).toEqual({ ok: true });
@@ -204,7 +295,10 @@ describe("AT-13: back up, wipe, restore", () => {
     if (!b.ok) throw new Error(b.error);
     const dbOnly = readZip(b.path).get("database/dossier.db")!;
     rmSync(b.path);
-    const zip = craft("db-only.zip", (m) => { for (const n of [...m.keys()]) if (n.startsWith("files/")) m.delete(n); m.set("database/dossier.db", dbOnly); });
+    const zip = craft("db-only.zip", (m) => {
+      for (const n of [...m.keys()]) if (n.startsWith("files/")) m.delete(n);
+      m.set("database/dossier.db", dbOnly);
+    });
     writeFileSync(join(root, "keep-me.txt"), "left alone");
     const r = await restore(zip);
     expect(r).toMatchObject({ ok: true, counts: { files: 0, submissions: 0 } });
@@ -222,13 +316,23 @@ describe("AT-13: back up, wipe, restore", () => {
       const file = join(dir, "old.db");
       const old = new Database(file);
       migrate(drizzle(old), { migrationsFolder: join(dir, "old") });
-      old.prepare("INSERT INTO tracks (user_id, name, position, created_at, updated_at) VALUES ('local', 'T', 0, 1, 1)").run();
-      old.prepare("INSERT INTO applications (user_id, track_id, title, created_at, updated_at) VALUES ('local', 1, 'Old app', 1, 1)").run();
+      old
+        .prepare("INSERT INTO tracks (user_id, name, position, created_at, updated_at) VALUES ('local', 'T', 0, 1, 1)")
+        .run();
+      old
+        .prepare(
+          "INSERT INTO applications (user_id, track_id, title, created_at, updated_at) VALUES ('local', 1, 'Old app', 1, 1)",
+        )
+        .run();
       // Three file rows, all recorded with the hash of "original": the first is intact in the backup, the second was edited, the third is not in it.
       const hash = createHash("sha256").update("original").digest("hex");
-      ["ok", "changed", "gone"].forEach((n, i) => old.prepare(
-        "INSERT INTO files (user_id, created_at, updated_at, application_id, label, original_name, stored_name, relative_path, sha256, size_bytes, upload_date, base_name, extension, seq) VALUES ('local', 1, 1, 1, 'CV', ?, ?, ?, ?, 8, '2026-11-08', ?, 'txt', ?)",
-      ).run(`${n}.txt`, `${n}.txt`, `app/${n}.txt`, hash, n, i + 1));
+      ["ok", "changed", "gone"].forEach((n, i) =>
+        old
+          .prepare(
+            "INSERT INTO files (user_id, created_at, updated_at, application_id, label, original_name, stored_name, relative_path, sha256, size_bytes, upload_date, base_name, extension, seq) VALUES ('local', 1, 1, 1, 'CV', ?, ?, ?, ?, 8, '2026-11-08', ?, 'txt', ?)",
+          )
+          .run(`${n}.txt`, `${n}.txt`, `app/${n}.txt`, hash, n, i + 1),
+      );
       old.close();
       const zip = craft("old.zip", (m) => {
         for (const n of [...m.keys()]) if (n.startsWith("files/")) m.delete(n);
@@ -236,14 +340,29 @@ describe("AT-13: back up, wipe, restore", () => {
         m.set("files/app/changed.txt", Buffer.from("edited!!"));
         m.set("database/dossier.db", readFileSync(file));
       });
-      expect(await checkBackup(zip)).toMatchObject({ ok: true, info: { schemaOlder: true, counts: { applications: 1, files: 3, notes: 0 } } });
+      expect(await checkBackup(zip)).toMatchObject({
+        ok: true,
+        info: { schemaOlder: true, counts: { applications: 1, files: 3, notes: 0 } },
+      });
       const r = await restore(zip);
       expect(r.ok).toBe(true);
       expect(integrity()).toEqual({ "app/ok.txt": "ok", "app/changed.txt": "mismatch", "app/gone.txt": "missing" });
-      expect(getDb().select().from(applications).all().map((a) => a.title)).toEqual(["Old app"]);
-      expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: MIGRATION_COUNT });
-      expect((getDb().$client.prepare("PRAGMA table_info(files)").all() as { name: string }[]).map((c) => c.name)).toEqual(expect.arrayContaining(["integrity", "checked_at", "deleted_at"]));
-      expect(getDb().$client.prepare("SELECT name FROM sqlite_master WHERE name = 'activity_events'").all()).toHaveLength(1);
+      expect(
+        getDb()
+          .select()
+          .from(applications)
+          .all()
+          .map((a) => a.title),
+      ).toEqual(["Old app"]);
+      expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({
+        n: MIGRATION_COUNT,
+      });
+      expect(
+        (getDb().$client.prepare("PRAGMA table_info(files)").all() as { name: string }[]).map((c) => c.name),
+      ).toEqual(expect.arrayContaining(["integrity", "checked_at", "deleted_at"]));
+      expect(
+        getDb().$client.prepare("SELECT name FROM sqlite_master WHERE name = 'activity_events'").all(),
+      ).toHaveLength(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -277,13 +396,19 @@ describe("AT-13: back up, wipe, restore", () => {
 });
 
 describe("a backup of files the app flags (changed or missing) restores, flagged (NFR-5)", () => {
-  const fileRows = () => getDb().$client.prepare("SELECT id, relative_path AS rel, sha256 FROM files ORDER BY id").all() as { id: number; rel: string; sha256: string }[];
+  const fileRows = () =>
+    getDb().$client.prepare("SELECT id, relative_path AS rel, sha256 FROM files ORDER BY id").all() as {
+      id: number;
+      rel: string;
+      sha256: string;
+    }[];
   const backUp = async (minute: number) => {
     const b = await createBackup(dest, new Date(2026, 10, 9, 13, minute));
     if (!b.ok) throw new Error(b.error);
     return b;
   };
-  const restoreZip = (b: { path: string; createdAt: string }) => restoreFromBackup(b.path, { createdAt: b.createdAt, counts: dbRestore.currentCounts() });
+  const restoreZip = (b: { path: string; createdAt: string }) =>
+    restoreFromBackup(b.path, { createdAt: b.createdAt, counts: dbRestore.currentCounts() });
 
   it("AT-8 state: a file edited outside the app is backed up, checked, restored as it is and flagged mismatch; the others are intact", async () => {
     const [cv, ...others] = fileRows();
@@ -358,17 +483,20 @@ describe("validation refuses before anything is changed", () => {
     expect(existsSync(join(work, "evil.txt"))).toBe(false);
   });
 
-  it.each(["../evil.txt", "/etc/passwd", "a\\..\\b.txt", "x/../../y.txt", "C:\\y.txt"])("refuses a backup whose database lists an unsafe file path (%j)", async (bad) => {
-    const out = craft("tampered-row.zip", (m) => {
-      const f = join(work, "tampered-row.db");
-      writeFileSync(f, m.get("database/dossier.db")!);
-      const d = new Database(f);
-      d.prepare("UPDATE files SET relative_path = ? WHERE id = (SELECT min(id) FROM files)").run(bad);
-      d.close();
-      m.set("database/dossier.db", readFileSync(f));
-    });
-    await refused(out, /unsafe path/);
-  });
+  it.each(["../evil.txt", "/etc/passwd", "a\\..\\b.txt", "x/../../y.txt", "C:\\y.txt"])(
+    "refuses a backup whose database lists an unsafe file path (%j)",
+    async (bad) => {
+      const out = craft("tampered-row.zip", (m) => {
+        const f = join(work, "tampered-row.db");
+        writeFileSync(f, m.get("database/dossier.db")!);
+        const d = new Database(f);
+        d.prepare("UPDATE files SET relative_path = ? WHERE id = (SELECT min(id) FROM files)").run(bad);
+        d.close();
+        m.set("database/dossier.db", readFileSync(f));
+      });
+      await refused(out, /unsafe path/);
+    },
+  );
 
   it("refuses a duplicate name, a symlink, a folder with data, an unknown entry and an encrypted entry", async () => {
     await refused(withBackupEntries([{ name: firstFile(), data: "dup" }]), /twice/);
@@ -379,22 +507,60 @@ describe("validation refuses before anything is changed", () => {
   });
 
   it("refuses oversized and bomb-like entries by their declared sizes", async () => {
-    const big = (i: number): ZipSpec => ({ name: `files/big${i}.bin`, data: "x", declaredSize: 0xfffffff0, compressedSize: 0xfffffff0 });
+    const big = (i: number): ZipSpec => ({
+      name: `files/big${i}.bin`,
+      data: "x",
+      declaredSize: 0xfffffff0,
+      compressedSize: 0xfffffff0,
+    });
     await refused(withBackupEntries([1, 2, 3, 4, 5, 6].map(big)), /unpack to more than/);
-    await refused(withBackupEntries([{ name: "files/bomb.bin", data: "x", declaredSize: 50_000_000, compressedSize: 10, method: 8 }]), /zip bomb/);
+    await refused(
+      withBackupEntries([
+        { name: "files/bomb.bin", data: "x", declaredSize: 50_000_000, compressedSize: 10, method: 8 },
+      ]),
+      /zip bomb/,
+    );
   });
 
   it("refuses a bad manifest, an unsupported format version and a manifest that disagrees with the zip", async () => {
-    await refused(craft("m1.zip", (m) => m.set("manifest.json", Buffer.from("not json")), [], true), /not an object/);
+    await refused(
+      craft("m1.zip", (m) => m.set("manifest.json", Buffer.from("not json")), [], true),
+      /not an object/,
+    );
     const man = () => JSON.parse(readZip(good).get("manifest.json")!.toString());
-    await refused(craft("m2.zip", (m) => m.set("manifest.json", Buffer.from(JSON.stringify({ ...man(), format: "other" }))), [], true), /not a Dossier backup/);
-    await refused(craft("m3.zip", (m) => m.set("manifest.json", Buffer.from(JSON.stringify({ ...man(), formatVersion: 99 }))), [], true), /different version/);
-    await refused(craft("m4.zip", (m) => m.set("manifest.json", Buffer.from(JSON.stringify({ ...man(), fileCount: 9 }))), [], true), /does not match its manifest/);
+    await refused(
+      craft(
+        "m2.zip",
+        (m) => m.set("manifest.json", Buffer.from(JSON.stringify({ ...man(), format: "other" }))),
+        [],
+        true,
+      ),
+      /not a Dossier backup/,
+    );
+    await refused(
+      craft(
+        "m3.zip",
+        (m) => m.set("manifest.json", Buffer.from(JSON.stringify({ ...man(), formatVersion: 99 }))),
+        [],
+        true,
+      ),
+      /different version/,
+    );
+    await refused(
+      craft("m4.zip", (m) => m.set("manifest.json", Buffer.from(JSON.stringify({ ...man(), fileCount: 9 }))), [], true),
+      /does not match its manifest/,
+    );
   });
 
   it("refuses a zip with no manifest, no database, a non-zip and a missing or relative path", async () => {
-    await refused(craft("n1.zip", (m) => m.delete("manifest.json"), [], true), /no manifest/);
-    await refused(craft("n2.zip", (m) => m.delete("database/dossier.db"), [], true), /no database/);
+    await refused(
+      craft("n1.zip", (m) => m.delete("manifest.json"), [], true),
+      /no manifest/,
+    );
+    await refused(
+      craft("n2.zip", (m) => m.delete("database/dossier.db"), [], true),
+      /no database/,
+    );
     writeFileSync(join(work, "text.zip"), "hello, I am not a zip");
     await refused(join(work, "text.zip"), /not a readable zip/);
     await refused(join(work, "nope.zip"), /No file exists/);
@@ -409,25 +575,41 @@ describe("validation refuses before anything is changed", () => {
     const d = new Database(file);
     d.prepare("INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('future', ?)").run(9_999_999_999_999);
     d.close();
-    await refused(craft("newer.zip", (m) => m.set("database/dossier.db", readFileSync(file))), /newer version of Dossier/);
+    await refused(
+      craft("newer.zip", (m) => m.set("database/dossier.db", readFileSync(file))),
+      /newer version of Dossier/,
+    );
   });
 
   it("refuses a corrupt or foreign database", async () => {
     const db0 = readZip(good).get("database/dossier.db")!;
-    await refused(craft("c1.zip", (m) => m.set("database/dossier.db", Buffer.from("garbage".repeat(500)))), /database inside the backup/);
+    await refused(
+      craft("c1.zip", (m) => m.set("database/dossier.db", Buffer.from("garbage".repeat(500)))),
+      /database inside the backup/,
+    );
     const damaged = Buffer.from(db0);
     for (let i = 4096; i < damaged.length; i += 17) damaged[i] ^= 0xff; // scribble over every page after the first
-    await refused(craft("c2.zip", (m) => m.set("database/dossier.db", damaged)), /database inside the backup/);
+    await refused(
+      craft("c2.zip", (m) => m.set("database/dossier.db", damaged)),
+      /database inside the backup/,
+    );
     const other = join(work, "other.db");
     const o = new Database(other);
     o.exec("CREATE TABLE x (a)");
     o.close();
-    await refused(craft("c3.zip", (m) => m.set("database/dossier.db", readFileSync(other))), /not a Dossier database/);
+    await refused(
+      craft("c3.zip", (m) => m.set("database/dossier.db", readFileSync(other))),
+      /not a Dossier database/,
+    );
   });
 
   it("does not refuse a file whose bytes differ from the recorded SHA-256, or a listed file that is missing: it lists and flags them", async () => {
-    const cv = firstFile().slice("files/".length), lt = letter().slice("files/".length);
-    const zip = craft("h1.zip", (m) => { m.set(firstFile(), Buffer.from("cv version X")); m.delete(letter()); });
+    const cv = firstFile().slice("files/".length),
+      lt = letter().slice("files/".length);
+    const zip = craft("h1.zip", (m) => {
+      m.set(firstFile(), Buffer.from("cv version X"));
+      m.delete(letter());
+    });
     expect(await checkBackup(zip)).toMatchObject({ ok: true, info: { changed: [cv], missing: [lt], fileCount: 2 } });
     expect((await restore(zip)).ok).toBe(true);
     expect(integrity()).toMatchObject({ [cv]: "mismatch", [lt]: "missing" });
@@ -448,9 +630,15 @@ describe("validation refuses before anything is changed", () => {
   });
 
   it("refuses when the data or the backup changed since the confirmation", async () => {
-    const stale = await restoreFromBackup(good, { createdAt: createdAt(), counts: { ...dbRestore.currentCounts(), applications: 99 } });
+    const stale = await restoreFromBackup(good, {
+      createdAt: createdAt(),
+      counts: { ...dbRestore.currentCounts(), applications: 99 },
+    });
     expect(!stale.ok && stale.error).toMatch(/data changed since/);
-    const other = await restoreFromBackup(good, { createdAt: "2020-01-01T00:00:00.000Z", counts: dbRestore.currentCounts() });
+    const other = await restoreFromBackup(good, {
+      createdAt: "2020-01-01T00:00:00.000Z",
+      counts: dbRestore.currentCounts(),
+    });
     expect(!other.ok && other.error).toMatch(/file changed since/);
     expect(await restoreFromBackup(good, null)).toMatchObject({ ok: false });
     expect(readdirSync(dest)).toEqual([]);
@@ -481,12 +669,21 @@ describe("a failure during the swap rolls everything back", () => {
   it("a database swap that fails puts the old files back", async () => {
     wipe();
     const before = snapshot(true);
-    vi.spyOn(dbRestore, "swapDatabase").mockImplementation(() => { throw new Error("disk full"); });
+    vi.spyOn(dbRestore, "swapDatabase").mockImplementation(() => {
+      throw new Error("disk full");
+    });
     const r = await restore();
     expect(!r.ok && r.error).toMatch(/restore failed: disk full.*unchanged/);
     const after = snapshot(true);
     expect(after.backups).toHaveLength(1); // the safety backup stays
-    const strip = (x: typeof before) => ({ ...x, backups: 0, tables: { ...x.tables, settings: x.tables.settings.filter((r) => (r as { key: string }).key !== "last_backup_at") } });
+    const strip = (x: typeof before) => ({
+      ...x,
+      backups: 0,
+      tables: {
+        ...x.tables,
+        settings: x.tables.settings.filter((r) => (r as { key: string }).key !== "last_backup_at"),
+      },
+    });
     expect(strip(after)).toEqual(strip(before));
     expect(existsSync(join(root, "junk.txt"))).toBe(true);
     expect(readdirSync(root)).toEqual(["junk.txt"]); // no staging or empty aside folder left behind
@@ -515,7 +712,10 @@ describe("the action", () => {
     const counts = dbRestore.currentCounts();
     const first = restoreBackup(good, { createdAt: createdAt(), counts });
     expect(await backUpNow()).toMatchObject({ ok: false, error: /already running/ });
-    expect(await restoreBackup(good, { createdAt: createdAt(), counts })).toMatchObject({ ok: false, error: /already running/ });
+    expect(await restoreBackup(good, { createdAt: createdAt(), counts })).toMatchObject({
+      ok: false,
+      error: /already running/,
+    });
     expect((await first).ok).toBe(true);
     expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
     expect((await backUpNow()).ok).toBe(true); // the lock is released

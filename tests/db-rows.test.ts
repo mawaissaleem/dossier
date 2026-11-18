@@ -9,9 +9,17 @@ import { dropTestDb, useTestDb } from "./helpers/db";
 let db: ReturnType<typeof useTestDb>;
 let trackId: number;
 const app = (title: string, over: Partial<typeof applications.$inferInsert> = {}) =>
-  db.insert(applications).values({ userId: "local", trackId, title, ...over }).returning().get().id;
+  db
+    .insert(applications)
+    .values({ userId: "local", trackId, title, ...over })
+    .returning()
+    .get().id;
 const col = (type: (typeof columns.$inferInsert)["type"], over: Partial<typeof columns.$inferInsert> = {}) =>
-  db.insert(columns).values({ userId: "local", trackId, name: `${type}-${Math.random()}`, type, position: 0, ...over }).returning().get().id;
+  db
+    .insert(columns)
+    .values({ userId: "local", trackId, name: `${type}-${Math.random()}`, type, position: 0, ...over })
+    .returning()
+    .get().id;
 const opt = (columnId: number, label: string, position = 0, userId = "local") =>
   db.insert(columnOptions).values({ userId, columnId, label, color: "red", position }).returning().get().id;
 
@@ -59,7 +67,12 @@ describe("listApplicationRows", () => {
   });
 
   it("returns every column key, null for blanks, and typed values for the 6 types", async () => {
-    const t = col("text"), n = col("number"), d = col("date"), l = col("link"), k = col("checkbox"), s = col("single_select");
+    const t = col("text"),
+      n = col("number"),
+      d = col("date"),
+      l = col("link"),
+      k = col("checkbox"),
+      s = col("single_select");
     const o = opt(s, "Applied");
     const blank = col("text");
     const id = app("A");
@@ -71,8 +84,17 @@ describe("listApplicationRows", () => {
     await setCellValue(id, s, o);
     const [row] = await listApplicationRows(trackId);
     expect(row).toEqual({
-      id, title: "A",
-      values: { [t]: "hi", [n]: 4.5, [d]: "2026-03-04", [l]: "https://example.com/", [k]: false, [s]: o, [blank]: null },
+      id,
+      title: "A",
+      values: {
+        [t]: "hi",
+        [n]: 4.5,
+        [d]: "2026-03-04",
+        [l]: "https://example.com/",
+        [k]: false,
+        [s]: o,
+        [blank]: null,
+      },
     });
   });
 
@@ -102,7 +124,8 @@ describe("listApplicationRows", () => {
   });
 
   it("shows a column added after rows exist as null on all of them", async () => {
-    const a = app("a"), b = app("b");
+    const a = app("a"),
+      b = app("b");
     const later = col("text", { name: "later" });
     const rows = await listApplicationRows(trackId);
     expect(rows.map((r) => r.id)).toEqual([b, a]);
@@ -125,8 +148,14 @@ describe("listApplicationRows", () => {
     // One transaction: 200 separate fsyncing commits made this test time out under a loaded full suite.
     db.transaction((tx) => {
       for (let i = 0; i < 200; i++) {
-        const a = tx.insert(applications).values({ userId: "local", trackId, title: `app ${i}` }).returning().get().id;
-        tx.insert(cellValues).values({ userId: "local", applicationId: a, columnId: t, valueText: `v${i}` }).run();
+        const a = tx
+          .insert(applications)
+          .values({ userId: "local", trackId, title: `app ${i}` })
+          .returning()
+          .get().id;
+        tx.insert(cellValues)
+          .values({ userId: "local", applicationId: a, columnId: t, valueText: `v${i}` })
+          .run();
       }
     });
     expect((await listApplicationRows(trackId)).length).toBe(201);
@@ -146,7 +175,14 @@ describe("getApplicationDetail", () => {
     const blank = col("text", { position: 6 });
     const o = opt(s, "Applied");
     const id = app("Acme", { archived: true });
-    for (const [cid, v] of [[t, "hi"], [n, 4.5], [d, "2026-01-02"], [l, "https://a.b/"], [c, true], [s, o]] as const) {
+    for (const [cid, v] of [
+      [t, "hi"],
+      [n, 4.5],
+      [d, "2026-01-02"],
+      [l, "https://a.b/"],
+      [c, true],
+      [s, o],
+    ] as const) {
       expect((await setCellValue(id, cid, v)).ok).toBe(true);
     }
     const detail = await getApplicationDetail(id);
@@ -154,7 +190,15 @@ describe("getApplicationDetail", () => {
     expect(detail!.columns.map((x) => x.id)).toEqual([t, n, d, l, c, s, blank]);
     expect(detail!.columns[1].hidden).toBe(true);
     expect(detail!.columns[5].options).toHaveLength(1);
-    expect(detail!.values).toEqual({ [t]: "hi", [n]: 4.5, [d]: "2026-01-02", [l]: "https://a.b/", [c]: true, [s]: o, [blank]: null });
+    expect(detail!.values).toEqual({
+      [t]: "hi",
+      [n]: 4.5,
+      [d]: "2026-01-02",
+      [l]: "https://a.b/",
+      [c]: true,
+      [s]: o,
+      [blank]: null,
+    });
   });
 
   it("ignores another application's cells; null for another user's application or track, and a missing id", async () => {
@@ -163,9 +207,21 @@ describe("getApplicationDetail", () => {
     const b = app("B");
     await setCellValue(b, t, "other");
     expect((await getApplicationDetail(a))!.values).toEqual({ [t]: null });
-    const foreignTrack = db.insert(tracks).values({ userId: "someone-else", name: "X", position: 1 }).returning().get().id;
-    const foreignApp = db.insert(applications).values({ userId: "someone-else", trackId: foreignTrack, title: "F" }).returning().get().id;
-    const mixed = db.insert(applications).values({ userId: "local", trackId: foreignTrack, title: "M" }).returning().get().id;
+    const foreignTrack = db
+      .insert(tracks)
+      .values({ userId: "someone-else", name: "X", position: 1 })
+      .returning()
+      .get().id;
+    const foreignApp = db
+      .insert(applications)
+      .values({ userId: "someone-else", trackId: foreignTrack, title: "F" })
+      .returning()
+      .get().id;
+    const mixed = db
+      .insert(applications)
+      .values({ userId: "local", trackId: foreignTrack, title: "M" })
+      .returning()
+      .get().id;
     expect(await getApplicationDetail(foreignApp)).toBeNull();
     expect(await getApplicationDetail(mixed)).toBeNull();
     expect(await getApplicationDetail(99999)).toBeNull();

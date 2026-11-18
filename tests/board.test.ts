@@ -1,15 +1,32 @@
 import { describe, expect, it } from "vitest";
 import type { ApplicationRow } from "@/lib/db/applications";
 import { closestCenter, type CollisionDetection } from "@dnd-kit/core";
-import { applyMove, boardGroups, columnAtX, columnFilteredOut, columnLabel, groupByStatus, hiddenAfterMove, nextColumn, planMove } from "@/lib/board";
+import {
+  applyMove,
+  boardGroups,
+  columnAtX,
+  columnFilteredOut,
+  columnLabel,
+  groupByStatus,
+  hiddenAfterMove,
+  nextColumn,
+  planMove,
+} from "@/lib/board";
 import type { Filter } from "@/lib/filter";
 
-const status = { id: 1, options: [
-  { id: 30, label: "Zed", color: "blue", position: 0 },
-  { id: 10, label: "Alpha", color: "red", position: 1 },
-  { id: 20, label: "Mid", color: "green", position: 2 },
-] };
-const row = (id: number, v: ApplicationRow["values"][number]): ApplicationRow => ({ id, title: `t${id}`, values: { 1: v } });
+const status = {
+  id: 1,
+  options: [
+    { id: 30, label: "Zed", color: "blue", position: 0 },
+    { id: 10, label: "Alpha", color: "red", position: 1 },
+    { id: 20, label: "Mid", color: "green", position: 2 },
+  ],
+};
+const row = (id: number, v: ApplicationRow["values"][number]): ApplicationRow => ({
+  id,
+  title: `t${id}`,
+  values: { 1: v },
+});
 const ids = (c: { cards: ApplicationRow[] }) => c.cards.map((r) => r.id);
 
 describe("groupByStatus", () => {
@@ -26,7 +43,10 @@ describe("groupByStatus", () => {
     expect(ids(g[2])).toEqual([4]);
   });
   it("blank, missing and deleted-option values go to a last No status column", () => {
-    const g = groupByStatus([row(1, null), row(2, 999), row(3, "x"), row(4, 10), { id: 5, title: "t5", values: {} }], status);
+    const g = groupByStatus(
+      [row(1, null), row(2, 999), row(3, "x"), row(4, 10), { id: 5, title: "t5", values: {} }],
+      status,
+    );
     expect(g.map((c) => c.label)).toEqual(["Zed", "Alpha", "Mid", "No status"]);
     expect(ids(g[3])).toEqual([5, 3, 2, 1]);
     expect(g[3].optionId).toBeNull();
@@ -47,9 +67,20 @@ describe("groupByStatus", () => {
 describe("boardGroups (filter, then group) and columnFilteredOut", () => {
   const sel = [
     { id: 1, type: "single_select" as const, options: status.options },
-    { id: 2, type: "single_select" as const, options: [{ id: 50, label: "High", color: "red", position: 0 }, { id: 51, label: "Low", color: "gray", position: 1 }] },
+    {
+      id: 2,
+      type: "single_select" as const,
+      options: [
+        { id: 50, label: "High", color: "red", position: 0 },
+        { id: 51, label: "Low", color: "gray", position: 1 },
+      ],
+    },
   ];
-  const r = (id: number, s: number | null, p: number | null): ApplicationRow => ({ id, title: `t${id}`, values: { 1: s, 2: p } });
+  const r = (id: number, s: number | null, p: number | null): ApplicationRow => ({
+    id,
+    title: `t${id}`,
+    values: { 1: s, 2: p },
+  });
   const rs = [r(1, 10, 50), r(2, 10, 51), r(3, 20, 50), r(4, null, 50), r(5, 999, 51), r(6, 30, 50)];
   const f = (id: number, options: number[], blank = false): Filter => ({ id, options, blank });
   const counts = (g: ReturnType<typeof boardGroups>) => g.map((c) => [c.label, ids(c)]);
@@ -60,15 +91,39 @@ describe("boardGroups (filter, then group) and columnFilteredOut", () => {
     expect(counts(boardGroups(titleOnly, sel, [], status)).at(-1)).toEqual(["No status", [9]]);
   });
   it("a non-status filter removes cards but keeps every status column", () => {
-    expect(counts(boardGroups(rs, sel, [f(2, [50])], status))).toEqual([["Zed", [6]], ["Alpha", [1]], ["Mid", [3]], ["No status", [4]]]);
+    expect(counts(boardGroups(rs, sel, [f(2, [50])], status))).toEqual([
+      ["Zed", [6]],
+      ["Alpha", [1]],
+      ["Mid", [3]],
+      ["No status", [4]],
+    ]);
   });
   it("a status filter leaves the other columns empty; options and blank are OR, columns AND", () => {
-    expect(counts(boardGroups(rs, sel, [f(1, [10])], status))).toEqual([["Zed", []], ["Alpha", [2, 1]], ["Mid", []]]);
-    expect(counts(boardGroups(rs, sel, [f(1, [10], true)], status))).toEqual([["Zed", []], ["Alpha", [2, 1]], ["Mid", []], ["No status", [5, 4]]]); // blank: no value or deleted option
-    expect(counts(boardGroups(rs, sel, [f(1, [10], true), f(2, [51])], status))).toEqual([["Zed", []], ["Alpha", [2]], ["Mid", []], ["No status", [5]]]);
+    expect(counts(boardGroups(rs, sel, [f(1, [10])], status))).toEqual([
+      ["Zed", []],
+      ["Alpha", [2, 1]],
+      ["Mid", []],
+    ]);
+    expect(counts(boardGroups(rs, sel, [f(1, [10], true)], status))).toEqual([
+      ["Zed", []],
+      ["Alpha", [2, 1]],
+      ["Mid", []],
+      ["No status", [5, 4]],
+    ]); // blank: no value or deleted option
+    expect(counts(boardGroups(rs, sel, [f(1, [10], true), f(2, [51])], status))).toEqual([
+      ["Zed", []],
+      ["Alpha", [2]],
+      ["Mid", []],
+      ["No status", [5]],
+    ]);
   });
   it("a blank-only status filter shows only No status; filters that match nothing leave empty columns", () => {
-    expect(counts(boardGroups(rs, sel, [f(1, [], true)], status))).toEqual([["Zed", []], ["Alpha", []], ["Mid", []], ["No status", [5, 4]]]);
+    expect(counts(boardGroups(rs, sel, [f(1, [], true)], status))).toEqual([
+      ["Zed", []],
+      ["Alpha", []],
+      ["Mid", []],
+      ["No status", [5, 4]],
+    ]);
     expect(boardGroups(rs, sel, [f(1, [20]), f(2, [51])], status).every((c) => c.cards.length === 0)).toBe(true);
   });
   it("does not mutate the rows and ignores a filter on a column that is not a select", () => {
@@ -91,7 +146,9 @@ describe("boardGroups (filter, then group) and columnFilteredOut", () => {
     expect(hiddenAfterMove(rs[0], sel, [f(1, [10, 20])], 1, m)).toBe(false);
     expect(hiddenAfterMove(rs[0], sel, [f(2, [51])], 1, m)).toBe(true); // already hidden by priority: unchanged by the move
     expect(hiddenAfterMove(rs[0], sel, [], 1, m)).toBe(false);
-    expect(hiddenAfterMove(rs[0], sel, [f(1, [], true)], 1, planMove(groupByStatus(rs, status), 1, 1, null)!)).toBe(false); // moved to No status, blank kept
+    expect(hiddenAfterMove(rs[0], sel, [f(1, [], true)], 1, planMove(groupByStatus(rs, status), 1, 1, null)!)).toBe(
+      false,
+    ); // moved to No status, blank kept
   });
 });
 
@@ -129,20 +186,36 @@ describe("planMove and applyMove (board drop, optimistic state)", () => {
     const m = planMove(groups, 1, 1, 20)!;
     expect(applyMove([row(1, 20)], 1, m)[0].values[1]).toBe(20); // refreshed: the saved value
     expect(applyMove([row(1, 30)], 1, m)[0].values[1]).toBe(30); // changed elsewhere meanwhile: not overridden
-    expect(applyMove([{ id: 1, title: "t1", values: {} }], 1, planMove(groupByStatus([{ id: 1, title: "t1", values: {} }], status), 1, 1, 10)!)[0].values[1]).toBe(10);
+    expect(
+      applyMove(
+        [{ id: 1, title: "t1", values: {} }],
+        1,
+        planMove(groupByStatus([{ id: 1, title: "t1", values: {} }], status), 1, 1, 10)!,
+      )[0].values[1],
+    ).toBe(10);
   });
 });
 
 // Keyboard drag geometry with the board's real sizes: 288px columns (w-72), a 12px gap, a 264x70 card placed 8px below a column's top.
 describe("columnAtX and nextColumn (keyboard drag)", () => {
-  const W = 288, CARD = 264;
+  const W = 288,
+    CARD = 264;
   const col = (i: number, height: number) => ({ id: `c${i}`, left: i * (W + 12), width: W, top: 100, height });
   // Where the keyboard getter puts the card in column t, and the card's centre x the collision check uses.
-  const placed = (t: { left: number; width: number; top: number }) => ({ left: t.left + (t.width - CARD) / 2, top: t.top + 8, width: CARD, height: 70 });
+  const placed = (t: { left: number; width: number; top: number }) => ({
+    left: t.left + (t.width - CARD) / 2,
+    top: t.top + 8,
+    width: CARD,
+    height: 70,
+  });
   const mid = (r: { left: number; width: number }) => r.left + r.width / 2;
   // dnd-kit's closestCenter, the detection used before: card centre to column centre, height included.
   const closest = (r: ReturnType<typeof placed>, cols: ReturnType<typeof col>[]) =>
-    closestCenter({ collisionRect: r, droppableContainers: cols, droppableRects: new Map(cols.map((c) => [c.id, c])) } as unknown as Parameters<CollisionDetection>[0])[0];
+    closestCenter({
+      collisionRect: r,
+      droppableContainers: cols,
+      droppableRects: new Map(cols.map((c) => [c.id, c])),
+    } as unknown as Parameters<CollisionDetection>[0])[0];
 
   it("ArrowRight into a tall column next to a short one lands on the tall column", () => {
     const cols = [col(0, 200), col(1, 975), col(2, 90)];

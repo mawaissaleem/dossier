@@ -29,7 +29,9 @@ import { parseExpected, problemsMessage, sumBytes, targetRefusal, type LiveFile 
 import { resolveInRoot } from "./resolve";
 import { validateFilesRoot } from "./root";
 
-export type MoveResult = { ok: true; path: string; moved: number; bytes: number; renamed: number; copied: number; warnings: string[] } | { ok: false; error: string };
+export type MoveResult =
+  | { ok: true; path: string; moved: number; bytes: number; renamed: number; copied: number; warnings: string[] }
+  | { ok: false; error: string };
 export type RepointResult = { ok: true; path: string; checked: number; changed: number } | { ok: false; error: string };
 
 const fail = (error: string) => ({ ok: false, error }) as const;
@@ -37,7 +39,10 @@ const code = (e: unknown) => (e as NodeJS.ErrnoException).code;
 class Shown extends Error {} // its message is already written for the user
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 // A read-only file cannot be removed on Windows, so make it writable first.
-const removeFile = async (p: string) => { await chmod(p, 0o666).catch(() => {}); await rm(p, { force: true }); };
+const removeFile = async (p: string) => {
+  await chmod(p, 0o666).catch(() => {});
+  await rm(p, { force: true });
+};
 
 async function sha256Of(path: string): Promise<string> {
   const h = createHash("sha256");
@@ -48,13 +53,18 @@ async function sha256Of(path: string): Promise<string> {
 // Every folder between `abs` and `top` (exclusive), deepest first: the application folders a move created or emptied.
 function foldersBelow(top: string, abs: string[]): string[] {
   const all = new Set<string>();
-  for (const a of abs) for (let d = dirname(a); d !== top && d.startsWith(top) && !all.has(d); d = dirname(d)) all.add(d);
+  for (const a of abs)
+    for (let d = dirname(a); d !== top && d.startsWith(top) && !all.has(d); d = dirname(d)) all.add(d);
   return [...all].sort((x, y) => y.length - x.length);
 }
 
 type Step = { src: string; dst: string; copied: boolean };
 
-export async function moveStoredFiles(input: unknown, expected: unknown, deps: { rename?: typeof rename; copyFile?: typeof copyFile } = {}): Promise<MoveResult> {
+export async function moveStoredFiles(
+  input: unknown,
+  expected: unknown,
+  deps: { rename?: typeof rename; copyFile?: typeof copyFile } = {},
+): Promise<MoveResult> {
   const move = deps.rename ?? rename;
   const copy = deps.copyFile ?? copyFile;
   const exp = parseExpected(expected);
@@ -62,17 +72,23 @@ export async function moveStoredFiles(input: unknown, expected: unknown, deps: {
   const v = await validateFilesRoot(input);
   if (!v.ok) return v;
   const from = await getFilesRoot();
-  if (!from) return fail("There is no current files folder to move. Choose Re-point to use a folder that already holds your files.");
+  if (!from)
+    return fail(
+      "There is no current files folder to move. Choose Re-point to use a folder that already holds your files.",
+    );
   const fromReal = await realpath(from).catch(() => null);
-  if (!fromReal) return fail(`The current files folder ${from} cannot be found. If you moved it yourself, choose Re-point instead.`);
+  if (!fromReal)
+    return fail(`The current files folder ${from} cannot be found. If you moved it yourself, choose Re-point instead.`);
   const toReal = await realpath(v.path);
   const backup = await getBackupDestination();
   const refusal = targetRefusal(fromReal, toReal, backup ? await realpath(backup).catch(() => resolve(backup)) : null);
   if (refusal) return fail(refusal);
-  if ((await readdir(v.path)).length > 0) return fail("The new folder is not empty. Choose an empty folder so nothing is mixed up.");
+  if ((await readdir(v.path)).length > 0)
+    return fail("The new folder is not empty. Choose an empty folder so nothing is mixed up.");
 
   const live = await listLiveFiles();
-  if (live.length !== exp.fileCount || sumBytes(live) !== exp.totalBytes) return fail("Your files changed since the confirmation was shown. Check again.");
+  if (live.length !== exp.fileCount || sumBytes(live) !== exp.totalBytes)
+    return fail("Your files changed since the confirmation was shown. Check again.");
 
   const plan: { f: LiveFile; src: string; dst: string }[] = [];
   for (const f of live) {
@@ -86,8 +102,17 @@ export async function moveStoredFiles(input: unknown, expected: unknown, deps: {
   const target = resolve(v.path);
   try {
     for (const { f, src, dst } of plan) {
-      const st = await lstat(src).catch((e) => { throw code(e) === "ENOENT" ? new Shown(`"${f.relativePath}" is missing from the current files folder. Run Check files, or choose Re-point if you moved the folder yourself.`) : e; });
-      if (!st.isFile()) throw new Shown(`"${f.relativePath}" is not a plain file in the current files folder (a link or folder is in its place).`);
+      const st = await lstat(src).catch((e) => {
+        throw code(e) === "ENOENT"
+          ? new Shown(
+              `"${f.relativePath}" is missing from the current files folder. Run Check files, or choose Re-point if you moved the folder yourself.`,
+            )
+          : e;
+      });
+      if (!st.isFile())
+        throw new Shown(
+          `"${f.relativePath}" is not a plain file in the current files folder (a link or folder is in its place).`,
+        );
       await mkdir(dirname(dst), { recursive: true });
       try {
         await move(src, dst); // same file system: no bytes are read or written
@@ -99,13 +124,19 @@ export async function moveStoredFiles(input: unknown, expected: unknown, deps: {
         const got = await sha256Of(dst);
         if (got !== f.sha256) {
           // A file already changed since upload (AT-8) is copied as it is and stays flagged, as a same-drive rename would carry it.
-          if (got !== (await sha256Of(src))) throw new Shown(`"${f.relativePath}" did not copy correctly: the copy differs from the original. Check the new drive and try again.`);
+          if (got !== (await sha256Of(src)))
+            throw new Shown(
+              `"${f.relativePath}" did not copy correctly: the copy differs from the original. Check the new drive and try again.`,
+            );
           await recordIntegrity(f.id, "mismatch");
         }
         await chmod(dst, 0o444);
       }
     }
-    if (!(await switchFilesRoot(v.path, live))) throw new Shown("Your files changed while they were being moved (an upload or a delete). Nothing was changed; try again.");
+    if (!(await switchFilesRoot(v.path, live)))
+      throw new Shown(
+        "Your files changed while they were being moved (an upload or a delete). Nothing was changed; try again.",
+      );
   } catch (e) {
     const stuck: string[] = [];
     for (const s of done.reverse()) {
@@ -116,25 +147,53 @@ export async function moveStoredFiles(input: unknown, expected: unknown, deps: {
         stuck.push(s.dst);
       }
     }
-    for (const d of foldersBelow(target, plan.map((p) => p.dst))) await rmdir(d).catch(() => {});
+    for (const d of foldersBelow(
+      target,
+      plan.map((p) => p.dst),
+    ))
+      await rmdir(d).catch(() => {});
     if (!(e instanceof Shown)) console.error("Move files root failed", e);
     const why = e instanceof Shown ? e.message : `The move failed: ${(e as Error).message}`;
-    return fail(`${why} Your files folder was not changed.${stuck.length ? ` Dossier could not undo the move of ${plural(stuck.length, "file")}; they are in ${v.path}: ${stuck.slice(0, 3).join(", ")}.` : ""}`);
+    return fail(
+      `${why} Your files folder was not changed.${stuck.length ? ` Dossier could not undo the move of ${plural(stuck.length, "file")}; they are in ${v.path}: ${stuck.slice(0, 3).join(", ")}.` : ""}`,
+    );
   }
 
   // The setting has switched. From here nothing is rolled back: problems are reported.
   const warnings: string[] = [];
   let notRemoved = 0;
-  for (const s of done.filter((d) => d.copied)) await removeFile(s.src).catch(() => { notRemoved++; });
+  for (const s of done.filter((d) => d.copied))
+    await removeFile(s.src).catch(() => {
+      notRemoved++;
+    });
   let kept = 0;
-  for (const d of foldersBelow(resolve(from), plan.map((p) => p.src))) {
-    await rmdir(d).catch((e) => { if (code(e) !== "ENOENT") kept++; });
+  for (const d of foldersBelow(
+    resolve(from),
+    plan.map((p) => p.src),
+  )) {
+    await rmdir(d).catch((e) => {
+      if (code(e) !== "ENOENT") kept++;
+    });
   }
-  if (notRemoved) warnings.push(`${plural(notRemoved, "old copy")} could not be removed from ${from}. They are safe to delete by hand.`);
-  if (kept) warnings.push(`${plural(kept, "folder")} in ${from} still hold files Dossier did not store, so they were left there.`);
+  if (notRemoved)
+    warnings.push(
+      `${plural(notRemoved, "old copy")} could not be removed from ${from}. They are safe to delete by hand.`,
+    );
+  if (kept)
+    warnings.push(
+      `${plural(kept, "folder")} in ${from} still hold files Dossier did not store, so they were left there.`,
+    );
   warnings.push(`The old folder ${from} itself was not removed.`);
   const copied = done.filter((d) => d.copied).length;
-  return { ok: true, path: v.path, moved: done.length, bytes: sumBytes(live), renamed: done.length - copied, copied, warnings };
+  return {
+    ok: true,
+    path: v.path,
+    moved: done.length,
+    bytes: sumBytes(live),
+    renamed: done.length - copied,
+    copied,
+    warnings,
+  };
 }
 
 export async function repointStoredFiles(input: unknown): Promise<RepointResult> {
@@ -150,7 +209,10 @@ export async function repointStoredFiles(input: unknown): Promise<RepointResult>
     else if (st.size !== f.sizeBytes) changed.push(f.id);
   }
   if (problems.length) return fail(problemsMessage(problems));
-  if (!(await switchFilesRoot(v.path, live))) return fail("Your files changed while they were being checked (an upload or a delete). Nothing was changed; try again.");
+  if (!(await switchFilesRoot(v.path, live)))
+    return fail(
+      "Your files changed while they were being checked (an upload or a delete). Nothing was changed; try again.",
+    );
   for (const id of changed) await recordIntegrity(id, "mismatch"); // after the switch: a refused re-point flags nothing
   return { ok: true, path: v.path, checked: live.length, changed: changed.length };
 }

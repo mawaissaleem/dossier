@@ -6,9 +6,17 @@ const rel = (v: unknown, today: string) => deadlineInfo(v, today)?.relative;
 
 describe("deadlineInfo", () => {
   it("today, tomorrow, yesterday", () => {
-    expect(deadlineInfo("2026-11-12", "2026-11-12")).toEqual({ date: "12 Nov 2026", relative: "today", overdue: false });
+    expect(deadlineInfo("2026-11-12", "2026-11-12")).toEqual({
+      date: "12 Nov 2026",
+      relative: "today",
+      overdue: false,
+    });
     expect(rel("2026-11-13", "2026-11-12")).toBe("tomorrow");
-    expect(deadlineInfo("2026-11-11", "2026-11-12")).toEqual({ date: "11 Nov 2026", relative: "yesterday", overdue: true });
+    expect(deadlineInfo("2026-11-11", "2026-11-12")).toEqual({
+      date: "11 Nov 2026",
+      relative: "yesterday",
+      overdue: true,
+    });
   });
   it("future and past in days; only the past is overdue", () => {
     expect(deadlineInfo("2026-11-15", "2026-11-12")).toMatchObject({ relative: "in 3 days", overdue: false });
@@ -24,7 +32,8 @@ describe("deadlineInfo", () => {
     expect(rel("2027-03-01", "2027-02-28")).toBe("tomorrow");
   });
   it("blank or invalid values give null so the card omits the line", () => {
-    for (const v of [null, undefined, "", "  ", "2026-13-01", "2026-02-30", "12/11/2026", "2026-1-5", 20261112, true]) expect(deadlineInfo(v, "2026-11-12")).toBeNull();
+    for (const v of [null, undefined, "", "  ", "2026-13-01", "2026-02-30", "12/11/2026", "2026-1-5", 20261112, true])
+      expect(deadlineInfo(v, "2026-11-12")).toBeNull();
   });
   it("no known today (server render) gives the date alone, never overdue", () => {
     expect(deadlineInfo("2020-01-01", null)).toEqual({ date: "1 Jan 2020", relative: null, overdue: false });
@@ -46,10 +55,20 @@ describe("cardColumns", () => {
     expect(cardColumns(cols)).toEqual({ priority: cols[1], deadline: cols[2] });
   });
   it("takes the first match, skips hidden columns, requires the right type", () => {
-    const cols = [c("Priority", "single_select", true), c("Priority", "single_select"), c("Priority", "single_select"), c("Deadline", "text"), c("Deadline", "date"), c("Deadline", "date")];
+    const cols = [
+      c("Priority", "single_select", true),
+      c("Priority", "single_select"),
+      c("Priority", "single_select"),
+      c("Deadline", "text"),
+      c("Deadline", "date"),
+      c("Deadline", "date"),
+    ];
     expect(cardColumns(cols)).toEqual({ priority: cols[1], deadline: cols[4] });
   });
   it("a track without them has neither", () => {
-    expect(cardColumns([c("Status", "single_select"), c("Due", "date")])).toEqual({ priority: undefined, deadline: undefined });
+    expect(cardColumns([c("Status", "single_select"), c("Due", "date")])).toEqual({
+      priority: undefined,
+      deadline: undefined,
+    });
   });
 });

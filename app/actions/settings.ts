@@ -3,7 +3,14 @@
 import { refresh, revalidatePath } from "next/cache";
 import { listLiveFiles, switchFilesRoot } from "@/lib/db/files";
 import { getFilesRoot } from "@/lib/db/settings";
-import { resetPlannerSettings, setCapacity, setOptionBuffer, setPlannerSlots, setRankingRules, setStillToDo } from "@/lib/db/planner";
+import {
+  resetPlannerSettings,
+  setCapacity,
+  setOptionBuffer,
+  setPlannerSlots,
+  setRankingRules,
+  setStillToDo,
+} from "@/lib/db/planner";
 import { setExpectedLabels, setSubmittedStatuses, setWinStatuses } from "@/lib/db/track-settings";
 import { tryLock } from "@/lib/files/lock";
 import { moveStoredFiles, repointStoredFiles, type MoveResult, type RepointResult } from "@/lib/files/relocate";
@@ -21,9 +28,14 @@ export async function saveFilesRoot(input: string): Promise<FilesRootResult> {
   try {
     const live = await listLiveFiles();
     if (live.length > 0 && r.path !== (await getFilesRoot())) {
-      return { ok: false, error: "Your stored files are in the current folder. Choose Move (Dossier moves them) or Re-point (you already moved the folder) instead of Save." };
+      return {
+        ok: false,
+        error:
+          "Your stored files are in the current folder. Choose Move (Dossier moves them) or Re-point (you already moved the folder) instead of Save.",
+      };
     }
-    if (!(await switchFilesRoot(r.path, live))) return { ok: false, error: "Your files changed while saving. Try again." };
+    if (!(await switchFilesRoot(r.path, live)))
+      return { ok: false, error: "Your files changed while saving. Try again." };
   } catch {
     return { ok: false, error: "Could not save. Try again." };
   } finally {
@@ -34,7 +46,9 @@ export async function saveFilesRoot(input: string): Promise<FilesRootResult> {
 }
 
 // The Move confirm's impact, read fresh on every open (DESIGN.md): how many live files and bytes will move, and from where.
-export async function fetchMoveImpact(): Promise<{ ok: true; fileCount: number; totalBytes: number; from: string | null } | { ok: false; error: string }> {
+export async function fetchMoveImpact(): Promise<
+  { ok: true; fileCount: number; totalBytes: number; from: string | null } | { ok: false; error: string }
+> {
   try {
     const live = await listLiveFiles();
     return { ok: true, fileCount: live.length, totalBytes: sumBytes(live), from: await getFilesRoot() };
@@ -76,7 +90,10 @@ export async function repointFilesRoot(input: unknown): Promise<RepointResult> {
 }
 
 // Which status options count as "submitted" for a track (FR-3.5). Validated here too: this runs on any POST.
-export async function saveSubmittedStatuses(trackId: number, ids: number[]): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function saveSubmittedStatuses(
+  trackId: number,
+  ids: number[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!Number.isInteger(trackId)) return { ok: false, error: "Track not found." };
   try {
     const r = await setSubmittedStatuses(trackId, ids);
@@ -88,7 +105,10 @@ export async function saveSubmittedStatuses(trackId: number, ids: number[]): Pro
 }
 
 // Which status options count as wins on the dashboard for a track (FR-9.7). Validated in the data layer: this runs on any POST.
-export async function saveWinStatuses(trackId: number, ids: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function saveWinStatuses(
+  trackId: number,
+  ids: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!Number.isInteger(trackId)) return { ok: false, error: "Track not found." };
   try {
     const r = await setWinStatuses(trackId, ids);
@@ -100,7 +120,10 @@ export async function saveWinStatuses(trackId: number, ids: unknown): Promise<{ 
 }
 
 // Expected file labels for a track (FR-7.3). Validated in the data layer: this runs on any POST.
-export async function saveExpectedLabels(trackId: number, labels: string[]): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function saveExpectedLabels(
+  trackId: number,
+  labels: string[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!Number.isInteger(trackId)) return { ok: false, error: "Track not found." };
   try {
     const r = await setExpectedLabels(trackId, labels);
@@ -112,7 +135,10 @@ export async function saveExpectedLabels(trackId: number, labels: string[]): Pro
 }
 
 // Planner engine slots for a track (FR-8.1). Validated in the data layer: this runs on any POST.
-export async function savePlannerSlots(trackId: number, slots: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function savePlannerSlots(
+  trackId: number,
+  slots: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!Number.isInteger(trackId)) return { ok: false, error: "Track not found." };
   try {
     const r = await setPlannerSlots(trackId, slots);
@@ -124,7 +150,10 @@ export async function savePlannerSlots(trackId: number, slots: unknown): Promise
 }
 
 // One option's buffer days (FR-8.2). Validated in the data layer: this runs on any POST.
-export async function saveOptionBuffer(optionId: unknown, days: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function saveOptionBuffer(
+  optionId: unknown,
+  days: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const r = await setOptionBuffer(optionId, days);
     if (r.ok) refresh();
@@ -135,7 +164,10 @@ export async function saveOptionBuffer(optionId: unknown, days: unknown): Promis
 }
 
 // Which status options are "still to do" for a track (FR-8.4). Validated in the data layer: this runs on any POST.
-export async function saveStillToDo(trackId: number, ids: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function saveStillToDo(
+  trackId: number,
+  ids: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!Number.isInteger(trackId)) return { ok: false, error: "Track not found." };
   try {
     const r = await setStillToDo(trackId, ids);
@@ -147,7 +179,10 @@ export async function saveStillToDo(trackId: number, ids: unknown): Promise<{ ok
 }
 
 // The overdue and no-deadline ranking rules (FR-8.5, FR-8.6). Validated in the data layer: this runs on any POST.
-export async function saveRankingRules(overdue: unknown, noDeadline: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function saveRankingRules(
+  overdue: unknown,
+  noDeadline: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const r = await setRankingRules(overdue, noDeadline);
     if (r.ok) refresh();

@@ -13,10 +13,20 @@ export function resolveWinStatuses(stored: unknown, options: Opt[]): number[] {
   return options.filter(keep).map((o) => o.id);
 }
 
-export type Win = { id: number; title: string; trackId: number; trackName: string; label: string; color: string; archived: boolean; since: number };
+export type Win = {
+  id: number;
+  title: string;
+  trackId: number;
+  trackName: string;
+  label: string;
+  color: string;
+  archived: boolean;
+  since: number;
+};
 
 // Most recently reached first (`since` = ms since epoch); ties: lower id. Returns a new array.
-export const orderWins = <T extends { id: number; since: number }>(wins: readonly T[]): T[] => [...wins].sort((a, b) => b.since - a.since || a.id - b.id);
+export const orderWins = <T extends { id: number; since: number }>(wins: readonly T[]): T[] =>
+  [...wins].sort((a, b) => b.since - a.since || a.id - b.id);
 
 const plural = (n: number, label: string) => {
   const w = label.trim().toLowerCase();
@@ -40,8 +50,10 @@ export function winCountsText(wins: readonly { label: string }[], labels: readon
 // "No interviews or offers yet" / "No interviews, offers or hires yet" from the configured labels (distinct, in order).
 export function noWinsText(labels: readonly string[]): string {
   const seen = new Set<string>();
-  const words = labels.filter((l) => !seen.has(l.trim().toLowerCase()) && seen.add(l.trim().toLowerCase())).map((l) => plural(2, l));
-  const list = words.length > 1 ? `${words.slice(0, -1).join(", ")} or ${words.at(-1)}` : words[0] ?? "wins";
+  const words = labels
+    .filter((l) => !seen.has(l.trim().toLowerCase()) && seen.add(l.trim().toLowerCase()))
+    .map((l) => plural(2, l));
+  const list = words.length > 1 ? `${words.slice(0, -1).join(", ")} or ${words.at(-1)}` : (words[0] ?? "wins");
   return `No ${list} yet`;
 }
 

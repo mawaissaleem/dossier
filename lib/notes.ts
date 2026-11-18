@@ -9,6 +9,7 @@ export function checkNoteBody(body: unknown): NoteBodyResult {
   if (typeof body !== "string") return { ok: false, error: "Write a note first." };
   const trimmed = body.trim();
   if (/^[\s​-‍⁠﻿]*$/.test(trimmed)) return { ok: false, error: "Write a note first." };
-  if (trimmed.length > NOTE_BODY_MAX) return { ok: false, error: `A note can be at most ${NOTE_BODY_MAX.toLocaleString("en-US")} characters.` };
+  if (trimmed.length > NOTE_BODY_MAX)
+    return { ok: false, error: `A note can be at most ${NOTE_BODY_MAX.toLocaleString("en-US")} characters.` };
   return { ok: true, body: trimmed };
 }

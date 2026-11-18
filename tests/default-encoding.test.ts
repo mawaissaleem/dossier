@@ -20,7 +20,14 @@ describe("encodeDefault / decodeDefault", () => {
   });
 
   it("round-trips whatever parseCell accepts for each type", () => {
-    for (const [type, raw] of [["text", "  hi "], ["number", " 7.25 "], ["date", "2024-02-29"], ["link", "example.com"], ["checkbox", false], ["single_select", "9"]] as const) {
+    for (const [type, raw] of [
+      ["text", "  hi "],
+      ["number", " 7.25 "],
+      ["date", "2024-02-29"],
+      ["link", "example.com"],
+      ["checkbox", false],
+      ["single_select", "9"],
+    ] as const) {
       const p = parseCell(type, raw);
       if (!p.ok || p.value === null) throw new Error("fixture");
       expect(decodeDefault(type, encodeDefault(p.value))).toBe(p.value);
@@ -28,12 +35,24 @@ describe("encodeDefault / decodeDefault", () => {
   });
 
   it.each<[ColumnType, string | null]>([
-    ["text", null], ["text", ""], ["text", "   "],
-    ["number", ""], ["number", "abc"], ["number", "0x10"], ["number", " 5"], ["number", "1e3"],
-    ["date", "2026-02-30"], ["date", "tomorrow"],
-    ["link", "javascript:alert(1)"], ["link", "has space.com"],
-    ["checkbox", "yes"], ["checkbox", "1"], ["checkbox", ""],
-    ["single_select", "abc"], ["single_select", "-1"], ["single_select", "1.5"],
+    ["text", null],
+    ["text", ""],
+    ["text", "   "],
+    ["number", ""],
+    ["number", "abc"],
+    ["number", "0x10"],
+    ["number", " 5"],
+    ["number", "1e3"],
+    ["date", "2026-02-30"],
+    ["date", "tomorrow"],
+    ["link", "javascript:alert(1)"],
+    ["link", "has space.com"],
+    ["checkbox", "yes"],
+    ["checkbox", "1"],
+    ["checkbox", ""],
+    ["single_select", "abc"],
+    ["single_select", "-1"],
+    ["single_select", "1.5"],
   ])("%s %j decodes to null (no default)", (type, text) => {
     expect(decodeDefault(type, text)).toBeNull();
   });

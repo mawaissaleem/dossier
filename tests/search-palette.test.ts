@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { chordLabel, highlightSegments, isMacPlatform, isSearchChord, wrapIndex } from "@/lib/search-palette";
 
-const key = (o: Partial<Parameters<typeof isSearchChord>[0]>) => ({ key: "k", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...o });
+const key = (o: Partial<Parameters<typeof isSearchChord>[0]>) => ({
+  key: "k",
+  ctrlKey: false,
+  metaKey: false,
+  altKey: false,
+  shiftKey: false,
+  ...o,
+});
 
 describe("highlightSegments", () => {
   it("marks a match and keeps the original text", () => {
@@ -17,12 +24,23 @@ describe("highlightSegments", () => {
     expect(highlightSegments("Zu\u0308rich", "zurich").find((s) => s.match)?.text).toBe("Zu\u0308rich"); // decomposed input (u + combining diaeresis)
   });
   it("marks every word and every occurrence, and merges overlaps", () => {
-    expect(highlightSegments("ab ab cd", "ab cd").filter((s) => s.match).map((s) => s.text)).toEqual(["ab", "ab", "cd"]);
+    expect(
+      highlightSegments("ab ab cd", "ab cd")
+        .filter((s) => s.match)
+        .map((s) => s.text),
+    ).toEqual(["ab", "ab", "cd"]);
     expect(highlightSegments("abcd", "abc bcd")).toEqual([{ text: "abcd", match: true }]);
   });
   it("treats markup and regex characters as plain text", () => {
-    expect(highlightSegments("<b>x</b> (a+b)", "(a+b)")).toEqual([{ text: "<b>x</b> ", match: false }, { text: "(a+b)", match: true }]);
-    expect(highlightSegments("<img src=x onerror=1>", "img").map((s) => s.text).join("")).toBe("<img src=x onerror=1>");
+    expect(highlightSegments("<b>x</b> (a+b)", "(a+b)")).toEqual([
+      { text: "<b>x</b> ", match: false },
+      { text: "(a+b)", match: true },
+    ]);
+    expect(
+      highlightSegments("<img src=x onerror=1>", "img")
+        .map((s) => s.text)
+        .join(""),
+    ).toBe("<img src=x onerror=1>");
   });
   it("returns one plain run for a blank query or no match, and nothing for empty text", () => {
     expect(highlightSegments("Acme", "  ")).toEqual([{ text: "Acme", match: false }]);
@@ -30,7 +48,16 @@ describe("highlightSegments", () => {
     expect(highlightSegments("", "a")).toEqual([]);
   });
   it("always joins back to the input", () => {
-    for (const [t, q] of [["…ate Zürich – École", "ecole zur"], ["a😀b", "b"], ["İstanbul", "istanbul"]]) expect(highlightSegments(t, q).map((s) => s.text).join("")).toBe(t);
+    for (const [t, q] of [
+      ["…ate Zürich – École", "ecole zur"],
+      ["a😀b", "b"],
+      ["İstanbul", "istanbul"],
+    ])
+      expect(
+        highlightSegments(t, q)
+          .map((s) => s.text)
+          .join(""),
+      ).toBe(t);
   });
 });
 

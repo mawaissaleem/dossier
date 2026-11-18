@@ -31,9 +31,22 @@ export const STAGE_PREFIX = ".dossier-restore-";
 // another machine would otherwise bring its files folder path, backup folder and reminder with it: the files folder would point
 // somewhere that does not exist here, and restoring must never silently change where files are stored or where backups go.
 // Everything else in settings (file labels, expected labels, submitted statuses) is app content and comes from the backup.
-export const KEPT_SETTING_KEYS = ["files_root", "backup_destination", "backup_reminder_days", "last_backup_at"] as const;
+export const KEPT_SETTING_KEYS = [
+  "files_root",
+  "backup_destination",
+  "backup_reminder_days",
+  "last_backup_at",
+] as const;
 
-export type ZipEntryInfo = { name: string; flags: number; method: number; compressedSize: number; uncompressedSize: number; versionMadeBy: number; externalAttributes: number };
+export type ZipEntryInfo = {
+  name: string;
+  flags: number;
+  method: number;
+  compressedSize: number;
+  uncompressedSize: number;
+  versionMadeBy: number;
+  externalAttributes: number;
+};
 export type EntryKind = "file" | "dir" | "symlink" | "other";
 
 // Unix mode lives in the top 16 bits of the external attributes when the entry was made on Unix (host 3) or macOS (host 19);
@@ -41,7 +54,7 @@ export type EntryKind = "file" | "dir" | "symlink" | "other";
 export function entryKind(e: Pick<ZipEntryInfo, "name" | "versionMadeBy" | "externalAttributes">): EntryKind {
   const host = e.versionMadeBy >> 8;
   if (host === 3 || host === 19) {
-    const type = ((e.externalAttributes >>> 16) & 0xffff) & 0o170000;
+    const type = (e.externalAttributes >>> 16) & 0xffff & 0o170000;
     if (type === 0o120000) return "symlink";
     if (type === 0o040000) return "dir";
     if (type !== 0o100000 && type !== 0) return "other";
@@ -51,13 +64,15 @@ export function entryKind(e: Pick<ZipEntryInfo, "name" | "versionMadeBy" | "exte
   return e.name.endsWith("/") ? "dir" : "file";
 }
 
-export type Listing = { ok: true; files: Map<string, number>; dbBytes: number; totalBytes: number } | { ok: false; error: string };
+export type Listing =
+  { ok: true; files: Map<string, number>; dbBytes: number; totalBytes: number } | { ok: false; error: string };
 
 const shown = (name: string) => JSON.stringify(name.length > 80 ? `${name.slice(0, 80)}...` : name);
 const bad = (error: string): Listing => ({ ok: false, error });
 
 export function checkListing(entries: ZipEntryInfo[], limits: Limits = LIMITS): Listing {
-  if (entries.length > limits.maxEntries) return bad(`This backup holds too many entries (${entries.length}; the limit is ${limits.maxEntries}).`);
+  if (entries.length > limits.maxEntries)
+    return bad(`This backup holds too many entries (${entries.length}; the limit is ${limits.maxEntries}).`);
   const seen = new Set<string>();
   const files = new Map<string, number>(); // relative path -> size
   let hasManifest = false;
@@ -66,31 +81,51 @@ export function checkListing(entries: ZipEntryInfo[], limits: Limits = LIMITS): 
 
   for (const e of entries) {
     const { name } = e;
-    if (name.includes("\0") || name.includes("\\")) return bad(`The backup has an entry with an unsafe name (${shown(name)}). It was not restored.`);
+    if (name.includes("\0") || name.includes("\\"))
+      return bad(`The backup has an entry with an unsafe name (${shown(name)}). It was not restored.`);
     const bare = name.endsWith("/") ? name.slice(0, -1) : name;
-    if (bare === "" || name.startsWith("/") || /^[a-zA-Z]:/.test(name) || bare.split("/").some((s) => s === ".." || s === "." || s === "")) {
+    if (
+      bare === "" ||
+      name.startsWith("/") ||
+      /^[a-zA-Z]:/.test(name) ||
+      bare.split("/").some((s) => s === ".." || s === "." || s === "")
+    ) {
       return bad(`The backup has an entry that points outside its own folder (${shown(name)}). It was not restored.`);
     }
     if (seen.has(bare)) return bad(`The backup lists ${shown(name)} twice.`);
     seen.add(bare);
 
     const kind = entryKind(e);
-    if (kind === "symlink" || kind === "other") return bad(`The backup holds a link or special entry (${shown(name)}). Only regular files are allowed.`);
-    if (e.flags & 1) return bad(`The backup holds an encrypted entry (${shown(name)}). Dossier backups are not encrypted.`);
-    if (e.method !== 0 && e.method !== 8) return bad(`The backup uses an unsupported compression method (${shown(name)}).`);
+    if (kind === "symlink" || kind === "other")
+      return bad(`The backup holds a link or special entry (${shown(name)}). Only regular files are allowed.`);
+    if (e.flags & 1)
+      return bad(`The backup holds an encrypted entry (${shown(name)}). Dossier backups are not encrypted.`);
+    if (e.method !== 0 && e.method !== 8)
+      return bad(`The backup uses an unsupported compression method (${shown(name)}).`);
 
     if (kind === "dir") {
       if (e.uncompressedSize !== 0) return bad(`The backup has a folder entry with data in it (${shown(name)}).`);
-      const ok = bare === "database" || bare === "files" || (bare.startsWith(FILES_PREFIX) && checkRelativePath(bare.slice(FILES_PREFIX.length)).ok);
+      const ok =
+        bare === "database" ||
+        bare === "files" ||
+        (bare.startsWith(FILES_PREFIX) && checkRelativePath(bare.slice(FILES_PREFIX.length)).ok);
       if (!ok) return bad(`The backup holds an unexpected entry (${shown(name)}).`);
       continue;
     }
 
-    if (e.uncompressedSize > limits.ratioFloorBytes && e.uncompressedSize / Math.max(e.compressedSize, 1) > limits.maxRatio) {
-      return bad(`The backup entry ${shown(name)} is compressed far beyond what a real file shows (a zip bomb?). It was not restored.`);
+    if (
+      e.uncompressedSize > limits.ratioFloorBytes &&
+      e.uncompressedSize / Math.max(e.compressedSize, 1) > limits.maxRatio
+    ) {
+      return bad(
+        `The backup entry ${shown(name)} is compressed far beyond what a real file shows (a zip bomb?). It was not restored.`,
+      );
     }
     totalBytes += e.uncompressedSize;
-    if (totalBytes > limits.maxTotalBytes) return bad(`The backup would unpack to more than ${Math.round(limits.maxTotalBytes / 1024 ** 3)} GB. It was not restored.`);
+    if (totalBytes > limits.maxTotalBytes)
+      return bad(
+        `The backup would unpack to more than ${Math.round(limits.maxTotalBytes / 1024 ** 3)} GB. It was not restored.`,
+      );
 
     if (name === MANIFEST_NAME) {
       if (e.uncompressedSize > limits.maxManifestBytes) return bad("The backup manifest is too large.");
@@ -102,7 +137,9 @@ export function checkListing(entries: ZipEntryInfo[], limits: Limits = LIMITS): 
       if (!rel.ok) return bad(`The backup has a file with an unsafe name (${shown(name)}): ${rel.error}`);
       files.set(rel.path, e.uncompressedSize);
     } else {
-      return bad(`The backup holds an unexpected entry (${shown(name)}). Only the manifest, the database and files/ are allowed.`);
+      return bad(
+        `The backup holds an unexpected entry (${shown(name)}). Only the manifest, the database and files/ are allowed.`,
+      );
     }
   }
   if (!hasManifest) return bad("This zip has no manifest.json, so it is not a Dossier backup.");
@@ -110,14 +147,16 @@ export function checkListing(entries: ZipEntryInfo[], limits: Limits = LIMITS): 
   // "files/a" as a file and "files/a/b" under it cannot both exist on disk.
   for (const rel of files.keys()) {
     for (let i = rel.indexOf("/"); i !== -1; i = rel.indexOf("/", i + 1)) {
-      if (files.has(rel.slice(0, i))) return bad(`The backup has ${shown(rel.slice(0, i))} as both a file and a folder.`);
+      if (files.has(rel.slice(0, i)))
+        return bad(`The backup has ${shown(rel.slice(0, i))} as both a file and a folder.`);
     }
   }
   return { ok: true, files, dbBytes, totalBytes };
 }
 
 // A backup whose database is from a newer version of the app cannot be read by this one: refuse rather than guess.
-export const schemaIsNewer = (backupLatest: number | null, appLatest: number | null) => backupLatest !== null && (appLatest === null || backupLatest > appLatest);
+export const schemaIsNewer = (backupLatest: number | null, appLatest: number | null) =>
+  backupLatest !== null && (appLatest === null || backupLatest > appLatest);
 
 export type Counts = { applications: number; columns: number; files: number; submissions: number; notes: number };
 export const COUNT_KEYS = ["applications", "columns", "files", "submissions", "notes"] as const;

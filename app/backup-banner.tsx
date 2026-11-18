@@ -13,10 +13,18 @@ export async function BackupBanner() {
   const reminder = await getBackupReminder().catch(() => null);
   if (!reminder) return null;
   return (
-    <div role="status" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-warning bg-muted p-3 text-sm">
+    <div
+      role="status"
+      className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-warning bg-muted p-3 text-sm"
+    >
       <TriangleAlertIcon aria-hidden className="size-4 shrink-0 text-warning" />
       <span className="min-w-0 flex-1 break-words">{reminderMessage(reminder)}</span>
-      <Link href="/settings#backup" className="shrink-0 rounded-sm font-medium underline underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-ring">Open backup settings</Link>
+      <Link
+        href="/settings#backup"
+        className="shrink-0 rounded-sm font-medium underline underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Open backup settings
+      </Link>
     </div>
   );
 }

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { SIDEBAR_INIT_SCRIPT, isSidebarChord, isTypingTarget, parseSidebar, readSidebar, sidebarChordLabel, sidebarCookie, toggles } from "@/lib/sidebar";
+import {
+  SIDEBAR_INIT_SCRIPT,
+  isSidebarChord,
+  isTypingTarget,
+  parseSidebar,
+  readSidebar,
+  sidebarChordLabel,
+  sidebarCookie,
+  toggles,
+} from "@/lib/sidebar";
 
 describe("sidebar cookie (pure)", () => {
   it("parses open and treats everything else as collapsed", () => {
@@ -18,24 +27,50 @@ describe("sidebar cookie (pure)", () => {
   it("serialises for the whole site, a year, SameSite=Lax; the value round-trips", () => {
     expect(sidebarCookie(true)).toBe("sidebar=open; Path=/; Max-Age=31536000; SameSite=Lax");
     expect(sidebarCookie(false)).toBe("sidebar=closed; Path=/; Max-Age=31536000; SameSite=Lax");
-    for (const open of [true, false]) expect(readSidebar(sidebarCookie(open).split(";")[0])).toBe(open ? "open" : "closed");
+    for (const open of [true, false])
+      expect(readSidebar(sidebarCookie(open).split(";")[0])).toBe(open ? "open" : "closed");
   });
 
   it("the pre-paint script sets data-sidebar exactly when readSidebar says open", () => {
-    for (const cookie of ["", "sidebar=open", "sidebar=closed", "a=1; sidebar=open; b=2", "x=1; sidebar=open", "mysidebar=open", "sidebar=opened", "sidebar=open=x"]) {
+    for (const cookie of [
+      "",
+      "sidebar=open",
+      "sidebar=closed",
+      "a=1; sidebar=open; b=2",
+      "x=1; sidebar=open",
+      "mysidebar=open",
+      "sidebar=opened",
+      "sidebar=open=x",
+    ]) {
       const set: [string, string][] = [];
-      new Function("document", SIDEBAR_INIT_SCRIPT)({ cookie, documentElement: { setAttribute: (k: string, v: string) => set.push([k, v]) } });
+      new Function("document", SIDEBAR_INIT_SCRIPT)({
+        cookie,
+        documentElement: { setAttribute: (k: string, v: string) => set.push([k, v]) },
+      });
       expect(set, cookie).toEqual(readSidebar(cookie) === "open" ? [["data-sidebar", "open"]] : []);
     }
   });
 
   it("the pre-paint script never throws when cookies are unavailable", () => {
-    expect(() => new Function("document", SIDEBAR_INIT_SCRIPT)({ get cookie() { throw new Error("blocked"); } })).not.toThrow();
+    expect(() =>
+      new Function("document", SIDEBAR_INIT_SCRIPT)({
+        get cookie() {
+          throw new Error("blocked");
+        },
+      }),
+    ).not.toThrow();
   });
 });
 
 describe("sidebar shortcut (pure)", () => {
-  const key = (o: Partial<Parameters<typeof isSidebarChord>[0]> = {}) => ({ key: "b", ctrlKey: true, metaKey: false, altKey: false, shiftKey: false, ...o });
+  const key = (o: Partial<Parameters<typeof isSidebarChord>[0]> = {}) => ({
+    key: "b",
+    ctrlKey: true,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...o,
+  });
   const free = { typing: false, layerOpen: false };
 
   it("is Ctrl+B off macOS and Cmd+B on macOS, with no other modifier", () => {

@@ -18,7 +18,18 @@ export async function getRecentlyViewed(nowMs: number = Date.now()): Promise<(Vi
 // Called when a track page is opened (a client effect posts it; nothing writes during render). The read and the write run with no await between them, so two calls cannot interleave.
 // `view` and `trackId` come from a POST, so both are checked here; an unknown or foreign track is refused and nothing is written.
 export async function recordTrackView(trackId: number, view: string, nowMs: number = Date.now()): Promise<TrackResult> {
-  if (!isTrackView(view) || !getDb().select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, trackId), eq(tracks.userId, getUserId()))).get()) return { ok: false, error: "Track not found." };
-  await setSetting(RECENTLY_VIEWED_KEY, recordViewed(parseViewed(readSetting(RECENTLY_VIEWED_KEY)), { trackId, view, at: nowMs }));
+  if (
+    !isTrackView(view) ||
+    !getDb()
+      .select({ id: tracks.id })
+      .from(tracks)
+      .where(and(eq(tracks.id, trackId), eq(tracks.userId, getUserId())))
+      .get()
+  )
+    return { ok: false, error: "Track not found." };
+  await setSetting(
+    RECENTLY_VIEWED_KEY,
+    recordViewed(parseViewed(readSetting(RECENTLY_VIEWED_KEY)), { trackId, view, at: nowMs }),
+  );
   return { ok: true };
 }

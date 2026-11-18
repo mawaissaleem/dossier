@@ -1,11 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { positionLabel, previewItems, stepIndex } from "@/lib/preview-nav";
 
-const f = (id: number, storedName: string, deletedAt?: Date | null) => ({ id, originalName: `orig-${id}`, storedName, deletedAt });
+const f = (id: number, storedName: string, deletedAt?: Date | null) => ({
+  id,
+  originalName: `orig-${id}`,
+  storedName,
+  deletedAt,
+});
 
 describe("previewItems", () => {
   it("keeps PDFs and images in list order, drops text, other types and deleted files", () => {
-    const list = [f(1, "a.pdf"), f(2, "b.txt"), f(3, "c.PNG"), f(4, "d.pdf", new Date()), f(5, "e.docx"), f(6, "f.pdf", null)];
+    const list = [
+      f(1, "a.pdf"),
+      f(2, "b.txt"),
+      f(3, "c.PNG"),
+      f(4, "d.pdf", new Date()),
+      f(5, "e.docx"),
+      f(6, "f.pdf", null),
+    ];
     expect(previewItems(list)).toEqual([
       { id: 1, name: "orig-1", storedName: "a.pdf", kind: "pdf" },
       { id: 3, name: "orig-3", storedName: "c.PNG", kind: "image" },

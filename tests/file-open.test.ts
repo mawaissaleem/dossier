@@ -29,7 +29,9 @@ async function store(name: string, content: string, date: string, label = "CV", 
   return r.file;
 }
 const get = (id: number | string, headers: Record<string, string> = {}) =>
-  GET(new NextRequest(`http://localhost:3000/api/files/${id}`, { headers: { host: "localhost:3000", ...headers } }), { params: Promise.resolve({ id: String(id) }) } as never);
+  GET(new NextRequest(`http://localhost:3000/api/files/${id}`, { headers: { host: "localhost:3000", ...headers } }), {
+    params: Promise.resolve({ id: String(id) }),
+  } as never);
 
 beforeEach(async () => {
   db = useTestDb();
@@ -66,7 +68,16 @@ describe("listApplicationFiles", () => {
     await store("z.pdf", "5", "2026-11-09", "CV", other);
     const list = await listApplicationFiles(appId);
     expect(list.map((f) => f.id)).toEqual([b.id, c.id, d.id, a.id]);
-    expect(list[0]).toEqual({ id: b.id, originalName: "b.pdf", storedName: b.storedName, label: "Cover letter", uploadDate: "2026-11-05", sizeBytes: 1, integrity: "ok", checkedAt: null });
+    expect(list[0]).toEqual({
+      id: b.id,
+      originalName: "b.pdf",
+      storedName: b.storedName,
+      label: "Cover letter",
+      uploadDate: "2026-11-05",
+      sizeBytes: 1,
+      integrity: "ok",
+      checkedAt: null,
+    });
     db.update(files).set({ userId: "someone-else" }).where(eq(files.id, a.id)).run();
     expect((await listApplicationFiles(appId)).map((f) => f.id)).toEqual([b.id, c.id, d.id]);
   });
@@ -86,13 +97,18 @@ describe("GET /api/files/:id", () => {
     expect(res.status).toBe(200);
     expect(Buffer.from(await res.arrayBuffer()).toString()).toBe(bytes);
     expect(res.headers.get("content-type")).toBe("application/pdf");
-    expect(res.headers.get("content-disposition")).toBe(`inline; filename="01-20261108-My_CV.pdf"; filename*=UTF-8''01-20261108-My_CV.pdf`);
+    expect(res.headers.get("content-disposition")).toBe(
+      `inline; filename="01-20261108-My_CV.pdf"; filename*=UTF-8''01-20261108-My_CV.pdf`,
+    );
     expect(res.headers.get("content-length")).toBe(String(Buffer.byteLength(bytes)));
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'self'");
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
-  it.each([["pic.png", "image/png"], ["notes.txt", "text/plain; charset=utf-8"]])("%s is inline and keeps the sandbox", async (name, type) => {
+  it.each([
+    ["pic.png", "image/png"],
+    ["notes.txt", "text/plain; charset=utf-8"],
+  ])("%s is inline and keeps the sandbox", async (name, type) => {
     const res = await get((await store(name, "x", "2026-11-08")).id);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe(type);
@@ -100,7 +116,12 @@ describe("GET /api/files/:id", () => {
     expect(res.headers.get("content-security-policy")).toBe("sandbox; default-src 'none'; frame-ancestors 'self'");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
   });
-  it.each([["page.html", "<script>alert(1)</script>"], ["pic.svg", "<svg onload=alert(1)/>"], ["x.js", "alert(1)"], ["doc.docx", "PK"]])("%s is an attachment, sandboxed and nosniff", async (name, body) => {
+  it.each([
+    ["page.html", "<script>alert(1)</script>"],
+    ["pic.svg", "<svg onload=alert(1)/>"],
+    ["x.js", "alert(1)"],
+    ["doc.docx", "PK"],
+  ])("%s is an attachment, sandboxed and nosniff", async (name, body) => {
     const f = await store(name, body, "2026-11-08");
     const res = await get(f.id);
     expect(res.status).toBe(200);
@@ -168,7 +189,10 @@ describe("GET /api/files/:id", () => {
   });
   it("?download=1 sends the same bytes as an attachment, still hash-checked", async () => {
     const f = await store("a.pdf", "original", "2026-11-08");
-    const dl = (q: string) => GET(new NextRequest(`http://localhost:3000/api/files/${f.id}${q}`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(f.id) }) } as never);
+    const dl = (q: string) =>
+      GET(new NextRequest(`http://localhost:3000/api/files/${f.id}${q}`, { headers: { host: "localhost:3000" } }), {
+        params: Promise.resolve({ id: String(f.id) }),
+      } as never);
     const ok = await dl("?download=1");
     expect(ok.status).toBe(200);
     expect(ok.headers.get("content-disposition")).toMatch(/^attachment; filename="/);
@@ -220,7 +244,9 @@ describe("GET /api/files/:id", () => {
     const page = async (res: Response, status: number, title: string) => {
       expect(res.status).toBe(status);
       expect(res.headers.get("content-type")).toContain("text/html");
-      expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
+      expect(res.headers.get("content-security-policy")).toBe(
+        "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'",
+      );
       expect(res.headers.get("cross-origin-resource-policy")).toBe("same-origin");
       expect(res.headers.get("cache-control")).toBe("no-store");
       const html = await res.text();
@@ -228,7 +254,8 @@ describe("GET /api/files/:id", () => {
       expect(html).toContain(`<a href="/applications/${appId}" target="_top">Back to the application</a>`);
       return html;
     };
-    if (process.platform !== "win32" && process.getuid?.() !== 0) { // root reads anything and Windows ignores chmod 000, so the unreadable case cannot be made there
+    if (process.platform !== "win32" && process.getuid?.() !== 0) {
+      // root reads anything and Windows ignores chmod 000, so the unreadable case cannot be made there
       chmodSync(abs, 0o000);
       await page(await get(f.id, asFrame), 500, "This file could not be read");
     }
@@ -247,8 +274,13 @@ describe("GET /api/files/:id", () => {
     const f = await store("a.pdf", "original", "2026-11-08");
     chmodSync(join(root, f.relativePath), 0o644);
     writeFileSync(join(root, f.relativePath), "tampered");
-    const req = (q: string) => GET(new NextRequest(`http://localhost:3000/api/files/${f.id}${q}`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(f.id) }) } as never);
-    expect(await (await req("?download=1")).text()).toContain(`<a href="/api/files/${f.id}?anyway=1&download=1">Open anyway</a>`);
+    const req = (q: string) =>
+      GET(new NextRequest(`http://localhost:3000/api/files/${f.id}${q}`, { headers: { host: "localhost:3000" } }), {
+        params: Promise.resolve({ id: String(f.id) }),
+      } as never);
+    expect(await (await req("?download=1")).text()).toContain(
+      `<a href="/api/files/${f.id}?anyway=1&download=1">Open anyway</a>`,
+    );
     expect(await (await req("")).text()).toContain(`<a href="/api/files/${f.id}?anyway=1">Open anyway</a>`);
     const any = await req("?anyway=1&download=1");
     expect(any.status).toBe(200);
@@ -300,7 +332,9 @@ describe("hash verification on open (8.6)", () => {
     expect(html).toContain(`/api/files/${f.id}?anyway=1`);
     expect(html).toContain(`<a href="/applications/${appId}" target="_top">Back to the application</a>`);
     expect(html).toContain("prefers-color-scheme:light");
-    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
+    expect(res.headers.get("content-security-policy")).toBe(
+      "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'",
+    );
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(row(f.id).integrity).toBe("mismatch");
   });
@@ -318,7 +352,9 @@ describe("hash verification on open (8.6)", () => {
     const res = await get(f.id);
     expect(res.status).toBe(409);
     expect(res.headers.get("content-type")).toContain("text/html");
-    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
+    expect(res.headers.get("content-security-policy")).toBe(
+      "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'",
+    );
     expect(res.headers.get("cross-origin-resource-policy")).toBe("same-origin");
     expect(res.headers.get("cache-control")).toBe("no-store");
     const html = await res.text();
@@ -335,7 +371,10 @@ describe("hash verification on open (8.6)", () => {
   it("open anyway serves the changed bytes with the usual safe headers", async () => {
     const f = await store("a.pdf", "original", "2026-11-08");
     edit(f.relativePath, "tampered");
-    const res = await GET(new NextRequest(`http://localhost:3000/api/files/${f.id}?anyway=1`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(f.id) }) } as never);
+    const res = await GET(
+      new NextRequest(`http://localhost:3000/api/files/${f.id}?anyway=1`, { headers: { host: "localhost:3000" } }),
+      { params: Promise.resolve({ id: String(f.id) }) } as never,
+    );
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("tampered");
     expect(res.headers.get("content-length")).toBe("8");

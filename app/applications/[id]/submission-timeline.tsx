@@ -23,7 +23,12 @@ import { cn } from "@/lib/utils";
 export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
   const uid = useId();
   const [open, setOpen] = useState<Set<number>>(() => new Set(items.length ? [items[0].id] : []));
-  const toggle = (id: number) => setOpen((o) => { const n = new Set(o); if (!n.delete(id)) n.add(id); return n; });
+  const toggle = (id: number) =>
+    setOpen((o) => {
+      const n = new Set(o);
+      if (!n.delete(id)) n.add(id);
+      return n;
+    });
   return (
     <ol aria-label="Submissions" className="ml-1.5 border-l border-input">
       {items.map((s, i) => {
@@ -31,7 +36,13 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
         const panel = `${uid}-${s.id}`;
         return (
           <li key={s.id} className="relative pb-3 pl-5 last:pb-0">
-            <span aria-hidden className={cn("absolute top-3.5 -left-[5px] size-2.5 rounded-full", i === 0 ? "bg-accent" : "bg-muted-foreground")} />
+            <span
+              aria-hidden
+              className={cn(
+                "absolute top-3.5 -left-[5px] size-2.5 rounded-full",
+                i === 0 ? "bg-accent" : "bg-muted-foreground",
+              )}
+            />
             <div className="rounded-lg border border-border bg-card">
               <h3 className="text-sm">
                 <button
@@ -41,53 +52,90 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                   onClick={() => toggle(s.id)}
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <ChevronRightIcon aria-hidden className={cn("size-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-90")} />
-                  <time dateTime={s.date} className="font-semibold tabular-nums">{s.date}</time>
+                  <ChevronRightIcon
+                    aria-hidden
+                    className={cn("size-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-90")}
+                  />
+                  <time dateTime={s.date} className="font-semibold tabular-nums">
+                    {s.date}
+                  </time>
                   <span className="text-muted-foreground">{fileCountLabel(s.files.length)}</span>
-                  {i === 0 && <span className="ml-auto rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">Latest</span>}
+                  {i === 0 && (
+                    <span className="ml-auto rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">Latest</span>
+                  )}
                 </button>
               </h3>
               <SubmissionNote id={s.id} date={s.date} note={s.note} />
               <div id={panel} hidden={!isOpen}>
                 {s.files.length === 0 ? (
-                  <p className="border-t border-border px-3 py-2 pl-9 text-sm text-muted-foreground">No files were recorded for this submission.</p>
+                  <p className="border-t border-border px-3 py-2 pl-9 text-sm text-muted-foreground">
+                    No files were recorded for this submission.
+                  </p>
                 ) : (
                   <PreviewGroup items={previewItems(s.files)}>
-                  <ul className="divide-y divide-border border-t border-border">
-                    {s.files.map((f) => (
-                      <li key={f.id} className="flex items-center gap-3 px-3 py-2 pl-9">
-                        <div className="min-w-0 flex-1">
-                          <p className="flex min-w-0 flex-wrap items-center gap-x-2">
-                            <span title={f.originalName} className="truncate font-medium">{f.originalName}</span>
-                            <span title={f.label} className="max-w-32 shrink-0 truncate rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">{f.label}</span>
-                            {f.deletedAt ? (
-                              <span className="shrink-0 rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">Deleted <NoteTime iso={f.deletedAt.toISOString()} dateOnly /></span>
-                            ) : (
-                              <IntegrityBadge state={f.integrity} checkedAt={f.checkedAt} />
-                            )}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            <span title={f.storedName}>{f.storedName}</span>
-                            {f.deletedAt && <> · {formatBytes(f.sizeBytes)} · checksum <span title={f.sha256}>{f.sha256.slice(0, 12)}</span> · the file itself is gone</>}
-                          </p>
-                        </div>
-                        {f.deletedAt ? null : <>
-                        {previewKind(f.storedName) && <PreviewButton id={f.id} name={f.originalName} />}
-                        <Button asChild variant="outline" size="sm">
-                          <a href={`/api/files/${f.id}`} target="_blank" rel="noopener" aria-label={`Open ${f.originalName}`}>
-                            Open <ExternalLinkIcon aria-hidden />
-                          </a>
-                        </Button>
-                        <Button asChild variant="ghost" size="sm">
-                          {/* A flagged file: no `download`, so the 409 "file changed" page opens (with "Open anyway") instead of being saved as the file. */}
-                          <a href={`/api/files/${f.id}`} {...(f.integrity === "ok" ? { download: true } : { target: "_blank", rel: "noopener" })} aria-label={`Download ${f.originalName}`}>
-                            Download <DownloadIcon aria-hidden />
-                          </a>
-                        </Button>
-                        </>}
-                      </li>
-                    ))}
-                  </ul>
+                    <ul className="divide-y divide-border border-t border-border">
+                      {s.files.map((f) => (
+                        <li key={f.id} className="flex items-center gap-3 px-3 py-2 pl-9">
+                          <div className="min-w-0 flex-1">
+                            <p className="flex min-w-0 flex-wrap items-center gap-x-2">
+                              <span title={f.originalName} className="truncate font-medium">
+                                {f.originalName}
+                              </span>
+                              <span
+                                title={f.label}
+                                className="max-w-32 shrink-0 truncate rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium"
+                              >
+                                {f.label}
+                              </span>
+                              {f.deletedAt ? (
+                                <span className="shrink-0 rounded-sm bg-muted px-1.5 text-xs leading-5 font-medium">
+                                  Deleted <NoteTime iso={f.deletedAt.toISOString()} dateOnly />
+                                </span>
+                              ) : (
+                                <IntegrityBadge state={f.integrity} checkedAt={f.checkedAt} />
+                              )}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              <span title={f.storedName}>{f.storedName}</span>
+                              {f.deletedAt && (
+                                <>
+                                  {" "}
+                                  · {formatBytes(f.sizeBytes)} · checksum{" "}
+                                  <span title={f.sha256}>{f.sha256.slice(0, 12)}</span> · the file itself is gone
+                                </>
+                              )}
+                            </p>
+                          </div>
+                          {f.deletedAt ? null : (
+                            <>
+                              {previewKind(f.storedName) && <PreviewButton id={f.id} name={f.originalName} />}
+                              <Button asChild variant="outline" size="sm">
+                                <a
+                                  href={`/api/files/${f.id}`}
+                                  target="_blank"
+                                  rel="noopener"
+                                  aria-label={`Open ${f.originalName}`}
+                                >
+                                  Open <ExternalLinkIcon aria-hidden />
+                                </a>
+                              </Button>
+                              <Button asChild variant="ghost" size="sm">
+                                {/* A flagged file: no `download`, so the 409 "file changed" page opens (with "Open anyway") instead of being saved as the file. */}
+                                <a
+                                  href={`/api/files/${f.id}`}
+                                  {...(f.integrity === "ok"
+                                    ? { download: true }
+                                    : { target: "_blank", rel: "noopener" })}
+                                  aria-label={`Download ${f.originalName}`}
+                                >
+                                  Download <DownloadIcon aria-hidden />
+                                </a>
+                              </Button>
+                            </>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                   </PreviewGroup>
                 )}
               </div>

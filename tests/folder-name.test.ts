@@ -11,8 +11,14 @@ describe("safeName", () => {
     ["a - - b", "a_-_-_b"],
     ["Zürich Universität", "Zürich_Universität"],
     ["東京大学 工学部", "東京大学_工学部"],
-    ["CON", "CON_"], ["nul", "nul_"], ["Com1", "Com1_"], ["LPT9.txt", "LPT9_.txt"], ["aux.tar.gz", "aux_.tar.gz"],
-    ["CON_x", "CON_x"], ["COM10", "COM10"], ["console", "console"],
+    ["CON", "CON_"],
+    ["nul", "nul_"],
+    ["Com1", "Com1_"],
+    ["LPT9.txt", "LPT9_.txt"],
+    ["aux.tar.gz", "aux_.tar.gz"],
+    ["CON_x", "CON_x"],
+    ["COM10", "COM10"],
+    ["console", "console"],
   ])("%j -> %j", (input, out) => expect(safeName(input, "fb")).toBe(out));
 
   it("uses the fallback when nothing is left", () => {
@@ -35,8 +41,12 @@ describe("safeName", () => {
 
 const cell = (name: string, value: string | null) => ({ name, value });
 const base = (o: Partial<FolderNameInput> = {}): FolderNameInput => ({
-  id: 7, title: "My app", trackName: "Job", uploadDate: "2026-10-15",
-  cells: [cell("Company", "Acme Corp"), cell("Role", "Data Engineer"), cell("Location", "Berlin")], ...o,
+  id: 7,
+  title: "My app",
+  trackName: "Job",
+  uploadDate: "2026-10-15",
+  cells: [cell("Company", "Acme Corp"), cell("Role", "Data Engineer"), cell("Location", "Berlin")],
+  ...o,
 });
 
 describe("folderBaseName", () => {
@@ -45,7 +55,9 @@ describe("folderBaseName", () => {
     expect(folderBaseName(base({ uploadDate: "2027-01-02" }))).toBe("Acme_Corp_Data_Engineer_2027-01");
   });
   it("PhD: University_Program, columns matched by trimmed case-insensitive name", () => {
-    const r = folderBaseName(base({ trackName: " phd ", cells: [cell(" UNIVERSITY", "Zürich"), cell("program", "Computer Science")] }));
+    const r = folderBaseName(
+      base({ trackName: " phd ", cells: [cell(" UNIVERSITY", "Zürich"), cell("program", "Computer Science")] }),
+    );
     expect(r).toBe("Zürich_Computer_Science_2026-10");
   });
   it("another track falls back to the title, even with a Company column", () => {
@@ -77,7 +89,8 @@ describe("folderBaseName", () => {
     expect(Buffer.byteLength(job)).toBeLessThanOrEqual(200);
   });
   it("rejects a malformed or impossible date", () => {
-    for (const d of ["", "2026-10", "2026-13-01", "2026-02-30", " 2026-10-01"]) expect(() => folderBaseName(base({ uploadDate: d }))).toThrow();
+    for (const d of ["", "2026-10", "2026-13-01", "2026-02-30", " 2026-10-01"])
+      expect(() => folderBaseName(base({ uploadDate: d }))).toThrow();
     expect(folderBaseName(base({ uploadDate: "2028-02-29" }))).toBe("Acme_Corp_Data_Engineer_2028-02");
   });
 });

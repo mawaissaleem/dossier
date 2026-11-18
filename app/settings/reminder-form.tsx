@@ -45,14 +45,27 @@ export function ReminderForm({ current }: { current: number }) {
           step={1}
           className="max-w-28"
           value={value}
-          onChange={(e) => { setValue(e.target.value); setSaved(false); }}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setSaved(false);
+          }}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? "backup-days-err" : undefined}
         />
-        <Button type="submit" variant="outline" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
+        <Button type="submit" variant="outline" disabled={pending}>
+          {pending ? "Saving…" : "Save"}
+        </Button>
       </div>
-      {error && <p id="backup-days-err" role="alert" className="text-sm text-destructive">{error}</p>}
-      {saved && <p role="status" className="text-sm text-muted-foreground">Saved.</p>}
+      {error && (
+        <p id="backup-days-err" role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      {saved && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Saved.
+        </p>
+      )}
     </form>
   );
 }

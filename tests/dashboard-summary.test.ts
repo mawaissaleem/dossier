@@ -5,7 +5,9 @@ const base = { overdue: 0, nextDays: null, count: 0, capacity: 4 };
 
 describe("summaryLine (pure)", () => {
   it("names the weekday and the date, then everything that applies", () => {
-    expect(summaryLine("2026-11-12", { overdue: 2, nextDays: 3, count: 1, capacity: 4 })).toBe("Thursday 12 November · 2 overdue · next deadline in 3 days · 1 of 4 this week");
+    expect(summaryLine("2026-11-12", { overdue: 2, nextDays: 3, count: 1, capacity: 4 })).toBe(
+      "Thursday 12 November · 2 overdue · next deadline in 3 days · 1 of 4 this week",
+    );
   });
   it("leaves out overdue when none and the deadline when there is none", () => {
     expect(summaryLine("2026-11-12", base)).toBe("Thursday 12 November · 0 of 4 this week");

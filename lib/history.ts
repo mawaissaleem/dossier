@@ -16,8 +16,20 @@ export function formatYmd(s: string): string {
   return m && Number(m[2]) >= 1 && Number(m[2]) <= 12 ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : s;
 }
 
-const TYPE: Record<string, HistoryType> = { status_changed: "status", file_uploaded: "upload", file_deleted: "delete", submission_created: "submission" };
-const FALLBACK: Record<HistoryType, string> = { note: "Note", status: "Status changed", upload: "File uploaded", delete: "File deleted", submission: "Submission recorded", other: "Activity recorded" };
+const TYPE: Record<string, HistoryType> = {
+  status_changed: "status",
+  file_uploaded: "upload",
+  file_deleted: "delete",
+  submission_created: "submission",
+};
+const FALLBACK: Record<HistoryType, string> = {
+  note: "Note",
+  status: "Status changed",
+  upload: "File uploaded",
+  delete: "File deleted",
+  submission: "Submission recorded",
+  other: "Activity recorded",
+};
 
 // Garbled or unknown details give a neutral line for the kind; never throws.
 export function eventLine(kind: string, d: ActivityDetails): string {
@@ -39,11 +51,27 @@ export function eventLine(kind: string, d: ActivityDetails): string {
 // (the later write), so the order never depends on the input order.
 export function buildHistory(notes: NoteIn[], events: EventIn[], now: Date): HistoryItem[] {
   const all = [
-    ...notes.map((n) => ({ rank: 1, id: n.id, item: { key: `note-${n.id}`, type: "note", at: n.createdAt, text: n.body, future: false } as HistoryItem })),
+    ...notes.map((n) => ({
+      rank: 1,
+      id: n.id,
+      item: { key: `note-${n.id}`, type: "note", at: n.createdAt, text: n.body, future: false } as HistoryItem,
+    })),
     ...events.map((e) => {
       const type = TYPE[e.kind] ?? "other";
-      return { rank: 0, id: e.id, item: { key: `event-${e.id}`, type, at: e.occurredAt, text: eventLine(e.kind, e.details), future: e.occurredAt > now } as HistoryItem };
+      return {
+        rank: 0,
+        id: e.id,
+        item: {
+          key: `event-${e.id}`,
+          type,
+          at: e.occurredAt,
+          text: eventLine(e.kind, e.details),
+          future: e.occurredAt > now,
+        } as HistoryItem,
+      };
     }),
   ];
-  return all.sort((a, b) => b.item.at.getTime() - a.item.at.getTime() || b.rank - a.rank || b.id - a.id).map((x) => x.item);
+  return all
+    .sort((a, b) => b.item.at.getTime() - a.item.at.getTime() || b.rank - a.rank || b.id - a.id)
+    .map((x) => x.item);
 }

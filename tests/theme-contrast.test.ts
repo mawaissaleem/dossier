@@ -7,7 +7,10 @@ import { THEMES } from "@/lib/theme";
 // Resolve each theme's tokens from app/globals.css the way the cascade does: blocks in file order, applying
 // those whose selector list has :root or the theme's [data-theme] selector.
 const css = readFileSync("app/globals.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ selectors: m[1].split(",").map((s) => s.trim()), body: m[2] }));
+const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+  selectors: m[1].split(",").map((s) => s.trim()),
+  body: m[2],
+}));
 const tokens = (theme: string) => {
   const out: Record<string, string> = {};
   for (const b of blocks) {
@@ -18,19 +21,26 @@ const tokens = (theme: string) => {
 };
 
 // Every variable and property the :root (Graphite) blocks set, so a theme cannot silently inherit one of them.
-const required = blocks.filter((b) => b.selectors.includes(":root")).flatMap((b) => [...b.body.matchAll(/((?:--)?[\w-]+):/g)].map((m) => m[1]));
+const required = blocks
+  .filter((b) => b.selectors.includes(":root"))
+  .flatMap((b) => [...b.body.matchAll(/((?:--)?[\w-]+):/g)].map((m) => m[1]));
 
 describe.each(THEMES)("%s theme blocks", (theme) => {
-  const own = blocks.filter((b) => b.selectors.includes(`[data-theme="${theme}"]`)).map((b) => b.body).join("\n");
+  const own = blocks
+    .filter((b) => b.selectors.includes(`[data-theme="${theme}"]`))
+    .map((b) => b.body)
+    .join("\n");
   it("define every token and color-scheme themselves (no fallback to :root)", () => {
     expect(required).toContain("color-scheme");
     expect(required).toContain("--chip-gray-foreground");
-    for (const name of required) expect(own, `${name} in [data-theme="${theme}"]`).toMatch(new RegExp(`(^|[\\s;])${name}:`));
+    for (const name of required)
+      expect(own, `${name} in [data-theme="${theme}"]`).toMatch(new RegExp(`(^|[\\s;])${name}:`));
   });
   it("light themes have no white or near-white surface (all below #f8f8f8)", () => {
     if (!/color-scheme:\s*light/.test(own)) return;
     const t = tokens(theme);
-    for (const s of ["--background", "--wash", "--card", "--muted", "--popover"]) expect(luminance(t[s]), s).toBeLessThan(luminance("#f8f8f8"));
+    for (const s of ["--background", "--wash", "--card", "--muted", "--popover"])
+      expect(luminance(t[s]), s).toBeLessThan(luminance("#f8f8f8"));
   });
 });
 
@@ -55,7 +65,9 @@ describe.each(THEMES)("%s theme contrast (WCAG AA)", (theme) => {
     expect(contrast(t["--destructive-foreground"], t["--destructive"])).toBeGreaterThanOrEqual(4.5);
   });
   it("the active nav bar (accent -> accent-to) reach 3:1 on every surface", () => {
-    for (const s of surfaces) for (const stop of ["--accent", "--accent-to"]) expect(contrast(t[stop], t[s]), `${stop} on ${s}`).toBeGreaterThanOrEqual(3);
+    for (const s of surfaces)
+      for (const stop of ["--accent", "--accent-to"])
+        expect(contrast(t[stop], t[s]), `${stop} on ${s}`).toBeGreaterThanOrEqual(3);
   });
   it("control borders and the focus ring reach 3:1 on every surface a control sits on", () => {
     for (const s of surfaces) {
@@ -65,10 +77,15 @@ describe.each(THEMES)("%s theme contrast (WCAG AA)", (theme) => {
     }
   });
   it("destructive button hover (bg-destructive/90 over any surface) keeps the label readable", () => {
-    for (const s of surfaces) expect(contrast(t["--destructive-foreground"], mix(t["--destructive"], t[s], 0.9)), `on ${s}`).toBeGreaterThanOrEqual(4.5);
+    for (const s of surfaces)
+      expect(
+        contrast(t["--destructive-foreground"], mix(t["--destructive"], t[s], 0.9)),
+        `on ${s}`,
+      ).toBeGreaterThanOrEqual(4.5);
   });
   it("the selected colour swatch border (foreground) stands out from every chip colour", () => {
-    for (const p of PALETTE) expect(contrast(t["--foreground"], t[`--chip-${p}`]), `swatch ${p}`).toBeGreaterThanOrEqual(3);
+    for (const p of PALETTE)
+      expect(contrast(t["--foreground"], t[`--chip-${p}`]), `swatch ${p}`).toBeGreaterThanOrEqual(3);
   });
   it("the Pipeline bar: its outline and gaps (input) reach 3:1 on the card, and the No status segment (muted) stands out from them", () => {
     expect(contrast(t["--input"], t["--card"])).toBeGreaterThanOrEqual(3);

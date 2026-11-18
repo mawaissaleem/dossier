@@ -19,10 +19,12 @@ export function StarButton({ id, name, starred }: { id: number; name: string; st
       aria-pressed={shown}
       aria-label={`${shown ? "Unstar" : "Star"} ${name}`}
       className={shown ? "text-warning" : "text-muted-foreground"}
-      onClick={() => startTransition(async () => {
-        setShown(!shown);
-        await setStarred(id, !shown).catch(() => undefined);
-      })}
+      onClick={() =>
+        startTransition(async () => {
+          setShown(!shown);
+          await setStarred(id, !shown).catch(() => undefined);
+        })
+      }
     >
       <StarIcon aria-hidden className={cn("size-[18px]", shown && "fill-current")} />
     </Button>

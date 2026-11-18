@@ -5,7 +5,9 @@ export type PreviewItem = { id: number; name: string; storedName: string; kind: 
 
 // The previewable files of one list (the Files list, or one submission), in the list's own order. A deleted file (tombstone) has no bytes: never offered.
 // Images join the PDFs in the same sequence: they are served inline by the same route, and a reader going through "what was sent" wants all of it.
-export function previewItems(files: { id: number; originalName: string; storedName: string; deletedAt?: unknown }[]): PreviewItem[] {
+export function previewItems(
+  files: { id: number; originalName: string; storedName: string; deletedAt?: unknown }[],
+): PreviewItem[] {
   return files.flatMap((f) => {
     const kind = previewKind(f.storedName);
     return kind && !f.deletedAt ? [{ id: f.id, name: f.originalName, storedName: f.storedName, kind }] : [];

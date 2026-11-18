@@ -10,11 +10,16 @@ export type InputKind = "text" | "number" | "date" | "checkbox" | "select";
 // Number is a text input too (inputMode decimal): type=number rejects values the server accepts and shows its own error text.
 export const inputKind = (type: ColumnType): InputKind => {
   switch (type) {
-    case "number": return "number";
-    case "date": return "date";
-    case "checkbox": return "checkbox";
-    case "single_select": return "select";
-    default: return "text"; // text, link
+    case "number":
+      return "number";
+    case "date":
+      return "date";
+    case "checkbox":
+      return "checkbox";
+    case "single_select":
+      return "select";
+    default:
+      return "text"; // text, link
   }
 };
 
@@ -30,7 +35,10 @@ export const BAD_DATE = "invalid date";
 // Entries for columns that still exist (a deleted column's leftover state is dropped). Strings are sent as typed;
 // blank is null; a select value is the option id as a number. A select option deleted while the form is open is sent as
 // blank (null), which is what the select then shows, so the payload never differs from the screen.
-export function buildValues(cols: { id: number; type: ColumnType; options: { id: number }[] }[], state: FormState): FormValue[] {
+export function buildValues(
+  cols: { id: number; type: ColumnType; options: { id: number }[] }[],
+  state: FormState,
+): FormValue[] {
   const out: FormValue[] = [];
   for (const c of cols) {
     const v = state[c.id];
@@ -53,8 +61,9 @@ export function defaultState(cols: DefaultCol[]): FormState {
     const v = decodeDefault(c.type, c.defaultValue);
     if (v === null) continue;
     if (c.type === "checkbox") out[c.id] = v === true;
-    else if (c.type === "single_select") { if (c.options.some((o) => o.id === v)) out[c.id] = String(v); }
-    else out[c.id] = formatCell(c, v);
+    else if (c.type === "single_select") {
+      if (c.options.some((o) => o.id === v)) out[c.id] = String(v);
+    } else out[c.id] = formatCell(c, v);
   }
   return out;
 }
@@ -69,11 +78,21 @@ export function buildCreateValues(cols: DefaultCol[], touched: FormState): FormV
 
 // Edit form start state: EVERY column, from the loaded values (no defaults, those are for new applications). Blank shows as "" and an
 // unchecked or blank checkbox as false; a select is its option id as text.
-export function initialState(cols: Pick<ColumnItem, "id" | "type" | "options">[], values: Record<number, CellScalar | null>): FormState {
+export function initialState(
+  cols: Pick<ColumnItem, "id" | "type" | "options">[],
+  values: Record<number, CellScalar | null>,
+): FormState {
   const out: FormState = {};
   for (const c of cols) {
     const v = values[c.id] ?? null;
-    out[c.id] = c.type === "checkbox" ? v === true : c.type === "single_select" ? (v === null ? "" : String(v)) : formatCell(c, v);
+    out[c.id] =
+      c.type === "checkbox"
+        ? v === true
+        : c.type === "single_select"
+          ? v === null
+            ? ""
+            : String(v)
+          : formatCell(c, v);
   }
   return out;
 }
@@ -96,7 +115,11 @@ export function changedState(cols: { id: number }[], state: FormState, initial: 
 type SplitCol = { name: string; type: ColumnType; hidden: boolean; isStatus: boolean };
 export { isPriority };
 export function splitEssentials<T extends SplitCol>(cols: T[]): { essentials: T[]; rest: T[] } {
-  const essentials = [cols.find((c) => !c.hidden && c.isStatus), cols.find((c) => !c.hidden && isPriority(c)), cols.find((c) => !c.hidden && isDeadline(c))].filter((c): c is T => c !== undefined);
+  const essentials = [
+    cols.find((c) => !c.hidden && c.isStatus),
+    cols.find((c) => !c.hidden && isPriority(c)),
+    cols.find((c) => !c.hidden && isDeadline(c)),
+  ].filter((c): c is T => c !== undefined);
   return { essentials, rest: cols.filter((c) => !essentials.includes(c)) };
 }
 
@@ -106,7 +129,10 @@ export const errorNamesColumn = (error: string | null | undefined, cols: { name:
 
 // Which field a server error is about: a column id, "title", or null for a form-level error (e.g. "Could not save").
 // Same "<column name>: " prefix rule as errorNamesColumn; title errors come from checkTitle in app/actions/applications.ts.
-export function errorField(error: string | null | undefined, cols: { id: number; name: string }[]): number | "title" | null {
+export function errorField(
+  error: string | null | undefined,
+  cols: { id: number; name: string }[],
+): number | "title" | null {
   if (!error) return null;
   const c = cols.find((col) => error.startsWith(`${col.name}: `));
   if (c) return c.id;

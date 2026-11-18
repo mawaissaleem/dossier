@@ -14,13 +14,23 @@ let trackId: number;
 let ids: number[]; // A, B, C, D in position order
 const snapshot = () => JSON.stringify(db.select().from(columns).all());
 const names = async () => (await listColumns(trackId)).map((c) => c.name).join("");
-const positions = () => db.select().from(columns).all().filter((c) => c.trackId === trackId).map((c) => c.position).sort((a, b) => a - b);
+const positions = () =>
+  db
+    .select()
+    .from(columns)
+    .all()
+    .filter((c) => c.trackId === trackId)
+    .map((c) => c.position)
+    .sort((a, b) => a - b);
 
 beforeEach(() => {
   vi.mocked(refresh).mockClear();
   db = useTestDb();
   trackId = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-  ids = ["A", "B", "C", "D"].map((name, position) => db.insert(columns).values({ userId: "local", trackId, name, type: "text", position }).returning().get().id);
+  ids = ["A", "B", "C", "D"].map(
+    (name, position) =>
+      db.insert(columns).values({ userId: "local", trackId, name, type: "text", position }).returning().get().id,
+  );
 });
 afterEach(dropTestDb);
 
@@ -41,9 +51,17 @@ describe("renameColumn", () => {
 
   it("rejects failures and writes nothing", async () => {
     const other = db.insert(tracks).values({ userId: "someone-else", name: "X", position: 0 }).returning().get().id;
-    const foreign = db.insert(columns).values({ userId: "someone-else", trackId: other, name: "Z", type: "text", position: 0 }).returning().get().id;
+    const foreign = db
+      .insert(columns)
+      .values({ userId: "someone-else", trackId: other, name: "Z", type: "text", position: 0 })
+      .returning()
+      .get().id;
     const t2 = db.insert(tracks).values({ userId: "local", name: "PhD", position: 1 }).returning().get().id;
-    const inT2 = db.insert(columns).values({ userId: "local", trackId: t2, name: "Y", type: "text", position: 0 }).returning().get().id;
+    const inT2 = db
+      .insert(columns)
+      .values({ userId: "local", trackId: t2, name: "Y", type: "text", position: 0 })
+      .returning()
+      .get().id;
     const before = snapshot();
     const cases: [unknown, unknown, unknown, string][] = [
       [trackId, ids[0], "b", "A column with that name already exists."], // case-insensitive
@@ -59,7 +77,8 @@ describe("renameColumn", () => {
       [trackId, "1", "New", "Column not found."],
       [0, ids[0], "New", "Column not found."],
     ];
-    for (const [t, c, n, error] of cases) expect(await renameColumn(t as number, c as number, n as string)).toEqual({ ok: false, error });
+    for (const [t, c, n, error] of cases)
+      expect(await renameColumn(t as number, c as number, n as string)).toEqual({ ok: false, error });
     expect(snapshot()).toBe(before);
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -68,7 +87,12 @@ describe("renameColumn", () => {
 describe("setColumnHidden", () => {
   it("hides and shows, keeps position and values, and any column incl. status", async () => {
     expect(await setColumnHidden(trackId, ids[1], true)).toEqual({ ok: true });
-    expect((await listColumns(trackId)).map((c) => [c.name, c.hidden])).toEqual([["A", false], ["B", true], ["C", false], ["D", false]]);
+    expect((await listColumns(trackId)).map((c) => [c.name, c.hidden])).toEqual([
+      ["A", false],
+      ["B", true],
+      ["C", false],
+      ["D", false],
+    ]);
     expect(await setColumnHidden(trackId, ids[1], false)).toEqual({ ok: true });
     expect((await listColumns(trackId))[1]).toMatchObject({ name: "B", hidden: false });
     expect(refresh).toHaveBeenCalledTimes(2);
@@ -82,9 +106,19 @@ describe("setColumnHidden", () => {
 
   it("rejects bad args, other tracks and other users", async () => {
     const other = db.insert(tracks).values({ userId: "someone-else", name: "X", position: 0 }).returning().get().id;
-    const foreign = db.insert(columns).values({ userId: "someone-else", trackId: other, name: "Z", type: "text", position: 0 }).returning().get().id;
+    const foreign = db
+      .insert(columns)
+      .values({ userId: "someone-else", trackId: other, name: "Z", type: "text", position: 0 })
+      .returning()
+      .get().id;
     const before = snapshot();
-    for (const [t, c, h] of [[other, foreign, true], [trackId, foreign, true], [trackId, 9999, true], [trackId, ids[0], "yes"], [trackId, 0, true]] as const) {
+    for (const [t, c, h] of [
+      [other, foreign, true],
+      [trackId, foreign, true],
+      [trackId, 9999, true],
+      [trackId, ids[0], "yes"],
+      [trackId, 0, true],
+    ] as const) {
       expect(await setColumnHidden(t, c, h as boolean)).toEqual({ ok: false, error: "Column not found." });
     }
     expect(snapshot()).toBe(before);
@@ -112,10 +146,18 @@ describe("moveColumn", () => {
     await setColumnHidden(trackId, ids[1], true); // A [B] C D
     await moveColumn(trackId, ids[2], "left"); // C passes A, not B
     expect(await names()).toBe("CBAD"); // B stays between, A now after it
-    const visible = (await listColumns(trackId)).filter((c) => !c.hidden).map((c) => c.name).join("");
+    const visible = (await listColumns(trackId))
+      .filter((c) => !c.hidden)
+      .map((c) => c.name)
+      .join("");
     expect(visible).toBe("CAD");
     await moveColumn(trackId, ids[0], "left"); // A passes C
-    expect((await listColumns(trackId)).filter((c) => !c.hidden).map((c) => c.name).join("")).toBe("ACD");
+    expect(
+      (await listColumns(trackId))
+        .filter((c) => !c.hidden)
+        .map((c) => c.name)
+        .join(""),
+    ).toBe("ACD");
     expect(positions()).toEqual([0, 1, 2, 3]);
   });
 
@@ -132,7 +174,11 @@ describe("moveColumn", () => {
   });
 
   it("positions stay unique and gap-free after a mixed sequence", async () => {
-    const extra = db.insert(columns).values({ userId: "local", trackId, name: "E", type: "text", position: 4 }).returning().get().id;
+    const extra = db
+      .insert(columns)
+      .values({ userId: "local", trackId, name: "E", type: "text", position: 4 })
+      .returning()
+      .get().id;
     await moveColumn(trackId, extra, "left");
     await setColumnHidden(trackId, ids[0], true);
     await moveColumn(trackId, ids[1], "right");
@@ -149,14 +195,30 @@ describe("moveColumn", () => {
     const t2 = db.insert(tracks).values({ userId: "local", name: "PhD", position: 1 }).returning().get().id;
     db.insert(columns).values({ userId: "local", trackId: t2, name: "P", type: "text", position: 0 }).run();
     await moveColumn(trackId, ids[1], "left");
-    expect(db.select().from(columns).all().find((c) => c.trackId === t2)?.position).toBe(0);
+    expect(
+      db
+        .select()
+        .from(columns)
+        .all()
+        .find((c) => c.trackId === t2)?.position,
+    ).toBe(0);
   });
 
   it("rejects bad args, other tracks and other users", async () => {
     const other = db.insert(tracks).values({ userId: "someone-else", name: "X", position: 0 }).returning().get().id;
-    const foreign = db.insert(columns).values({ userId: "someone-else", trackId: other, name: "Z", type: "text", position: 0 }).returning().get().id;
+    const foreign = db
+      .insert(columns)
+      .values({ userId: "someone-else", trackId: other, name: "Z", type: "text", position: 0 })
+      .returning()
+      .get().id;
     const before = snapshot();
-    for (const [t, c, d] of [[other, foreign, "left"], [trackId, foreign, "left"], [trackId, 9999, "right"], [trackId, ids[1], "up"], [trackId, 1.5, "left"]] as const) {
+    for (const [t, c, d] of [
+      [other, foreign, "left"],
+      [trackId, foreign, "left"],
+      [trackId, 9999, "right"],
+      [trackId, ids[1], "up"],
+      [trackId, 1.5, "left"],
+    ] as const) {
       expect(await moveColumn(t, c, d as "left")).toEqual({ ok: false, error: "Column not found." });
     }
     expect(snapshot()).toBe(before);

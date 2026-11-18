@@ -19,7 +19,9 @@ export async function checkFiles(applicationId: number): Promise<CheckFilesResul
 }
 
 // Read on each dialog open, so the warning is never stale page data (FR-5.8).
-export async function fetchFileDeleteImpact(id: number): Promise<({ ok: true } & FileDeleteImpact) | { ok: false; error: string }> {
+export async function fetchFileDeleteImpact(
+  id: number,
+): Promise<({ ok: true } & FileDeleteImpact) | { ok: false; error: string }> {
   if (!isId(id)) return { ok: false, error: "File not found." };
   const impact = await getFileDeleteImpact(id);
   return impact ? { ok: true, ...impact } : { ok: false, error: "File not found. It may already be deleted." };
@@ -27,9 +29,16 @@ export async function fetchFileDeleteImpact(id: number): Promise<({ ok: true } &
 
 // `confirm` must be literally true: the UI sets it only after the user saw what will be lost (NFR-4), and for a file in submissions after the extra
 // "I understand" step (`acknowledged`, also enforced here). `expectedSubmissions` is the count the dialog showed; the data layer refuses if it changed since. Runs on any POST, so checked here.
-export async function deleteFile(id: number, confirm: boolean, expectedSubmissions: number, acknowledged: boolean): Promise<{ ok: true; kept: boolean } | { ok: false; error: string }> {
-  if (confirm !== true || !Number.isSafeInteger(expectedSubmissions) || expectedSubmissions < 0) return { ok: false, error: "Deleting must be confirmed." };
-  if (expectedSubmissions > 0 && acknowledged !== true) return { ok: false, error: "This file was sent in a submission. Tick \"I understand\" to delete it." };
+export async function deleteFile(
+  id: number,
+  confirm: boolean,
+  expectedSubmissions: number,
+  acknowledged: boolean,
+): Promise<{ ok: true; kept: boolean } | { ok: false; error: string }> {
+  if (confirm !== true || !Number.isSafeInteger(expectedSubmissions) || expectedSubmissions < 0)
+    return { ok: false, error: "Deleting must be confirmed." };
+  if (expectedSubmissions > 0 && acknowledged !== true)
+    return { ok: false, error: 'This file was sent in a submission. Tick "I understand" to delete it.' };
   if (!isId(id)) return { ok: false, error: "File not found." };
   try {
     const r = await deleteStoredFile(id, expectedSubmissions);

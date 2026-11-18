@@ -1,5 +1,17 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  realpathSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
@@ -22,9 +34,25 @@ describe("backup naming and manifest (pure)", () => {
   });
 
   it("round-trips a manifest and rejects wrong ones", () => {
-    const m = buildManifest({ createdAt: "2026-11-10T14:32:00.000Z", schema: { migrations: 3, latest: 123 }, filesRoot: null, fileCount: 0, filesBytes: 0 });
+    const m = buildManifest({
+      createdAt: "2026-11-10T14:32:00.000Z",
+      schema: { migrations: 3, latest: 123 },
+      filesRoot: null,
+      fileCount: 0,
+      filesBytes: 0,
+    });
     expect(parseManifest(JSON.parse(JSON.stringify(m)))).toEqual({ ok: true, manifest: m });
-    for (const bad of [null, "x", {}, { ...m, format: "other" }, { ...m, formatVersion: 2 }, { ...m, createdAt: "nope" }, { ...m, schema: null }, { ...m, fileCount: -1 }, { ...m, filesRoot: 5 }]) {
+    for (const bad of [
+      null,
+      "x",
+      {},
+      { ...m, format: "other" },
+      { ...m, formatVersion: 2 },
+      { ...m, createdAt: "nope" },
+      { ...m, schema: null },
+      { ...m, fileCount: -1 },
+      { ...m, filesRoot: 5 },
+    ]) {
       expect(parseManifest(bad).ok).toBe(false);
     }
   });
@@ -77,11 +105,23 @@ describe("createBackup", () => {
     expect(readdirSync(dest)).toEqual(["dossier-backup-20261110-1432.zip"]);
     expect(r).toMatchObject({ fileCount: 3, filesBytes: 8 + 5 + 1, filesRoot: root });
     const zip = readZip(r.path);
-    expect([...zip.keys()].sort()).toEqual(["database/dossier.db", "files/Acme-2026/cv.pdf", "files/Acme-2026/letter.txt", "files/top.txt", "manifest.json"]);
+    expect([...zip.keys()].sort()).toEqual([
+      "database/dossier.db",
+      "files/Acme-2026/cv.pdf",
+      "files/Acme-2026/letter.txt",
+      "files/top.txt",
+      "manifest.json",
+    ]);
     expect(zip.get("files/Acme-2026/cv.pdf")!.toString()).toBe("cv bytes");
 
     const parsed = parseManifest(JSON.parse(zip.get("manifest.json")!.toString()));
-    expect(parsed.ok && parsed.manifest).toMatchObject({ filesRoot: root, fileCount: 3, filesBytes: 14, createdAt: NOW.toISOString(), schema: { migrations: MIGRATION_COUNT } });
+    expect(parsed.ok && parsed.manifest).toMatchObject({
+      filesRoot: root,
+      fileCount: 3,
+      filesBytes: 14,
+      createdAt: NOW.toISOString(),
+      schema: { migrations: MIGRATION_COUNT },
+    });
 
     // the database entry is a whole database with the same rows; open it from a file the test extracts
     const copy = join(work, "copy.db");
@@ -147,7 +187,13 @@ describe("createBackup", () => {
 
   it("owns the last-backup setting by the user id", async () => {
     await ok();
-    expect(db.select().from(settings).all().map((s) => [s.userId, s.key])).toContainEqual(["local", "last_backup_at"]);
+    expect(
+      db
+        .select()
+        .from(settings)
+        .all()
+        .map((s) => [s.userId, s.key]),
+    ).toContainEqual(["local", "last_backup_at"]);
   });
 
   it("deletes the zip and the temp folder when the backup fails midway", async () => {
@@ -186,28 +232,31 @@ describe("createBackup", () => {
   });
 
   // an unreadable source is the files folder's problem, not the destination's: the message names the file or folder
-  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)("names an unreadable file or folder in the files root, not the destination", async () => {
-    await setFilesRoot(root);
-    const file = join(root, "Acme-2026", "letter.txt");
-    chmodSync(file, 0o000);
-    try {
-      const e = await err(dest);
-      expect(e).toMatch(/cannot read "Acme-2026\/letter\.txt" in your files folder/);
-      expect(e).not.toMatch(/cannot write/);
-    } finally {
-      chmodSync(file, 0o644);
-    }
-    expect(readdirSync(dest)).toEqual([]);
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "names an unreadable file or folder in the files root, not the destination",
+    async () => {
+      await setFilesRoot(root);
+      const file = join(root, "Acme-2026", "letter.txt");
+      chmodSync(file, 0o000);
+      try {
+        const e = await err(dest);
+        expect(e).toMatch(/cannot read "Acme-2026\/letter\.txt" in your files folder/);
+        expect(e).not.toMatch(/cannot write/);
+      } finally {
+        chmodSync(file, 0o644);
+      }
+      expect(readdirSync(dest)).toEqual([]);
 
-    const dir = join(root, "Acme-2026");
-    chmodSync(dir, 0o000);
-    try {
-      expect(await err(dest)).toMatch(/cannot read "Acme-2026" in your files folder/);
-    } finally {
-      chmodSync(dir, 0o755);
-    }
-    expect(readdirSync(dest)).toEqual([]);
-  });
+      const dir = join(root, "Acme-2026");
+      chmodSync(dir, 0o000);
+      try {
+        expect(await err(dest)).toMatch(/cannot read "Acme-2026" in your files folder/);
+      } finally {
+        chmodSync(dir, 0o755);
+      }
+      expect(readdirSync(dest)).toEqual([]);
+    },
+  );
 });
 
 describe("createBackup refusals", () => {

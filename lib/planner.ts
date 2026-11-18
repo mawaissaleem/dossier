@@ -14,14 +14,28 @@ const name = (c: SlotColumn) => c.name.trim().toLowerCase();
 export const SLOT_DEFS: Record<Slot, { label: string; type: ColumnType; isDefault: (c: SlotColumn) => boolean }> = {
   priority: { label: "Priority", type: "single_select", isDefault: isPriority },
   deadline: { label: "Deadline", type: "date", isDefault: isDeadline },
-  effort: { label: "Effort", type: "single_select", isDefault: (c) => c.type === "single_select" && name(c) === "effort" },
-  followUp: { label: "Follow-up date", type: "date", isDefault: (c) => c.type === "date" && name(c) === "follow-up date" },
+  effort: {
+    label: "Effort",
+    type: "single_select",
+    isDefault: (c) => c.type === "single_select" && name(c) === "effort",
+  },
+  followUp: {
+    label: "Follow-up date",
+    type: "date",
+    isDefault: (c) => c.type === "date" && name(c) === "follow-up date",
+  },
 };
 
-const mapSlots = (f: (slot: Slot) => number | null): SlotMapping => ({ priority: f("priority"), deadline: f("deadline"), effort: f("effort"), followUp: f("followUp") });
+const mapSlots = (f: (slot: Slot) => number | null): SlotMapping => ({
+  priority: f("priority"),
+  deadline: f("deadline"),
+  effort: f("effort"),
+  followUp: f("followUp"),
+});
 
 // Columns that may feed a slot: the right type, in the order given.
-export const slotChoices = (slot: Slot, columns: SlotColumn[]) => columns.filter((c) => c.type === SLOT_DEFS[slot].type);
+export const slotChoices = (slot: Slot, columns: SlotColumn[]) =>
+  columns.filter((c) => c.type === SLOT_DEFS[slot].type);
 
 // `stored` is the parsed setting. Never saved (or not an object) = the first visible column per slot that matches by name and type.
 // A saved mapping keeps only ids that are still columns of the right type in this track's `columns`; the rest resolve to empty, silently.
@@ -31,7 +45,10 @@ export function resolveSlots(stored: unknown, columns: SlotColumn[]): SlotMappin
 }
 
 function resolveSaved(stored: unknown, columns: SlotColumn[]): SlotMapping {
-  const saved = stored !== null && typeof stored === "object" && !Array.isArray(stored) ? (stored as Record<string, unknown>) : null;
+  const saved =
+    stored !== null && typeof stored === "object" && !Array.isArray(stored)
+      ? (stored as Record<string, unknown>)
+      : null;
   return mapSlots((slot) => {
     const choices = slotChoices(slot, columns);
     if (!saved) return choices.find((c) => !c.hidden && SLOT_DEFS[slot].isDefault(c))?.id ?? null;
@@ -41,24 +58,35 @@ function resolveSaved(stored: unknown, columns: SlotColumn[]): SlotMapping {
 
 // The mapping to save, or an error. Every slot must be present as null or the id of a column of the right type in `columns`.
 export function checkSlots(input: unknown, columns: SlotColumn[]): { slots: SlotMapping } | { error: string } {
-  if (input === null || typeof input !== "object" || Array.isArray(input)) return { error: "Choose a column for each slot." };
+  if (input === null || typeof input !== "object" || Array.isArray(input))
+    return { error: "Choose a column for each slot." };
   const given = input as Record<string, unknown>;
   const slots = {} as SlotMapping;
   for (const slot of SLOTS) {
     const v = given[slot];
-    if (v === null) { slots[slot] = null; continue; }
+    if (v === null) {
+      slots[slot] = null;
+      continue;
+    }
     if (!Number.isInteger(v)) return { error: `Choose a column for ${SLOT_DEFS[slot].label} from the list.` };
     const col = columns.find((c) => c.id === v);
     if (!col) return { error: `${SLOT_DEFS[slot].label}: that column is not in this track.` };
-    if (col.type !== SLOT_DEFS[slot].type) return { error: `${SLOT_DEFS[slot].label} needs a ${SLOT_DEFS[slot].type === "date" ? "date" : "single-select"} column.` };
+    if (col.type !== SLOT_DEFS[slot].type)
+      return {
+        error: `${SLOT_DEFS[slot].label} needs a ${SLOT_DEFS[slot].type === "date" ? "date" : "single-select"} column.`,
+      };
     slots[slot] = col.id;
   }
-  if (slots.priority !== null && slots.priority === slots.effort) return { error: "Priority and Effort need different columns, otherwise the same buffer would count twice." };
+  if (slots.priority !== null && slots.priority === slots.effort)
+    return { error: "Priority and Effort need different columns, otherwise the same buffer would count twice." };
   return { slots };
 }
 
 // Buffers a reset gives the options of the Priority and Effort slot columns (the seed's values, lower-cased labels); every other label gets NULL (= 0).
-const SEED_BUFFERS = { priority: { priority: 3, "good-to-have": 0 }, effort: { heavy: 2, medium: 1, light: 0 } } as const satisfies Record<"priority" | "effort", Record<string, number>>;
+const SEED_BUFFERS = {
+  priority: { priority: 3, "good-to-have": 0 },
+  effort: { heavy: 2, medium: 1, light: 0 },
+} as const satisfies Record<"priority" | "effort", Record<string, number>>;
 export function defaultBuffer(slot: "priority" | "effort", label: string): number | null {
   const m: Record<string, number> = SEED_BUFFERS[slot];
   const key = label.trim().toLowerCase();
@@ -70,7 +98,8 @@ export const MAX_BUFFER_DAYS = 365;
 // A buffer to save: a whole number of days 0..365, or null (blank, counts as 0).
 export function checkBuffer(input: unknown): { days: number | null } | { error: string } {
   if (input === null) return { days: null };
-  if (typeof input !== "number" || !Number.isInteger(input) || input < 0 || input > MAX_BUFFER_DAYS) return { error: `Enter a whole number of days from 0 to ${MAX_BUFFER_DAYS}, or leave it blank.` };
+  if (typeof input !== "number" || !Number.isInteger(input) || input < 0 || input > MAX_BUFFER_DAYS)
+    return { error: `Enter a whole number of days from 0 to ${MAX_BUFFER_DAYS}, or leave it blank.` };
   return { days: input };
 }
 
@@ -104,19 +133,34 @@ const buf = (o: BufferOption) => o.bufferDays ?? 0;
 
 // FR-8.7: the lowest priority option = the smallest buffer; ties go to the last by position. No options = null.
 export function lowestPriorityOption(options: BufferOption[]): BufferOption | null {
-  return options.reduce<BufferOption | null>((low, o) => (!low || buf(o) < buf(low) || (buf(o) === buf(low) && o.position >= low.position) ? o : low), null);
+  return options.reduce<BufferOption | null>(
+    (low, o) => (!low || buf(o) < buf(low) || (buf(o) === buf(low) && o.position >= low.position) ? o : low),
+    null,
+  );
 }
 
 // The buffers an application gets: its Priority option (else the FR-8.7 lowest) and its Effort option (else none).
-function buffersOf(app: PlannerApp, priorityOptions: BufferOption[], effortOptions: BufferOption[]): Pick<Scored, "priority" | "effort"> {
+function buffersOf(
+  app: PlannerApp,
+  priorityOptions: BufferOption[],
+  effortOptions: BufferOption[],
+): Pick<Scored, "priority" | "effort"> {
   const chosen = priorityOptions.find((o) => o.id === app.priority);
   const p = chosen ?? lowestPriorityOption(priorityOptions);
   const e = effortOptions.find((o) => o.id === app.effort);
-  return { priority: { optionId: p?.id ?? null, buffer: p ? buf(p) : 0, fallback: !chosen }, effort: { optionId: e?.id ?? null, buffer: e ? buf(e) : 0 } };
+  return {
+    priority: { optionId: p?.id ?? null, buffer: p ? buf(p) : 0, fallback: !chosen },
+    effort: { optionId: e?.id ?? null, buffer: e ? buf(e) : 0 },
+  };
 }
 
 // Score = days left - priority buffer - effort buffer. null when the deadline is blank or not a real date (the undated policy is 10.5, below).
-export function scoreApplication(app: PlannerApp, today: string, priorityOptions: BufferOption[], effortOptions: BufferOption[]): Scored | null {
+export function scoreApplication(
+  app: PlannerApp,
+  today: string,
+  priorityOptions: BufferOption[],
+  effortOptions: BufferOption[],
+): Scored | null {
   const left = daysLeft(app.deadline, today);
   if (left === null) return null;
   const b = buffersOf(app, priorityOptions, effortOptions);
@@ -124,20 +168,27 @@ export function scoreApplication(app: PlannerApp, today: string, priorityOptions
 }
 
 // Lowest score first; ties: earlier deadline (fewer days left), then lower id. Applications without a valid deadline come back in `undated`, in input order.
-export function rankApplications(apps: PlannerApp[], today: string, priorityOptions: BufferOption[], effortOptions: BufferOption[]): { ranked: Scored[]; undated: PlannerApp[] } {
+export function rankApplications(
+  apps: PlannerApp[],
+  today: string,
+  priorityOptions: BufferOption[],
+  effortOptions: BufferOption[],
+): { ranked: Scored[]; undated: PlannerApp[] } {
   if (dayNumber(today) === null) throw new Error(`today must be a YYYY-MM-DD day, got ${String(today)}`);
   const ranked: Scored[] = [];
   const undated: PlannerApp[] = [];
   for (const app of apps) {
     const s = scoreApplication(app, today, priorityOptions, effortOptions);
-    if (s) ranked.push(s); else undated.push(app);
+    if (s) ranked.push(s);
+    else undated.push(app);
   }
   ranked.sort(compareScored);
   return { ranked, undated };
 }
 
 // Lowest score first; ties: earlier deadline (fewer days left), then lower id. Shared so lists scored per track can be merged (10.4).
-export const compareScored = (a: Scored, b: Scored) => a.score - b.score || a.daysLeft - b.daysLeft || a.app.id - b.app.id;
+export const compareScored = (a: Scored, b: Scored) =>
+  a.score - b.score || a.daysLeft - b.daysLeft || a.app.id - b.app.id;
 
 // ---- 10.4: still-to-do statuses (FR-8.4) ----
 
@@ -152,7 +203,9 @@ export function defaultStillToDo(options: StatusOpt[], submittedIds: number[]): 
 // `stored` is the parsed setting. Not a list (never saved, unreadable) = the default; a saved list keeps only ids that are still
 // status options, in option order, silently dropping the rest. An empty saved list stays empty (nothing is ranked).
 export function resolveStillToDo(stored: unknown, options: StatusOpt[], submittedIds: number[]): number[] {
-  return Array.isArray(stored) ? options.filter((o) => stored.includes(o.id)).map((o) => o.id) : defaultStillToDo(options, submittedIds);
+  return Array.isArray(stored)
+    ? options.filter((o) => stored.includes(o.id)).map((o) => o.id)
+    : defaultStillToDo(options, submittedIds);
 }
 
 // ---- 10.5: overdue and no-deadline rules (FR-8.5, FR-8.6) ----
@@ -163,7 +216,8 @@ export const NO_DEADLINE_POLICIES = ["stale", "last", "ignore"] as const;
 export type NoDeadlinePolicy = (typeof NO_DEADLINE_POLICIES)[number];
 
 export const isOverduePolicy = (v: unknown): v is OverduePolicy => OVERDUE_POLICIES.includes(v as OverduePolicy);
-export const isNoDeadlinePolicy = (v: unknown): v is NoDeadlinePolicy => NO_DEADLINE_POLICIES.includes(v as NoDeadlinePolicy);
+export const isNoDeadlinePolicy = (v: unknown): v is NoDeadlinePolicy =>
+  NO_DEADLINE_POLICIES.includes(v as NoDeadlinePolicy);
 
 // Stored value to the policy in force: anything unknown (never saved, unreadable, a retired value) = the default.
 export const resolveOverdue = (stored: unknown): OverduePolicy => (isOverduePolicy(stored) ? stored : "pin");
@@ -172,9 +226,20 @@ export const resolveNoDeadline = (stored: unknown): NoDeadlinePolicy => (isNoDea
 // An application without a usable deadline: the buffers it would get (priority + effort, for `last`) and whole days since it was last touched
 // (`lastTouched` is a YYYY-MM-DD day; a bad value or a day after today counts as 0). `id` is the application's, for the final tie-break.
 export type UndatedScore = Pick<Scored, "priority" | "effort"> & { id: number; buffer: number; daysUntouched: number };
-export function undatedScore(app: PlannerApp, lastTouched: unknown, today: string, priorityOptions: BufferOption[], effortOptions: BufferOption[]): UndatedScore {
+export function undatedScore(
+  app: PlannerApp,
+  lastTouched: unknown,
+  today: string,
+  priorityOptions: BufferOption[],
+  effortOptions: BufferOption[],
+): UndatedScore {
   const b = buffersOf(app, priorityOptions, effortOptions);
-  return { id: app.id, ...b, buffer: b.priority.buffer + b.effort.buffer, daysUntouched: Math.max(0, -(daysLeft(lastTouched, today) ?? 0)) };
+  return {
+    id: app.id,
+    ...b,
+    buffer: b.priority.buffer + b.effort.buffer,
+    daysUntouched: Math.max(0, -(daysLeft(lastTouched, today) ?? 0)),
+  };
 }
 
 // The final order. Dated first: `pin` puts overdue ones (days left < 0) ahead of the rest, each flagged `overdue`, then the rest by score;
@@ -182,15 +247,30 @@ export function undatedScore(app: PlannerApp, lastTouched: unknown, today: strin
 // undated: `last` = biggest priority+effort buffer first, `stale` = longest untouched first, `ignore` = left out; ties by id.
 // Only the order and membership change; the items keep every field they came with.
 export function orderRanking<S extends Scored, U extends { id: number; buffer: number; daysUntouched: number }>(
-  ranked: S[], undated: U[], overdue: OverduePolicy, noDeadline: NoDeadlinePolicy,
+  ranked: S[],
+  undated: U[],
+  overdue: OverduePolicy,
+  noDeadline: NoDeadlinePolicy,
 ): { ranked: (S & { overdue: boolean })[]; undated: U[] } {
   const sorted = [...ranked].sort(compareScored);
   const late = sorted.filter((s) => s.daysLeft < 0);
   const rest = sorted.filter((s) => s.daysLeft >= 0);
   const flagged = (list: S[], overdue: boolean) => list.map((s) => ({ ...s, overdue }));
-  const dated = overdue === "pin" ? [...flagged(late, true), ...flagged(rest, false)] : overdue === "hide" ? flagged(rest, false) : flagged(sorted, false);
+  const dated =
+    overdue === "pin"
+      ? [...flagged(late, true), ...flagged(rest, false)]
+      : overdue === "hide"
+        ? flagged(rest, false)
+        : flagged(sorted, false);
   const byId = (a: U, b: U) => a.id - b.id;
-  const rows = noDeadline === "ignore" ? [] : [...undated].sort(noDeadline === "last" ? (a, b) => b.buffer - a.buffer || byId(a, b) : (a, b) => b.daysUntouched - a.daysUntouched || byId(a, b));
+  const rows =
+    noDeadline === "ignore"
+      ? []
+      : [...undated].sort(
+          noDeadline === "last"
+            ? (a, b) => b.buffer - a.buffer || byId(a, b)
+            : (a, b) => b.daysUntouched - a.daysUntouched || byId(a, b),
+        );
   return { ranked: dated, undated: rows };
 }
 
@@ -202,14 +282,31 @@ const days = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
 // A null effort label = no Effort value, so that part is left out. Time part: `daysLeft` set = dated (negative = overdue); otherwise `daysUntouched`
 // set = the "stale" rule ("untouched for N days"); both null = the "last" rule.
 export function reasoning(item: {
-  priority: { label: string | null; buffer: number }; effort: { label: string | null; buffer: number };
-  daysLeft: number | null; daysUntouched: number | null;
+  priority: { label: string | null; buffer: number };
+  effort: { label: string | null; buffer: number };
+  daysLeft: number | null;
+  daysUntouched: number | null;
 }): string {
   const { priority: p, effort: e, daysLeft: left, daysUntouched: idle } = item;
-  const time = left !== null
-    ? left < 0 ? `overdue by ${days(-left)}` : left === 0 ? "due today" : left === 1 ? "due tomorrow" : `due in ${days(left)}`
-    : idle === null ? "no deadline" : idle === 0 ? "no deadline, untouched today" : `no deadline, untouched for ${days(idle)}`;
-  return [`${p.label ?? "No priority"} (+${p.buffer})`, ...(e.label === null ? [] : [`${e.label} effort (+${e.buffer})`]), time].join(", ");
+  const time =
+    left !== null
+      ? left < 0
+        ? `overdue by ${days(-left)}`
+        : left === 0
+          ? "due today"
+          : left === 1
+            ? "due tomorrow"
+            : `due in ${days(left)}`
+      : idle === null
+        ? "no deadline"
+        : idle === 0
+          ? "no deadline, untouched today"
+          : `no deadline, untouched for ${days(idle)}`;
+  return [
+    `${p.label ?? "No priority"} (+${p.buffer})`,
+    ...(e.label === null ? [] : [`${e.label} effort (+${e.buffer})`]),
+    time,
+  ].join(", ");
 }
 
 // ---- 10.8: weekly capacity (FR-8.8) ----
@@ -218,7 +315,8 @@ export const DEFAULT_CAPACITY = 4;
 export const MIN_CAPACITY = 1;
 export const MAX_CAPACITY = 50;
 
-const validCapacity = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= MIN_CAPACITY && v <= MAX_CAPACITY;
+const validCapacity = (v: unknown): v is number =>
+  typeof v === "number" && Number.isInteger(v) && v >= MIN_CAPACITY && v <= MAX_CAPACITY;
 
 // Stored value to the capacity in force: anything that is not a whole number 1..50 (never saved, unreadable, hand-edited) = the default.
 export const resolveCapacity = (stored: unknown): number => (validCapacity(stored) ? stored : DEFAULT_CAPACITY);
@@ -230,7 +328,8 @@ export function checkCapacity(input: unknown): { capacity: number } | { error: s
 }
 
 // Raw field text to the action's input: digits -> number, anything else (blank included) stays a string so checkCapacity refuses it.
-export const parseCapacityInput = (raw: string): number | string => (/^\d+$/.test(raw.trim()) ? Number(raw.trim()) : raw);
+export const parseCapacityInput = (raw: string): number | string =>
+  /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : raw;
 
 // This week's plan (FR-8.8): the first `capacity` of the final ordering (dated ones, then the undated as the no-deadline rule placed them), and the rest.
 export function weeksPlan<T>(ranking: T[], capacity: number): { plan: T[]; rest: T[] } {
@@ -244,7 +343,10 @@ export type FollowUpInput = { id: number; followUp: unknown; hasSubmission: bool
 
 // Submitted applications (a submission row, or a submitted current status) whose follow-up date is today or earlier. A blank or invalid date
 // never counts. Oldest follow-up first, then id. `daysAgo` is 0 for today; `text` is "due today" / "1 day ago" / "N days ago".
-export function followUpsDue<T extends FollowUpInput>(items: T[], today: string): (T & { daysAgo: number; text: string })[] {
+export function followUpsDue<T extends FollowUpInput>(
+  items: T[],
+  today: string,
+): (T & { daysAgo: number; text: string })[] {
   const out: (T & { daysAgo: number; text: string })[] = [];
   for (const it of items) {
     const left = daysLeft(it.followUp, today);

@@ -5,49 +5,94 @@ import { applications, cellValues, columnOptions, columns, tracks } from "@/lib/
 import { allTracksPipeline, pipelineCounts, pipelineSummary } from "@/lib/pipeline";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
-const opts = [{ id: 1, label: "To apply", color: "gray" }, { id: 2, label: "Applied", color: "blue" }, { id: 3, label: "Offer", color: "green" }];
+const opts = [
+  { id: 1, label: "To apply", color: "gray" },
+  { id: 2, label: "Applied", color: "blue" },
+  { id: 3, label: "Offer", color: "green" },
+];
 const job = { id: 10, name: "Job", color: "blue", statusColumnId: 100, options: opts };
 
 describe("pipelineCounts (pure)", () => {
   it("empty track: every option at zero, in order, no No status", () => {
     const [t] = pipelineCounts([], [job]);
     expect(t.total).toBe(0);
-    expect(t.segments.map((s) => [s.label, s.count])).toEqual([["To apply", 0], ["Applied", 0], ["Offer", 0]]);
+    expect(t.segments.map((s) => [s.label, s.count])).toEqual([
+      ["To apply", 0],
+      ["Applied", 0],
+      ["Offer", 0],
+    ]);
   });
   it("keeps zero-count options between others, in the configured order", () => {
-    const [t] = pipelineCounts([{ trackId: 10, optionId: 3, n: 2 }, { trackId: 10, optionId: 1, n: 5 }], [job]);
+    const [t] = pipelineCounts(
+      [
+        { trackId: 10, optionId: 3, n: 2 },
+        { trackId: 10, optionId: 1, n: 5 },
+      ],
+      [job],
+    );
     expect(t.segments.map((s) => s.count)).toEqual([5, 0, 2]);
     expect(t.total).toBe(7);
   });
   it("No status last, only when above zero; a value that is not an option counts as No status", () => {
-    const [t] = pipelineCounts([{ trackId: 10, optionId: null, n: 1 }, { trackId: 10, optionId: 99, n: 2 }, { trackId: 10, optionId: 2, n: 1 }], [job]);
+    const [t] = pipelineCounts(
+      [
+        { trackId: 10, optionId: null, n: 1 },
+        { trackId: 10, optionId: 99, n: 2 },
+        { trackId: 10, optionId: 2, n: 1 },
+      ],
+      [job],
+    );
     expect(t.segments.at(-1)).toEqual({ token: "blank", label: "No status", color: null, count: 3 });
     expect(t.total).toBe(4);
   });
   it("several tracks are counted apart and keep their order; a track without a status column gets only a total", () => {
     const phd = { id: 11, name: "PhD", color: "teal", statusColumnId: null, options: [] };
-    const r = pipelineCounts([{ trackId: 11, optionId: null, n: 4 }, { trackId: 10, optionId: 2, n: 1 }], [phd, job]);
+    const r = pipelineCounts(
+      [
+        { trackId: 11, optionId: null, n: 4 },
+        { trackId: 10, optionId: 2, n: 1 },
+      ],
+      [phd, job],
+    );
     expect(r.map((t) => t.name)).toEqual(["PhD", "Job"]);
     expect(r[0]).toMatchObject({ segments: [], total: 4 });
     expect(r[1].total).toBe(1);
   });
   it("summary lists non-zero segments", () => {
-    const [t] = pipelineCounts([{ trackId: 10, optionId: 2, n: 3 }, { trackId: 10, optionId: 3, n: 1 }], [job]);
+    const [t] = pipelineCounts(
+      [
+        { trackId: 10, optionId: 2, n: 3 },
+        { trackId: 10, optionId: 3, n: 1 },
+      ],
+      [job],
+    );
     expect(pipelineSummary(t)).toBe("Applied 3, Offer 1");
     expect(pipelineSummary(pipelineCounts([], [job])[0])).toBe("No applications");
   });
 });
 
 describe("allTracksPipeline (pure)", () => {
-  const phdOpts = [{ id: 7, label: "To apply", color: "teal" }, { id: 8, label: "Interview", color: "green" }];
+  const phdOpts = [
+    { id: 7, label: "To apply", color: "teal" },
+    { id: 8, label: "Interview", color: "green" },
+  ];
   const phd = { id: 11, name: "PhD", color: "teal", statusColumnId: 110, options: phdOpts };
-  const rows = [{ trackId: 10, optionId: 1, n: 3 }, { trackId: 10, optionId: 2, n: 2 }, { trackId: 11, optionId: 7, n: 4 }, { trackId: 11, optionId: 8, n: 1 }, { trackId: 11, optionId: null, n: 2 }];
+  const rows = [
+    { trackId: 10, optionId: 1, n: 3 },
+    { trackId: 10, optionId: 2, n: 2 },
+    { trackId: 11, optionId: 7, n: 4 },
+    { trackId: 11, optionId: 8, n: 1 },
+    { trackId: 11, optionId: null, n: 2 },
+  ];
 
   it("adds the tracks up by label, in order of first appearance, keeping the first colour", () => {
     const r = allTracksPipeline(pipelineCounts(rows, [job, phd]));
     expect(r.segments).toEqual([
-      { label: "To apply", color: "gray", count: 7 }, { label: "Applied", color: "blue", count: 2 }, { label: "Offer", color: "green", count: 0 },
-      { label: "Interview", color: "green", count: 1 }, { label: "No status", color: null, count: 2 },
+      { label: "To apply", color: "gray", count: 7 },
+      { label: "Applied", color: "blue", count: 2 },
+      { label: "Offer", color: "green", count: 0 },
+      { label: "Interview", color: "green", count: 1 },
+      { label: "No status", color: null, count: 2 },
     ]);
     expect(r.total).toBe(12);
   });
@@ -62,23 +107,34 @@ describe("allTracksPipeline (pure)", () => {
     expect(pipelineSummary(allTracksPipeline(pipelineCounts([], [job])))).toBe("No applications");
   });
   it("its label lists every count, like one track's", () => {
-    expect(pipelineSummary(allTracksPipeline(pipelineCounts(rows, [job, phd])))).toBe("To apply 7, Applied 2, Interview 1, No status 2");
+    expect(pipelineSummary(allTracksPipeline(pipelineCounts(rows, [job, phd])))).toBe(
+      "To apply 7, Applied 2, Interview 1, No status 2",
+    );
   });
 });
 
 describe("getPipelineCounts (data layer)", () => {
   let db: ReturnType<typeof useTestDb>;
-  beforeEach(() => { db = useTestDb(); });
+  beforeEach(() => {
+    db = useTestDb();
+  });
   afterEach(dropTestDb);
 
   function track(name: string, position: number, userId = "local") {
     const t = db.insert(tracks).values({ userId, name, position }).returning().get().id;
-    const status = db.insert(columns).values({ userId, trackId: t, name: "Status", type: "single_select", position: 0, isStatus: true }).returning().get().id;
-    const opt = (label: string, p: number) => db.insert(columnOptions).values({ userId, columnId: status, label, color: "blue", position: p }).returning().get().id;
+    const status = db
+      .insert(columns)
+      .values({ userId, trackId: t, name: "Status", type: "single_select", position: 0, isStatus: true })
+      .returning()
+      .get().id;
+    const opt = (label: string, p: number) =>
+      db.insert(columnOptions).values({ userId, columnId: status, label, color: "blue", position: p }).returning().get()
+        .id;
     const [a, b] = [opt("To apply", 0), opt("Applied", 1)];
     const add = (s: number | null, archived = false, uid = userId) => {
       const id = db.insert(applications).values({ userId: uid, trackId: t, title: "x", archived }).returning().get().id;
-      if (s !== null) db.insert(cellValues).values({ userId: uid, applicationId: id, columnId: status, valueOptionId: s }).run();
+      if (s !== null)
+        db.insert(cellValues).values({ userId: uid, applicationId: id, columnId: status, valueOptionId: s }).run();
       return id;
     };
     return { t, status, a, b, add };
@@ -87,10 +143,18 @@ describe("getPipelineCounts (data layer)", () => {
   it("counts per option, no status, in track order; archived rows are left out", async () => {
     const j = track("Job", 0);
     track("PhD", 1);
-    j.add(j.a); j.add(j.a); j.add(j.b); j.add(null); j.add(j.a, true);
+    j.add(j.a);
+    j.add(j.a);
+    j.add(j.b);
+    j.add(null);
+    j.add(j.a, true);
     const [job, phd] = await getPipelineCounts();
     expect(job).toMatchObject({ name: "Job", color: expect.any(String), statusColumnId: j.status, total: 4 });
-    expect(job.segments.map((s) => [s.label, s.count])).toEqual([["To apply", 2], ["Applied", 1], ["No status", 1]]);
+    expect(job.segments.map((s) => [s.label, s.count])).toEqual([
+      ["To apply", 2],
+      ["Applied", 1],
+      ["No status", 1],
+    ]);
     expect(phd).toMatchObject({ name: "PhD", total: 0 });
   });
 

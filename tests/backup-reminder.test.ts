@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { refresh } from "next/cache";
 import { saveReminderDays } from "@/app/actions/backup";
-import { backupReminder, DEFAULT_REMINDER_DAYS, parseReminderDays, reminderDaysOrDefault, reminderMessage } from "@/lib/backup-reminder";
+import {
+  backupReminder,
+  DEFAULT_REMINDER_DAYS,
+  parseReminderDays,
+  reminderDaysOrDefault,
+  reminderMessage,
+} from "@/lib/backup-reminder";
 import { getBackupReminder, getReminderDays, recordBackup, REMINDER_DAYS_KEY, setReminderDays } from "@/lib/db/backup";
 import { applications, settings, tracks } from "@/lib/db/schema";
 import { setSetting } from "@/lib/db/settings";
@@ -12,7 +18,8 @@ vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 const DAY = 86_400_000;
 const now = new Date("2026-11-10T12:00:00.000Z");
 const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
-const rule = (lastBackupAt: string | null, hasApplications = true, intervalDays = 7) => backupReminder({ lastBackupAt, intervalDays, now, hasApplications });
+const rule = (lastBackupAt: string | null, hasApplications = true, intervalDays = 7) =>
+  backupReminder({ lastBackupAt, intervalDays, now, hasApplications });
 
 describe("backupReminder (pure)", () => {
   it("is not overdue at exactly N days, overdue just past it", () => {
@@ -49,7 +56,28 @@ describe("parseReminderDays (pure)", () => {
     expect(parseReminderDays(" 30 ")).toEqual({ ok: true, days: 30 });
   });
   it("refuses everything else", () => {
-    for (const v of [0, 366, -1, 1.5, NaN, Infinity, "", "0", "366", "1.5", "-3", "1e2", "abc", "7 days", "00007x", null, undefined, {}, [7], true]) {
+    for (const v of [
+      0,
+      366,
+      -1,
+      1.5,
+      NaN,
+      Infinity,
+      "",
+      "0",
+      "366",
+      "1.5",
+      "-3",
+      "1e2",
+      "abc",
+      "7 days",
+      "00007x",
+      null,
+      undefined,
+      {},
+      [7],
+      true,
+    ]) {
       expect(parseReminderDays(v).ok, String(v)).toBe(false);
     }
   });
@@ -76,7 +104,13 @@ describe("reminder interval (data layer)", () => {
     expect(await getReminderDays()).toBe(7);
     expect(await setReminderDays("14")).toEqual({ ok: true, days: 14 });
     expect(await getReminderDays()).toBe(14);
-    expect(db.select().from(settings).all().find((s) => s.key === REMINDER_DAYS_KEY)).toMatchObject({ userId: "local", value: "14" });
+    expect(
+      db
+        .select()
+        .from(settings)
+        .all()
+        .find((s) => s.key === REMINDER_DAYS_KEY),
+    ).toMatchObject({ userId: "local", value: "14" });
   });
   it("refuses invalid input and keeps the old value", async () => {
     await setReminderDays(10);

@@ -3,7 +3,15 @@
 import { useId, useState, useTransition } from "react";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -13,7 +21,11 @@ import type { ColumnType } from "@/lib/db/schema";
 export type AddColumnResult = { ok: true } | { ok: false; error: string }; // the action's result (with an id) fits
 
 // Radix Dialog (components/ui/dialog): focus goes to the Name field, Escape closes, focus returns to the "+" trigger.
-export function AddColumnDialog({ onSubmit }: { onSubmit: (name: string, type: ColumnType) => Promise<AddColumnResult> }) {
+export function AddColumnDialog({
+  onSubmit,
+}: {
+  onSubmit: (name: string, type: ColumnType) => Promise<AddColumnResult>;
+}) {
   const uid = useId();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -60,7 +72,9 @@ export function AddColumnDialog({ onSubmit }: { onSubmit: (name: string, type: C
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
             <DialogTitle>Add column</DialogTitle>
-            <DialogDescription>The type cannot be changed later. To use a different type, add a new column.</DialogDescription>
+            <DialogDescription>
+              The type cannot be changed later. To use a different type, add a new column.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${uid}-name`}>Name</Label>
@@ -68,16 +82,31 @@ export function AddColumnDialog({ onSubmit }: { onSubmit: (name: string, type: C
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${uid}-type`}>Type</Label>
-            <NativeSelect id={`${uid}-type`} value={type} onChange={(e) => setType(e.target.value as ColumnType)} className="w-full">
+            <NativeSelect
+              id={`${uid}-type`}
+              value={type}
+              onChange={(e) => setType(e.target.value as ColumnType)}
+              className="w-full"
+            >
               {columnTypeOptions.map((o) => (
-                <NativeSelectOption key={o.type} value={o.type}>{o.label}</NativeSelectOption>
+                <NativeSelectOption key={o.type} value={o.type}>
+                  {o.label}
+                </NativeSelectOption>
               ))}
             </NativeSelect>
           </div>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <DialogFooter>
-            <Button type="button" variant="outline" disabled={pending} onClick={() => change(false)}>Cancel</Button>
-            <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add column"}</Button>
+            <Button type="button" variant="outline" disabled={pending} onClick={() => change(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Adding…" : "Add column"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -5,20 +5,42 @@ import { dropTestDb, useTestDb } from "./helpers/db";
 
 // Regression guard for NFR-1 (task 4.5): the track page must not get an N+1 or a slow read as the table grows.
 let db: ReturnType<typeof useTestDb>;
-beforeEach(() => { db = useTestDb(); });
+beforeEach(() => {
+  db = useTestDb();
+});
 afterEach(dropTestDb);
 
 const N = 2000;
-const chunks = <T,>(a: T[], n = 200) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, (i + 1) * n));
+const chunks = <T>(a: T[], n = 200) =>
+  Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, (i + 1) * n));
 
 describe("listApplicationRows at 2000 rows", () => {
   it("runs a fixed 4 queries and stays well inside a generous time bound", async () => {
     const trackId = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
     const col = (type: "text" | "number" | "single_select" | "checkbox", position: number) =>
-      db.insert(columns).values({ userId: "local", trackId, name: `${type}`, type, position }).returning().get().id;
+      db
+        .insert(columns)
+        .values({ userId: "local", trackId, name: `${type}`, type, position })
+        .returning()
+        .get().id;
     const [text, num, sel, box] = [col("text", 0), col("number", 1), col("single_select", 2), col("checkbox", 3)];
-    const opts = ["A", "B", "C"].map((label, position) => db.insert(columnOptions).values({ userId: "local", columnId: sel, label, color: "red", position }).returning().get().id);
-    const ids = chunks(Array.from({ length: N }, (_, i) => ({ userId: "local", trackId, title: `App ${i}` }))).flatMap((c) => db.insert(applications).values(c).returning({ id: applications.id }).all().map((r) => r.id));
+    const opts = ["A", "B", "C"].map(
+      (label, position) =>
+        db
+          .insert(columnOptions)
+          .values({ userId: "local", columnId: sel, label, color: "red", position })
+          .returning()
+          .get().id,
+    );
+    const ids = chunks(Array.from({ length: N }, (_, i) => ({ userId: "local", trackId, title: `App ${i}` }))).flatMap(
+      (c) =>
+        db
+          .insert(applications)
+          .values(c)
+          .returning({ id: applications.id })
+          .all()
+          .map((r) => r.id),
+    );
     const cells = ids.flatMap((applicationId, i) => [
       { userId: "local", applicationId, columnId: text, valueText: `Company ${i}` },
       { userId: "local", applicationId, columnId: num, valueNumber: i },

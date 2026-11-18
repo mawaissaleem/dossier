@@ -1,362 +1,337 @@
 [
- {
-  "name": "Job",
-  "position": 0,
-  "settingKeys": [
-   "expected_labels",
-   "submitted_statuses",
-   "win_statuses"
-  ],
-  "expectedLabels": [
-   "CV",
-   "Cover letter"
-  ],
-  "submitted": [
-   "Applied"
-  ],
-  "wins": [
-   "Interview",
-   "Offer"
-  ],
-  "columns": [
-   {
-    "name": "Status",
-    "type": "single_select",
+  {
+    "name": "Job",
     "position": 0,
-    "isStatus": true,
-    "hidden": false,
-    "default": "To apply",
-    "options": [
-     {
-      "label": "To apply",
-      "color": "red",
-      "position": 0,
-      "bufferDays": null
-     },
-     {
-      "label": "Applied",
-      "color": "orange",
-      "position": 1,
-      "bufferDays": null
-     },
-     {
-      "label": "Interview",
-      "color": "amber",
-      "position": 2,
-      "bufferDays": null
-     },
-     {
-      "label": "Offer",
-      "color": "green",
-      "position": 3,
-      "bufferDays": null
-     },
-     {
-      "label": "Rejected",
-      "color": "teal",
-      "position": 4,
-      "bufferDays": null
-     },
-     {
-      "label": "Withdrawn",
-      "color": "blue",
-      "position": 5,
-      "bufferDays": null
-     }
+    "settingKeys": ["expected_labels", "submitted_statuses", "win_statuses"],
+    "expectedLabels": ["CV", "Cover letter"],
+    "submitted": ["Applied"],
+    "wins": ["Interview", "Offer"],
+    "columns": [
+      {
+        "name": "Status",
+        "type": "single_select",
+        "position": 0,
+        "isStatus": true,
+        "hidden": false,
+        "default": "To apply",
+        "options": [
+          {
+            "label": "To apply",
+            "color": "red",
+            "position": 0,
+            "bufferDays": null
+          },
+          {
+            "label": "Applied",
+            "color": "orange",
+            "position": 1,
+            "bufferDays": null
+          },
+          {
+            "label": "Interview",
+            "color": "amber",
+            "position": 2,
+            "bufferDays": null
+          },
+          {
+            "label": "Offer",
+            "color": "green",
+            "position": 3,
+            "bufferDays": null
+          },
+          {
+            "label": "Rejected",
+            "color": "teal",
+            "position": 4,
+            "bufferDays": null
+          },
+          {
+            "label": "Withdrawn",
+            "color": "blue",
+            "position": 5,
+            "bufferDays": null
+          }
+        ]
+      },
+      {
+        "name": "Company",
+        "type": "text",
+        "position": 1,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Role",
+        "type": "text",
+        "position": 2,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Priority",
+        "type": "single_select",
+        "position": 3,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": [
+          {
+            "label": "Priority",
+            "color": "red",
+            "position": 0,
+            "bufferDays": 3
+          },
+          {
+            "label": "Good-to-have",
+            "color": "orange",
+            "position": 1,
+            "bufferDays": 0
+          }
+        ]
+      },
+      {
+        "name": "Effort",
+        "type": "single_select",
+        "position": 4,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": [
+          {
+            "label": "Heavy",
+            "color": "red",
+            "position": 0,
+            "bufferDays": 2
+          },
+          {
+            "label": "Medium",
+            "color": "orange",
+            "position": 1,
+            "bufferDays": 1
+          },
+          {
+            "label": "Light",
+            "color": "amber",
+            "position": 2,
+            "bufferDays": 0
+          }
+        ]
+      },
+      {
+        "name": "Deadline",
+        "type": "date",
+        "position": 5,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Follow-up date",
+        "type": "date",
+        "position": 6,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Link",
+        "type": "link",
+        "position": 7,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Location",
+        "type": "text",
+        "position": 8,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      }
     ]
-   },
-   {
-    "name": "Company",
-    "type": "text",
+  },
+  {
+    "name": "PhD",
     "position": 1,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Role",
-    "type": "text",
-    "position": 2,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Priority",
-    "type": "single_select",
-    "position": 3,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": [
-     {
-      "label": "Priority",
-      "color": "red",
-      "position": 0,
-      "bufferDays": 3
-     },
-     {
-      "label": "Good-to-have",
-      "color": "orange",
-      "position": 1,
-      "bufferDays": 0
-     }
+    "settingKeys": ["expected_labels", "submitted_statuses", "win_statuses"],
+    "expectedLabels": ["CV", "SOP", "Transcript"],
+    "submitted": ["Submitted"],
+    "wins": ["Interview", "Offer"],
+    "columns": [
+      {
+        "name": "Status",
+        "type": "single_select",
+        "position": 0,
+        "isStatus": true,
+        "hidden": false,
+        "default": "To apply",
+        "options": [
+          {
+            "label": "To apply",
+            "color": "red",
+            "position": 0,
+            "bufferDays": null
+          },
+          {
+            "label": "In progress",
+            "color": "orange",
+            "position": 1,
+            "bufferDays": null
+          },
+          {
+            "label": "Submitted",
+            "color": "amber",
+            "position": 2,
+            "bufferDays": null
+          },
+          {
+            "label": "Interview",
+            "color": "green",
+            "position": 3,
+            "bufferDays": null
+          },
+          {
+            "label": "Offer",
+            "color": "teal",
+            "position": 4,
+            "bufferDays": null
+          },
+          {
+            "label": "Rejected",
+            "color": "blue",
+            "position": 5,
+            "bufferDays": null
+          },
+          {
+            "label": "Withdrawn",
+            "color": "purple",
+            "position": 6,
+            "bufferDays": null
+          }
+        ]
+      },
+      {
+        "name": "University",
+        "type": "text",
+        "position": 1,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Program",
+        "type": "text",
+        "position": 2,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Supervisor",
+        "type": "text",
+        "position": 3,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Priority",
+        "type": "single_select",
+        "position": 4,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": [
+          {
+            "label": "Priority",
+            "color": "red",
+            "position": 0,
+            "bufferDays": 3
+          },
+          {
+            "label": "Good-to-have",
+            "color": "orange",
+            "position": 1,
+            "bufferDays": 0
+          }
+        ]
+      },
+      {
+        "name": "Effort",
+        "type": "single_select",
+        "position": 5,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": [
+          {
+            "label": "Heavy",
+            "color": "red",
+            "position": 0,
+            "bufferDays": 2
+          },
+          {
+            "label": "Medium",
+            "color": "orange",
+            "position": 1,
+            "bufferDays": 1
+          },
+          {
+            "label": "Light",
+            "color": "amber",
+            "position": 2,
+            "bufferDays": 0
+          }
+        ]
+      },
+      {
+        "name": "Deadline",
+        "type": "date",
+        "position": 6,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Follow-up date",
+        "type": "date",
+        "position": 7,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Link",
+        "type": "link",
+        "position": 8,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      },
+      {
+        "name": "Funding",
+        "type": "text",
+        "position": 9,
+        "isStatus": false,
+        "hidden": false,
+        "default": null,
+        "options": []
+      }
     ]
-   },
-   {
-    "name": "Effort",
-    "type": "single_select",
-    "position": 4,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": [
-     {
-      "label": "Heavy",
-      "color": "red",
-      "position": 0,
-      "bufferDays": 2
-     },
-     {
-      "label": "Medium",
-      "color": "orange",
-      "position": 1,
-      "bufferDays": 1
-     },
-     {
-      "label": "Light",
-      "color": "amber",
-      "position": 2,
-      "bufferDays": 0
-     }
-    ]
-   },
-   {
-    "name": "Deadline",
-    "type": "date",
-    "position": 5,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Follow-up date",
-    "type": "date",
-    "position": 6,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Link",
-    "type": "link",
-    "position": 7,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Location",
-    "type": "text",
-    "position": 8,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   }
-  ]
- },
- {
-  "name": "PhD",
-  "position": 1,
-  "settingKeys": [
-   "expected_labels",
-   "submitted_statuses",
-   "win_statuses"
-  ],
-  "expectedLabels": [
-   "CV",
-   "SOP",
-   "Transcript"
-  ],
-  "submitted": [
-   "Submitted"
-  ],
-  "wins": [
-   "Interview",
-   "Offer"
-  ],
-  "columns": [
-   {
-    "name": "Status",
-    "type": "single_select",
-    "position": 0,
-    "isStatus": true,
-    "hidden": false,
-    "default": "To apply",
-    "options": [
-     {
-      "label": "To apply",
-      "color": "red",
-      "position": 0,
-      "bufferDays": null
-     },
-     {
-      "label": "In progress",
-      "color": "orange",
-      "position": 1,
-      "bufferDays": null
-     },
-     {
-      "label": "Submitted",
-      "color": "amber",
-      "position": 2,
-      "bufferDays": null
-     },
-     {
-      "label": "Interview",
-      "color": "green",
-      "position": 3,
-      "bufferDays": null
-     },
-     {
-      "label": "Offer",
-      "color": "teal",
-      "position": 4,
-      "bufferDays": null
-     },
-     {
-      "label": "Rejected",
-      "color": "blue",
-      "position": 5,
-      "bufferDays": null
-     },
-     {
-      "label": "Withdrawn",
-      "color": "purple",
-      "position": 6,
-      "bufferDays": null
-     }
-    ]
-   },
-   {
-    "name": "University",
-    "type": "text",
-    "position": 1,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Program",
-    "type": "text",
-    "position": 2,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Supervisor",
-    "type": "text",
-    "position": 3,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Priority",
-    "type": "single_select",
-    "position": 4,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": [
-     {
-      "label": "Priority",
-      "color": "red",
-      "position": 0,
-      "bufferDays": 3
-     },
-     {
-      "label": "Good-to-have",
-      "color": "orange",
-      "position": 1,
-      "bufferDays": 0
-     }
-    ]
-   },
-   {
-    "name": "Effort",
-    "type": "single_select",
-    "position": 5,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": [
-     {
-      "label": "Heavy",
-      "color": "red",
-      "position": 0,
-      "bufferDays": 2
-     },
-     {
-      "label": "Medium",
-      "color": "orange",
-      "position": 1,
-      "bufferDays": 1
-     },
-     {
-      "label": "Light",
-      "color": "amber",
-      "position": 2,
-      "bufferDays": 0
-     }
-    ]
-   },
-   {
-    "name": "Deadline",
-    "type": "date",
-    "position": 6,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Follow-up date",
-    "type": "date",
-    "position": 7,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Link",
-    "type": "link",
-    "position": 8,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   },
-   {
-    "name": "Funding",
-    "type": "text",
-    "position": 9,
-    "isStatus": false,
-    "hidden": false,
-    "default": null,
-    "options": []
-   }
-  ]
- }
+  }
 ]

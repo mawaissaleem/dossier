@@ -17,15 +17,24 @@ import { applicationZipName } from "@/lib/zip-name";
 const NO_STORE = { "Cache-Control": "no-store", "Cross-Origin-Resource-Policy": "same-origin" };
 const json = (error: string, status: number) => NextResponse.json({ error }, { status, headers: NO_STORE });
 
-const WHAT = { changed: "changed since upload", missing: "missing from the files folder", unreadable: "could not be read", "too-large": "larger than any upload, so it is not read" };
+const WHAT = {
+  changed: "changed since upload",
+  missing: "missing from the files folder",
+  unreadable: "could not be read",
+  "too-large": "larger than any upload, so it is not read",
+};
 const problems409 = (id: number, problems: ZipProblem[], anyway: boolean) =>
-  problemPage(409, "Some files need attention",
+  problemPage(
+    409,
+    "Some files need attention",
     `<p>The zip was not made because these files are not as they were uploaded:</p>` +
       `<ul>${problems.map((p) => `<li>${esc(p.storedName)}: ${WHAT[p.kind]}</li>`).join("")}</ul>` +
       (anyway
         ? `<p><a href="/api/applications/${id}/zip?anyway=1">Download anyway</a> (changed files are included as they are on disk now; missing, unreadable and too-large files are left out)</p>`
         : `<p>None of the files can be read, so there is nothing to zip.</p>`),
-    id, NO_STORE);
+    id,
+    NO_STORE,
+  );
 
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/applications/[id]/zip">) {
   if (!isLocalHost(request.headers) || isCrossSiteFetch(request.headers)) return json("Local use only.", 403);
@@ -40,13 +49,17 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/applicat
   if (!plan.ok && plan.kind === "setup") return setupPage(plan.error, id, NO_STORE);
   if (!plan.ok) return json(plan.error, plan.kind === "none" ? 404 : 409);
   if (plan.problems.length > 0 && !anyway) return problems409(id, plan.problems, plan.includable > 0);
-  if (plan.includable === 0) return json("None of this application's files could be read; there is nothing to zip.", 409);
+  if (plan.includable === 0)
+    return json("None of this application's files could be read; there is nothing to zip.", 409);
   const folder = await getApplicationFolder(id);
   return new Response(applicationZipStream(plan.names), {
     headers: {
       ...NO_STORE,
       "Content-Type": "application/zip",
-      "Content-Disposition": contentDisposition("attachment", applicationZipName(folder ? basename(folder) : app.title, new Date())),
+      "Content-Disposition": contentDisposition(
+        "attachment",
+        applicationZipName(folder ? basename(folder) : app.title, new Date()),
+      ),
       "X-Content-Type-Options": "nosniff",
     },
   });

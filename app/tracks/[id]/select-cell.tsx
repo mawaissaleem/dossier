@@ -13,8 +13,18 @@ import { findOption } from "@/lib/options";
 // useOptimistic shows the new choice while saving and reverts by itself if the save fails (props stay the same).
 // A move to a submitted status that needs the submission review (FR-7.2) is not saved: the server answers needsReview, the select shows the
 // old value again and the review dialog opens; only its Confirm saves (status + submission). Cancel leaves everything as it was.
-export function SelectCell({ applicationId, columnId, value, options, label }: {
-  applicationId: number; columnId: number; value: string | number | boolean | null | undefined; options: OptionItem[]; label: string;
+export function SelectCell({
+  applicationId,
+  columnId,
+  value,
+  options,
+  label,
+}: {
+  applicationId: number;
+  columnId: number;
+  value: string | number | boolean | null | undefined;
+  options: OptionItem[];
+  label: string;
 }) {
   const current = findOption(options, value); // an id that is not in the list shows as blank
   const [shown, setShown] = useOptimistic(current?.id ?? null);
@@ -34,7 +44,13 @@ export function SelectCell({ applicationId, columnId, value, options, label }: {
         const r = await updateCell(applicationId, columnId, value === "" ? null : Number(value));
         if (r.ok) return;
         const id = Number(value);
-        if (r.needsReview) review({ applicationId, columnId, optionId: id, statusLabel: options.find((o) => o.id === id)?.label ?? "this status" });
+        if (r.needsReview)
+          review({
+            applicationId,
+            columnId,
+            optionId: id,
+            statusLabel: options.find((o) => o.id === id)?.label ?? "this status",
+          });
         else setError(r.error);
       } catch {
         setError("Could not save. Try again.");
@@ -44,14 +60,22 @@ export function SelectCell({ applicationId, columnId, value, options, label }: {
     });
   }
 
-  if (options.length === 0) return <span role="note" aria-label={`${label}: no options yet`} className="flex h-8 items-center text-muted-foreground">No options yet</span>;
+  if (options.length === 0)
+    return (
+      <span role="note" aria-label={`${label}: no options yet`} className="flex h-8 items-center text-muted-foreground">
+        No options yet
+      </span>
+    );
   const chosen = findOption(options, shown);
   return (
     <>
       {/* The chip is what you see; the transparent native select on top is what you click and tab to (full keyboard support, no per-cell Radix). */}
       <div className="group/sel relative flex h-8 min-w-24 items-center rounded-md hover:bg-muted has-[select:focus-visible]:ring-2 has-[select:focus-visible]:ring-ring">
         {chosen && <OptionChip option={chosen} />}
-        <ChevronDownIcon aria-hidden="true" className="pointer-events-none absolute right-1.5 size-3.5 text-muted-foreground opacity-0 group-hover/sel:opacity-100 group-has-[select:focus-visible]/sel:opacity-100" />
+        <ChevronDownIcon
+          aria-hidden="true"
+          className="pointer-events-none absolute right-1.5 size-3.5 text-muted-foreground opacity-0 group-hover/sel:opacity-100 group-has-[select:focus-visible]/sel:opacity-100"
+        />
         <NativeSelect
           aria-label={label}
           value={shown === null ? "" : String(shown)}
@@ -60,11 +84,17 @@ export function SelectCell({ applicationId, columnId, value, options, label }: {
         >
           <NativeSelectOption value="">— (blank)</NativeSelectOption>
           {options.map((o) => (
-            <NativeSelectOption key={o.id} value={o.id}>{o.label}</NativeSelectOption>
+            <NativeSelectOption key={o.id} value={o.id}>
+              {o.label}
+            </NativeSelectOption>
           ))}
         </NativeSelect>
       </div>
-      {error && <p role="alert" className="mt-1 w-0 min-w-full text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-1 w-0 min-w-full text-sm text-destructive">
+          {error}
+        </p>
+      )}
       {dialog}
     </>
   );

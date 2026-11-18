@@ -14,16 +14,40 @@ let db: ReturnType<typeof useTestDb>;
 let trackId: number;
 let status: number, stage: number, text: number; // status + stage are single_select, text is not
 let toApply: number, applied: number, open: number;
-const col = (name: string, type: "text" | "single_select", position: number, extra: Partial<typeof columns.$inferInsert> = {}, tid = trackId, userId = "local") =>
-  db.insert(columns).values({ userId, trackId: tid, name, type, position, ...extra }).returning().get().id;
+const col = (
+  name: string,
+  type: "text" | "single_select",
+  position: number,
+  extra: Partial<typeof columns.$inferInsert> = {},
+  tid = trackId,
+  userId = "local",
+) =>
+  db
+    .insert(columns)
+    .values({ userId, trackId: tid, name, type, position, ...extra })
+    .returning()
+    .get().id;
 const opt = (columnId: number, label: string, position: number, userId = "local") =>
   db.insert(columnOptions).values({ userId, columnId, label, color: "blue", position }).returning().get().id;
 const row = (id: number) => db.select().from(columns).where(eq(columns.id, id)).get()!;
-const statusIds = () => db.select().from(columns).where(eq(columns.trackId, trackId)).all().filter((c) => c.isStatus).map((c) => c.id);
+const statusIds = () =>
+  db
+    .select()
+    .from(columns)
+    .where(eq(columns.trackId, trackId))
+    .all()
+    .filter((c) => c.isStatus)
+    .map((c) => c.id);
 // The status cell of a new application, as the option label (null = blank).
 async function statusOf(appId: number) {
   const v = (await getApplicationDetail(appId))!.values[status];
-  return v === null ? null : db.select().from(columnOptions).where(eq(columnOptions.id, v as number)).get()!.label;
+  return v === null
+    ? null
+    : db
+        .select()
+        .from(columnOptions)
+        .where(eq(columnOptions.id, v as number))
+        .get()!.label;
 }
 
 beforeEach(() => {
@@ -36,13 +60,19 @@ beforeEach(() => {
   toApply = opt(status, "To apply", 0);
   applied = opt(status, "Applied", 1);
   open = opt(stage, "Open", 0);
-  db.update(columns).set({ defaultValue: String(toApply) }).where(eq(columns.id, status)).run();
+  db.update(columns)
+    .set({ defaultValue: String(toApply) })
+    .where(eq(columns.id, status))
+    .run();
 });
 afterEach(dropTestDb);
 
 describe("setStatusColumn", () => {
   it("moves the flag, keeps one per track, and leaves both columns' defaults with their columns", async () => {
-    db.update(columns).set({ defaultValue: String(open) }).where(eq(columns.id, stage)).run();
+    db.update(columns)
+      .set({ defaultValue: String(open) })
+      .where(eq(columns.id, stage))
+      .run();
     expect(await setStatusColumn(trackId, stage)).toEqual({ ok: true });
     expect(statusIds()).toEqual([stage]);
     expect(row(status).defaultValue).toBe(String(toApply));
@@ -72,7 +102,8 @@ describe("setStatusColumn", () => {
     expect((await setStatusColumn(trackId, empty)).ok).toBe(false);
     expect(await setStatusColumn(t2, stage)).toEqual({ ok: false, error: "Column not found." });
     expect(await setStatusColumn(trackId, 9999)).toEqual({ ok: false, error: "Column not found." });
-    for (const bad of [0, -1, 1.5, "1", NaN]) expect(await setStatusColumn(trackId, bad as number)).toEqual({ ok: false, error: "Column not found." });
+    for (const bad of [0, -1, 1.5, "1", NaN])
+      expect(await setStatusColumn(trackId, bad as number)).toEqual({ ok: false, error: "Column not found." });
     expect(JSON.stringify(db.select().from(columns).all())).toBe(before);
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -100,7 +131,8 @@ describe("setColumnDefault on the Status column", () => {
     const t2 = db.insert(tracks).values({ userId: "someone-else", name: "X", position: 0 }).returning().get().id;
     const foreignCol = col("S", "single_select", 0, {}, t2, "someone-else");
     const foreignOpt = opt(foreignCol, "A", 0, "someone-else");
-    for (const o of [open, 9999, foreignOpt, 0, 1.5, true]) expect((await setColumnDefault(status, o as number)).ok).toBe(false);
+    for (const o of [open, 9999, foreignOpt, 0, 1.5, true])
+      expect((await setColumnDefault(status, o as number)).ok).toBe(false);
     expect(await setColumnDefault(0, applied)).toEqual({ ok: false, error: "Column not found." });
     expect(row(status).defaultValue).toBe(before);
     expect(refresh).not.toHaveBeenCalled();
@@ -150,16 +182,36 @@ describe("createApplication default status", () => {
   it("after the status column is replaced, each default stays with its own column", async () => {
     await setStatusColumn(trackId, stage);
     const a = await createApplication("A", trackId);
-    expect(a.ok && db.select().from(cellValues).where(eq(cellValues.applicationId, a.id)).all().map((c) => c.columnId)).toEqual([status]); // stage has none yet
+    expect(
+      a.ok &&
+        db
+          .select()
+          .from(cellValues)
+          .where(eq(cellValues.applicationId, a.id))
+          .all()
+          .map((c) => c.columnId),
+    ).toEqual([status]); // stage has none yet
     await setColumnDefault(stage, open);
     const b = await createApplication("B", trackId);
-    expect(b.ok && db.select().from(cellValues).where(eq(cellValues.applicationId, b.id)).all().map((c) => c.columnId).sort()).toEqual([status, stage].sort());
+    expect(
+      b.ok &&
+        db
+          .select()
+          .from(cellValues)
+          .where(eq(cellValues.applicationId, b.id))
+          .all()
+          .map((c) => c.columnId)
+          .sort(),
+    ).toEqual([status, stage].sort());
   });
 
   it("another user's track creates nothing, default or not", async () => {
     const t2 = db.insert(tracks).values({ userId: "someone-else", name: "X", position: 0 }).returning().get().id;
     const foreign = col("S", "single_select", 0, { isStatus: true }, t2, "someone-else");
-    db.update(columns).set({ defaultValue: String(opt(foreign, "A", 0, "someone-else")) }).where(eq(columns.id, foreign)).run();
+    db.update(columns)
+      .set({ defaultValue: String(opt(foreign, "A", 0, "someone-else")) })
+      .where(eq(columns.id, foreign))
+      .run();
     expect(await createApplication("A", t2)).toEqual({ ok: false, error: "Track not found." });
     expect(db.select().from(applications).all()).toHaveLength(0);
     expect(db.select().from(cellValues).all()).toHaveLength(0);

@@ -6,7 +6,9 @@ export default function NotFound() {
   return (
     <Page narrow>
       <PageHeader title="Not found" description="This page does not exist, or the application was deleted." />
-      <Button asChild variant="outline"><Link href="/tracks">Go to Tracks</Link></Button>
+      <Button asChild variant="outline">
+        <Link href="/tracks">Go to Tracks</Link>
+      </Button>
     </Page>
   );
 }

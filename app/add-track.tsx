@@ -5,7 +5,15 @@ import { PlusIcon } from "lucide-react";
 import { RadioGroup } from "radix-ui";
 import { createTrack } from "@/app/actions/tracks";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MAX_TRACK_NAME, TEMPLATES, TEMPLATE_IDS, isTemplateId, type TemplateId } from "@/lib/track-templates";
@@ -40,17 +48,31 @@ export function AddTrack({ size }: { size?: "sm" }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => {
-      if (pending) return;
-      if (o) { setTemplate("job"); setName(TEMPLATES.job.defaultName); setError(null); }
-      setOpen(o);
-    }}>
-      <DialogTrigger asChild><Button type="button" size={size}><PlusIcon aria-hidden />Add track</Button></DialogTrigger>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (pending) return;
+        if (o) {
+          setTemplate("job");
+          setName(TEMPLATES.job.defaultName);
+          setError(null);
+        }
+        setOpen(o);
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button type="button" size={size}>
+          <PlusIcon aria-hidden />
+          Add track
+        </Button>
+      </DialogTrigger>
       <DialogContent showCloseButton={false} className="sm:max-w-md">
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
             <DialogTitle>Add track</DialogTitle>
-            <DialogDescription>A template sets up the columns, statuses and expected files. Everything stays editable afterwards.</DialogDescription>
+            <DialogDescription>
+              A template sets up the columns, statuses and expected files. Everything stays editable afterwards.
+            </DialogDescription>
           </DialogHeader>
           <RadioGroup.Root value={template} onValueChange={pick} aria-label="Template" className="grid gap-2">
             {TEMPLATE_IDS.map((id) => (
@@ -66,12 +88,27 @@ export function AddTrack({ size }: { size?: "sm" }) {
           </RadioGroup.Root>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${uid}-name`}>Name</Label>
-            <Input id={`${uid}-name`} required maxLength={MAX_TRACK_NAME} value={name} onChange={(e) => setName(e.target.value)} aria-invalid={error ? true : undefined} />
+            <Input
+              id={`${uid}-name`}
+              required
+              maxLength={MAX_TRACK_NAME}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              aria-invalid={error ? true : undefined}
+            />
           </div>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <DialogFooter>
-            <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add track"}</Button>
+            <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Adding…" : "Add track"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

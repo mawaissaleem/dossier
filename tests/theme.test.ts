@@ -9,7 +9,8 @@ describe("parseTheme", () => {
   it("falls back to Graphite for unknown or tampered values", () => {
     expect(DEFAULT_THEME).toBe("graphite");
     expect(parseTheme("ink")).toBe("graphite"); // the removed theme
-    for (const v of [null, undefined, "", "dark", "Ink", "constructor", "__proto__", "ink; x", 3, {}, ["ink"]]) expect(parseTheme(v)).toBe("graphite");
+    for (const v of [null, undefined, "", "dark", "Ink", "constructor", "__proto__", "ink; x", 3, {}, ["ink"]])
+      expect(parseTheme(v)).toBe("graphite");
   });
 });
 
@@ -30,6 +31,12 @@ describe("THEME_INIT_SCRIPT", () => {
     expect(run({ getItem: () => '"><script>x</script>' })).toBe("graphite");
   });
   it("does not throw when storage is blocked", () => {
-    expect(run({ getItem: () => { throw new Error("denied"); } })).toBeUndefined();
+    expect(
+      run({
+        getItem: () => {
+          throw new Error("denied");
+        },
+      }),
+    ).toBeUndefined();
   });
 });

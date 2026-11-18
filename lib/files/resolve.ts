@@ -38,7 +38,10 @@ export async function resolveInRoot(root: string, stored: unknown): Promise<Path
     const abs = resolve(rootAbs, ...c.path.split("/"));
     if (abs === rootAbs || !isInside(abs, rootAbs)) return refused;
 
-    const [rReal, tReal] = [await realpath(rootAbs).catch((e: NodeJS.ErrnoException) => (e.code === "ENOENT" ? ("missing" as const) : null)), await realTarget(abs)];
+    const [rReal, tReal] = [
+      await realpath(rootAbs).catch((e: NodeJS.ErrnoException) => (e.code === "ENOENT" ? ("missing" as const) : null)),
+      await realTarget(abs),
+    ];
     if (rReal === "missing") return fail(ROOT_MISSING); // the lexical checks above already refused anything that escapes the root
     if (!rReal || !tReal || tReal === rReal || !isInside(tReal, rReal)) return refused; // symlink out of the root
     // A root that contains the app (e.g. home) must still not reach the project folder or the database folder.

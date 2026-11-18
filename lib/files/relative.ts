@@ -13,7 +13,8 @@ export function checkRelativePath(input: unknown): PathResult {
   if (typeof input !== "string" || input === "") return fail("The stored path is empty.");
   if (input.length > MAX_PATH) return fail("The stored path is too long.");
   if (input.includes("\0")) return fail("The stored path contains an invalid character.");
-  if (input.includes("\\") || input.includes(":")) return fail("The stored path uses a Windows form (backslash or drive letter).");
+  if (input.includes("\\") || input.includes(":"))
+    return fail("The stored path uses a Windows form (backslash or drive letter).");
   if (input.startsWith("/")) return fail("The stored path must be relative to the files root.");
   for (const seg of input.split("/")) {
     if (seg === "") return fail("The stored path has an empty segment.");

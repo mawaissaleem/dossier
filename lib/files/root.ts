@@ -31,7 +31,10 @@ export async function validateFilesRoot(input: unknown): Promise<FilesRootResult
   if (typed === "") return fail("Enter the full path of a folder.");
   if (typed.length > MAX_PATH) return fail("That path is too long.");
   if (typed.includes("\0")) return fail("That path contains an invalid character.");
-  if (!isFullyAbsolute(typed)) return fail("Use the full path, such as /home/you/Dossier or C:\\Users\\you\\Dossier. Relative paths and ~ are not accepted.");
+  if (!isFullyAbsolute(typed))
+    return fail(
+      "Use the full path, such as /home/you/Dossier or C:\\Users\\you\\Dossier. Relative paths and ~ are not accepted.",
+    );
   const path = resolve(typed);
 
   let st;
@@ -44,7 +47,9 @@ export async function validateFilesRoot(input: unknown): Promise<FilesRootResult
 
   const target = await real(path);
   if ((await appDirs()).some((d) => isInside(target, d))) {
-    return fail("Choose a folder outside the Dossier app folder and its data folder, so your files stay apart from the app's own.");
+    return fail(
+      "Choose a folder outside the Dossier app folder and its data folder, so your files stay apart from the app's own.",
+    );
   }
 
   // Creating a file is the only reliable writability test (access(W_OK) ignores read-only mounts and ACLs).

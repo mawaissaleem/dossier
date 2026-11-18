@@ -39,7 +39,15 @@ async function Sections({ searchParams }: Props) {
   await connection();
   const sort = parseTrackSort((await searchParams).sort);
   const tracks = sortTracks(await getTrackOverviews(localToday()), sort);
-  if (tracks.length === 0) return <EmptyState title="No tracks yet" description="A track holds one kind of application, with its own columns and statuses. Start from the Job or PhD template, or a blank one."><AddTrack /></EmptyState>;
+  if (tracks.length === 0)
+    return (
+      <EmptyState
+        title="No tracks yet"
+        description="A track holds one kind of application, with its own columns and statuses. Start from the Job or PhD template, or a blank one."
+      >
+        <AddTrack />
+      </EmptyState>
+    );
   const [starred, viewed] = [await getStarredTrackIds(), await getRecentlyViewed()];
   const byId = new Map(tracks.map((t) => [t.id, t]));
   const recent = onlyExisting(viewed, new Set(byId.keys()));
@@ -48,19 +56,36 @@ async function Sections({ searchParams }: Props) {
     <div className="flex flex-col gap-7">
       {recent.length > 0 && (
         <section aria-labelledby="recent-h">
-          <h2 id="recent-h" className={H2}><ClockIcon aria-hidden />Recently viewed</h2>
+          <h2 id="recent-h" className={H2}>
+            <ClockIcon aria-hidden />
+            Recently viewed
+          </h2>
           <RecentlyViewed items={recent} tracks={byId} />
         </section>
       )}
       {stars.length > 0 && (
         <section aria-labelledby="starred-h">
-          <h2 id="starred-h" className={H2}><StarIcon aria-hidden />Starred</h2>
-          <div className={GRID}>{stars.map((t) => <TrackTile key={t.id} track={t} starred figures />)}</div>
+          <h2 id="starred-h" className={H2}>
+            <StarIcon aria-hidden />
+            Starred
+          </h2>
+          <div className={GRID}>
+            {stars.map((t) => (
+              <TrackTile key={t.id} track={t} starred figures />
+            ))}
+          </div>
         </section>
       )}
       <section aria-labelledby="all-h">
-        <h2 id="all-h" className={H2}><SquareKanbanIcon aria-hidden />All tracks</h2>
-        <div className={GRID}>{tracks.map((t) => <TrackTile key={t.id} track={t} starred={starred.has(t.id)} />)}</div>
+        <h2 id="all-h" className={H2}>
+          <SquareKanbanIcon aria-hidden />
+          All tracks
+        </h2>
+        <div className={GRID}>
+          {tracks.map((t) => (
+            <TrackTile key={t.id} track={t} starred={starred.has(t.id)} />
+          ))}
+        </div>
       </section>
     </div>
   );
@@ -73,8 +98,19 @@ export default function TracksPage({ searchParams }: Props) {
       <Page>
         <PageHeader
           title="Tracks"
-          description={<Suspense fallback={null}><Summary /></Suspense>}
-          actions={<><Suspense fallback={null}><Sort searchParams={searchParams} /></Suspense><AddTrack /></>}
+          description={
+            <Suspense fallback={null}>
+              <Summary />
+            </Suspense>
+          }
+          actions={
+            <>
+              <Suspense fallback={null}>
+                <Sort searchParams={searchParams} />
+              </Suspense>
+              <AddTrack />
+            </>
+          }
         />
         <Suspense fallback={<p className="text-muted-foreground">Loading tracks…</p>}>
           <Sections searchParams={searchParams} />

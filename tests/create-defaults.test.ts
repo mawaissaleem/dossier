@@ -15,8 +15,13 @@ let db: ReturnType<typeof useTestDb>;
 let trackId: number;
 let id: Record<Type, number>;
 let optA: number, optB: number;
-const col = (name: string, type: Type, position: number) => db.insert(columns).values({ userId: "local", trackId, name, type, position }).returning().get().id;
-const submit = async (title: string, touched: Record<number, string | boolean> = {}, cols?: Awaited<ReturnType<typeof listColumns>>) => {
+const col = (name: string, type: Type, position: number) =>
+  db.insert(columns).values({ userId: "local", trackId, name, type, position }).returning().get().id;
+const submit = async (
+  title: string,
+  touched: Record<number, string | boolean> = {},
+  cols?: Awaited<ReturnType<typeof listColumns>>,
+) => {
   const r = await createApplication(title, trackId, buildCreateValues(cols ?? (await listColumns(trackId)), touched));
   return r.ok ? { ...r, values: (await getApplicationDetail(r.id))!.values } : r;
 };
@@ -24,17 +29,50 @@ const submit = async (title: string, touched: Record<number, string | boolean> =
 beforeEach(async () => {
   db = useTestDb();
   trackId = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-  id = { text: col("Location", "text", 0), number: col("Salary", "number", 1), date: col("Deadline", "date", 2), link: col("Posting", "link", 3), checkbox: col("Referred", "checkbox", 4), single_select: col("Priority", "single_select", 5) };
-  optA = db.insert(columnOptions).values({ userId: "local", columnId: id.single_select, label: "High", color: "red", position: 0 }).returning().get().id;
-  optB = db.insert(columnOptions).values({ userId: "local", columnId: id.single_select, label: "Low", color: "blue", position: 1 }).returning().get().id;
-  for (const [c, v] of [[id.text, "Remote"], [id.number, 4.5], [id.date, "2026-03-04"], [id.link, "a.com"], [id.checkbox, true], [id.single_select, optA]] as const) await setColumnDefault(c, v);
+  id = {
+    text: col("Location", "text", 0),
+    number: col("Salary", "number", 1),
+    date: col("Deadline", "date", 2),
+    link: col("Posting", "link", 3),
+    checkbox: col("Referred", "checkbox", 4),
+    single_select: col("Priority", "single_select", 5),
+  };
+  optA = db
+    .insert(columnOptions)
+    .values({ userId: "local", columnId: id.single_select, label: "High", color: "red", position: 0 })
+    .returning()
+    .get().id;
+  optB = db
+    .insert(columnOptions)
+    .values({ userId: "local", columnId: id.single_select, label: "Low", color: "blue", position: 1 })
+    .returning()
+    .get().id;
+  for (const [c, v] of [
+    [id.text, "Remote"],
+    [id.number, 4.5],
+    [id.date, "2026-03-04"],
+    [id.link, "a.com"],
+    [id.checkbox, true],
+    [id.single_select, optA],
+  ] as const)
+    await setColumnDefault(c, v);
 });
 afterEach(dropTestDb);
 
 describe("add form defaults end to end", () => {
   it("title only creates the application with every default (AT-1)", async () => {
     const r = await submit("Acme");
-    expect(r).toMatchObject({ ok: true, values: { [id.text]: "Remote", [id.number]: 4.5, [id.date]: "2026-03-04", [id.link]: "https://a.com/", [id.checkbox]: true, [id.single_select]: optA } });
+    expect(r).toMatchObject({
+      ok: true,
+      values: {
+        [id.text]: "Remote",
+        [id.number]: 4.5,
+        [id.date]: "2026-03-04",
+        [id.link]: "https://a.com/",
+        [id.checkbox]: true,
+        [id.single_select]: optA,
+      },
+    });
     // the same through the server-side path with no payload at all
     const bare = await createApplication("Bare", trackId);
     expect(bare.ok && (await getApplicationDetail(bare.id))!.values[id.text]).toBe("Remote");
@@ -42,7 +80,16 @@ describe("add form defaults end to end", () => {
 
   it("a cleared pre-filled field saves blank, an unchecked box false, a blank select blank", async () => {
     const r = await submit("A", { [id.text]: "", [id.checkbox]: false, [id.single_select]: "", [id.number]: "  " });
-    expect(r).toMatchObject({ ok: true, values: { [id.text]: null, [id.number]: null, [id.checkbox]: false, [id.single_select]: null, [id.date]: "2026-03-04" } });
+    expect(r).toMatchObject({
+      ok: true,
+      values: {
+        [id.text]: null,
+        [id.number]: null,
+        [id.checkbox]: false,
+        [id.single_select]: null,
+        [id.date]: "2026-03-04",
+      },
+    });
   });
 
   it("a changed pre-filled field saves what was typed", async () => {
@@ -70,7 +117,10 @@ describe("add form defaults end to end", () => {
     await setColumnDefault(id.single_select, optB);
     await setColumnDefault(id.checkbox, null);
     const r = await submit("A", {}, shown);
-    expect(r).toMatchObject({ ok: true, values: { [id.text]: "Remote", [id.single_select]: optA, [id.checkbox]: true } });
+    expect(r).toMatchObject({
+      ok: true,
+      values: { [id.text]: "Remote", [id.single_select]: optA, [id.checkbox]: true },
+    });
   });
 
   it("a default option deleted after the form rendered saves nothing and errors", async () => {
@@ -82,26 +132,48 @@ describe("add form defaults end to end", () => {
   });
 
   it("an existing over-long default (from before the text cap) shows blank and creates blank, not an error", async () => {
-    db.update(columns).set({ defaultValue: "x".repeat(10_001) }).where(eq(columns.id, id.text)).run();
+    db.update(columns)
+      .set({ defaultValue: "x".repeat(10_001) })
+      .where(eq(columns.id, id.text))
+      .run();
     const r = await submit("A");
     expect(r).toMatchObject({ ok: true, values: { [id.text]: null, [id.number]: 4.5 } });
   });
 
   it("a default at the text cap is sent back as shown and saved", async () => {
     expect(await setColumnDefault(id.text, "x".repeat(10_000))).toEqual({ ok: true });
-    expect(await setColumnDefault(id.text, "x".repeat(10_001))).toEqual({ ok: false, error: "Text must be at most 10,000 characters." });
+    expect(await setColumnDefault(id.text, "x".repeat(10_001))).toEqual({
+      ok: false,
+      error: "Text must be at most 10,000 characters.",
+    });
     expect(await submit("A")).toMatchObject({ ok: true, values: { [id.text]: "x".repeat(10_000) } });
   });
 
   it("a track at the column cap still creates title-only through the form payload, and refuses one more column", async () => {
-    db.insert(columns).values(Array.from({ length: MAX_COLUMNS - 6 }, (_, i) => ({ userId: "local", trackId, name: `C${i}`, type: "text" as const, position: i + 6 }))).run(); // one statement: fast
+    db.insert(columns)
+      .values(
+        Array.from({ length: MAX_COLUMNS - 6 }, (_, i) => ({
+          userId: "local",
+          trackId,
+          name: `C${i}`,
+          type: "text" as const,
+          position: i + 6,
+        })),
+      )
+      .run(); // one statement: fast
     expect(await submit("A")).toMatchObject({ ok: true, values: { [id.text]: "Remote" } });
-    expect(await addColumn({ trackId, name: "One more", type: "text" })).toEqual({ ok: false, error: `A track can have at most ${MAX_COLUMNS} columns.` });
+    expect(await addColumn({ trackId, name: "One more", type: "text" })).toEqual({
+      ok: false,
+      error: `A track can have at most ${MAX_COLUMNS} columns.`,
+    });
     expect((await listColumns(trackId)).length).toBe(MAX_COLUMNS);
   });
 
   it("a bad-input date over a pre-filled default is refused with a named error, not saved blank", async () => {
-    expect(await submit("A", { [id.date]: BAD_DATE })).toEqual({ ok: false, error: "Deadline: Enter a valid date as YYYY-MM-DD." });
+    expect(await submit("A", { [id.date]: BAD_DATE })).toEqual({
+      ok: false,
+      error: "Deadline: Enter a valid date as YYYY-MM-DD.",
+    });
     expect(db.select().from(applications).all()).toEqual([]);
   });
 });

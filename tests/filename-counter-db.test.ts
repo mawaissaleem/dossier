@@ -20,7 +20,22 @@ async function mkApp() {
 // What 5.7 will do: load the entries, build the name, insert the row.
 async function upload(applicationId: number, name: string, date = "2026-11-08") {
   const r = buildStoredName(name, date, await getCounterEntries(applicationId));
-  db.insert(files).values({ userId: "local", applicationId, label: "CV", originalName: name, storedName: r.storedName, relativePath: `${applicationId}/${r.storedName}`, sha256: "a".repeat(64), sizeBytes: 1, uploadDate: date, baseName: r.baseName, extension: r.extension, seq: r.seq }).run();
+  db.insert(files)
+    .values({
+      userId: "local",
+      applicationId,
+      label: "CV",
+      originalName: name,
+      storedName: r.storedName,
+      relativePath: `${applicationId}/${r.storedName}`,
+      sha256: "a".repeat(64),
+      sizeBytes: 1,
+      uploadDate: date,
+      baseName: r.baseName,
+      extension: r.extension,
+      seq: r.seq,
+    })
+    .run();
   return r.storedName;
 }
 
@@ -30,7 +45,9 @@ describe("getCounterEntries + buildStoredName", () => {
     const b = await mkApp();
     await upload(a, "CV.pdf");
     await upload(b, "CV.pdf");
-    expect(await getCounterEntries(a)).toEqual([{ baseName: "CV", uploadDate: "2026-11-08", extension: "pdf", seq: 1 }]);
+    expect(await getCounterEntries(a)).toEqual([
+      { baseName: "CV", uploadDate: "2026-11-08", extension: "pdf", seq: 1 },
+    ]);
   });
   it("AT-5 against stored rows, with counters per application and per day", async () => {
     const a = await mkApp();

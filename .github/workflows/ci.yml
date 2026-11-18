@@ -20,6 +20,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run format:check
       - run: npm run lint
       # generates .next/types (LayoutProps, PageProps) that tsc needs on a clean checkout
       - run: npx next typegen

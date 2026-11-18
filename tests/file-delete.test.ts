@@ -1,4 +1,15 @@
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
@@ -36,19 +47,33 @@ async function mkApp(title = "Acme") {
   return r.id;
 }
 async function store(name: string, content: string, app = appId) {
-  const r = await storeUploadedFile({ applicationId: app, file: new File([content], name), label: "CV", uploadDate: "2026-11-08" });
+  const r = await storeUploadedFile({
+    applicationId: app,
+    file: new File([content], name),
+    label: "CV",
+    uploadDate: "2026-11-08",
+  });
   if (!r.ok || !("file" in r)) throw new Error(JSON.stringify(r));
   return r.file;
 }
-const submit = async (ids: number[], date = "2026-11-09") => expect(await addSubmission(appId, ids, date, null, null)).toEqual({ ok: true });
+const submit = async (ids: number[], date = "2026-11-09") =>
+  expect(await addSubmission(appId, ids, date, null, null)).toEqual({ ok: true });
 // Delete the way the dialog does: read the impact, then confirm with the count it showed.
 async function del(id: number) {
   const i = await fetchFileDeleteImpact(id);
   if (!i.ok) return deleteFile(id, true, 0, false);
   return deleteFile(id, true, i.submissions.length, true);
 }
-const get = (id: number) => GET(new NextRequest(`http://localhost:3000/api/files/${id}`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(id) }) } as never);
-const row = (id: number) => getDb().select().from(files).all().find((f) => f.id === id);
+const get = (id: number) =>
+  GET(new NextRequest(`http://localhost:3000/api/files/${id}`, { headers: { host: "localhost:3000" } }), {
+    params: Promise.resolve({ id: String(id) }),
+  } as never);
+const row = (id: number) =>
+  getDb()
+    .select()
+    .from(files)
+    .all()
+    .find((f) => f.id === id);
 
 beforeEach(async () => {
   db = useTestDb();
@@ -71,14 +96,32 @@ describe("a file in no submission", () => {
     const f = await store("CV.pdf", "v1");
     const abs = join(root, f.relativePath);
     if (posix) expect(statSync(abs).mode & 0o222).toBe(0); // stored read-only
-    expect(await fetchFileDeleteImpact(f.id)).toMatchObject({ ok: true, originalName: "CV.pdf", storedName: f.storedName, label: "CV", sizeBytes: 2, submissions: [] });
+    expect(await fetchFileDeleteImpact(f.id)).toMatchObject({
+      ok: true,
+      originalName: "CV.pdf",
+      storedName: f.storedName,
+      label: "CV",
+      sizeBytes: 2,
+      submissions: [],
+    });
 
     expect(await deleteFile(f.id, true, 0, false)).toEqual({ ok: true, kept: false });
     expect(existsSync(abs)).toBe(false);
     expect(row(f.id)).toBeUndefined();
     expect(await listApplicationFiles(appId)).toEqual([]);
     const ev = (await listActivity(appId))[0];
-    expect(ev).toMatchObject({ kind: "file_deleted", fileId: null, details: { kind: "file_deleted", fileId: f.id, originalName: "CV.pdf", storedName: f.storedName, label: "CV", submissionCount: 0 } });
+    expect(ev).toMatchObject({
+      kind: "file_deleted",
+      fileId: null,
+      details: {
+        kind: "file_deleted",
+        fileId: f.id,
+        originalName: "CV.pdf",
+        storedName: f.storedName,
+        label: "CV",
+        submissionCount: 0,
+      },
+    });
     expect(eventLine(ev.kind, ev.details)).toBe(`Deleted CV.pdf (${f.storedName}, CV)`);
     expect((await get(f.id)).status).toBe(404);
   });
@@ -112,7 +155,10 @@ describe("a file in a submission", () => {
   it("is not deleted by the server without the acknowledgement; an unsubmitted file needs none", async () => {
     const f = await store("CV.pdf", "v1");
     await submit([f.id]);
-    expect(await deleteFile(f.id, true, 1, false)).toMatchObject({ ok: false, error: expect.stringMatching(/I understand/) });
+    expect(await deleteFile(f.id, true, 1, false)).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/I understand/),
+    });
     expect(await deleteFile(f.id, true, 1, "yes" as never)).toMatchObject({ ok: false });
     expect(existsSync(join(root, f.relativePath))).toBe(true);
     expect(row(f.id)!.deletedAt).toBeNull();
@@ -127,7 +173,13 @@ describe("a file in a submission", () => {
     expect(await deleteFile(f.id, true, 1, true)).toEqual({ ok: true, kept: true });
     expect(existsSync(join(root, f.relativePath))).toBe(false);
     const r = row(f.id)!;
-    expect(r).toMatchObject({ originalName: "CV.pdf", storedName: f.storedName, label: "CV", sizeBytes: 2, sha256: f.sha256 });
+    expect(r).toMatchObject({
+      originalName: "CV.pdf",
+      storedName: f.storedName,
+      label: "CV",
+      sizeBytes: 2,
+      sha256: f.sha256,
+    });
     expect(r.deletedAt).toBeInstanceOf(Date);
 
     const [s] = await listSubmissions(appId);
@@ -194,7 +246,10 @@ describe("refusals and edge cases", () => {
 
   it("the reverse is stale too: the dialog said 1 submission, there are 0 now", async () => {
     const f = await store("CV.pdf", "v1");
-    expect(await deleteFile(f.id, true, 1, true)).toMatchObject({ ok: false, error: expect.stringMatching(/changed since/) });
+    expect(await deleteFile(f.id, true, 1, true)).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/changed since/),
+    });
     expect(existsSync(join(root, f.relativePath))).toBe(true);
   });
 
@@ -244,7 +299,10 @@ describe("refusals and edge cases", () => {
     const dir = join(root, f.relativePath, "..");
     chmodSync(dir, 0o555); // unlink needs write permission on the folder
     try {
-      expect(await deleteFile(f.id, true, 0, false)).toMatchObject({ ok: false, error: expect.stringMatching(/could not be removed/) });
+      expect(await deleteFile(f.id, true, 0, false)).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(/could not be removed/),
+      });
     } finally {
       chmodSync(dir, 0o755);
     }
@@ -283,7 +341,12 @@ describe("the rest of the app with a deleted file present", () => {
     await del(f.id);
     const i = (await getDeleteImpact(appId))!;
     expect(i.fileCount).toBe(1); // only the live file has bytes
-    const r = await deleteApplicationWithFiles(appId, { cellCount: i.cellCount, fileCount: i.fileCount, submissionCount: i.submissionCount, noteCount: i.noteCount });
+    const r = await deleteApplicationWithFiles(appId, {
+      cellCount: i.cellCount,
+      fileCount: i.fileCount,
+      submissionCount: i.submissionCount,
+      noteCount: i.noteCount,
+    });
     expect(r).toMatchObject({ ok: true });
     expect("warning" in r).toBe(false);
     expect(db.select().from(files).all()).toEqual([]);
@@ -314,7 +377,10 @@ describe("the rest of the app with a deleted file present", () => {
     expect(existsSync(join(root, f.relativePath))).toBe(false);
     expect(row(f.id)!.deletedAt).toBeInstanceOf(Date);
     const [s] = await listSubmissions(appId);
-    expect(s.files.map((x) => [x.storedName, x.deletedAt !== null])).toEqual([[f.storedName, true], [g.storedName, false]]);
+    expect(s.files.map((x) => [x.storedName, x.deletedAt !== null])).toEqual([
+      [f.storedName, true],
+      [g.storedName, false],
+    ]);
   });
 
   it("the backup action reports the files on disk, not the tombstone", async () => {
@@ -328,7 +394,12 @@ describe("the rest of the app with a deleted file present", () => {
   });
 
   it("history events of other kinds are untouched: the new kind is in the CHECK list", async () => {
-    expect(() => getDb().insert(activityEvents).values({ userId: "local", applicationId: appId, kind: "file_deleted", details: "{}" }).run()).not.toThrow();
+    expect(() =>
+      getDb()
+        .insert(activityEvents)
+        .values({ userId: "local", applicationId: appId, kind: "file_deleted", details: "{}" })
+        .run(),
+    ).not.toThrow();
     await expect(getFileDeleteImpact(1)).resolves.toBeNull();
   });
 });

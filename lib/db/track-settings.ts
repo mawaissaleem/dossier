@@ -22,7 +22,15 @@ export function statusOptions(trackId: number) {
     .from(columnOptions)
     .innerJoin(columns, eq(columns.id, columnOptions.columnId))
     .innerJoin(tracks, eq(tracks.id, columns.trackId))
-    .where(and(eq(tracks.id, trackId), eq(tracks.userId, userId), eq(columns.userId, userId), eq(columns.isStatus, true), eq(columnOptions.userId, userId)))
+    .where(
+      and(
+        eq(tracks.id, trackId),
+        eq(tracks.userId, userId),
+        eq(columns.userId, userId),
+        eq(columns.isStatus, true),
+        eq(columnOptions.userId, userId),
+      ),
+    )
     .orderBy(asc(columnOptions.position), asc(columnOptions.id))
     .all();
 }
@@ -81,7 +89,11 @@ export async function setWinStatuses(trackId: number, ids: unknown): Promise<Sub
 }
 
 const ownsTrack = (trackId: number) =>
-  getDb().select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, trackId), eq(tracks.userId, getUserId()))).get() !== undefined;
+  getDb()
+    .select({ id: tracks.id })
+    .from(tracks)
+    .where(and(eq(tracks.id, trackId), eq(tracks.userId, getUserId())))
+    .get() !== undefined;
 
 // The labels a file set should have (FR-7.3). Never saved or unreadable -> empty list (no warning); the templates (lib/track-templates.ts) are the only source of defaults.
 export async function getExpectedLabels(trackId: number): Promise<string[]> {
@@ -99,7 +111,10 @@ export async function setExpectedLabels(trackId: number, labels: unknown): Promi
 
 // The expected labels of the track the application is in (the review dialog); [] for an unknown application.
 export async function getApplicationExpectedLabels(applicationId: number): Promise<string[]> {
-  const a = getDb().select({ trackId: applications.trackId }).from(applications)
-    .where(and(eq(applications.id, applicationId), eq(applications.userId, getUserId()))).get();
+  const a = getDb()
+    .select({ trackId: applications.trackId })
+    .from(applications)
+    .where(and(eq(applications.id, applicationId), eq(applications.userId, getUserId())))
+    .get();
   return a ? getExpectedLabels(a.trackId) : [];
 }

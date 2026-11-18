@@ -25,11 +25,17 @@ const key = (s: string) => s.trim().toLowerCase();
 
 export function folderBaseName({ id, title, trackName, cells, uploadDate }: FolderNameInput): string {
   const date = parseCell("date", uploadDate); // blank parses as ok/null (a cleared cell), so require a value
-  if (!date.ok || date.value === null || uploadDate !== uploadDate.trim()) throw new Error("uploadDate must be a valid YYYY-MM-DD date.");
+  if (!date.ok || date.value === null || uploadDate !== uploadDate.trim())
+    throw new Error("uploadDate must be a valid YYYY-MM-DD date.");
   const month = uploadDate.slice(0, 7);
   const [room, roomBytes] = [MAX - month.length - 1, MAX_BYTES - month.length - 1]; // month is ASCII: 8 chars = 8 bytes
-  const parts = (PAIRS[key(trackName)] ?? []).map((col) => safeName(cells.find((c) => key(c.name) === col)?.value ?? "", ""));
-  const name = parts.length && parts.every(Boolean) ? safeName(parts.join("_"), "", room, roomBytes) : safeName(title, `Application_${id}`, room, roomBytes);
+  const parts = (PAIRS[key(trackName)] ?? []).map((col) =>
+    safeName(cells.find((c) => key(c.name) === col)?.value ?? "", ""),
+  );
+  const name =
+    parts.length && parts.every(Boolean)
+      ? safeName(parts.join("_"), "", room, roomBytes)
+      : safeName(title, `Application_${id}`, room, roomBytes);
   return `${name}_${month}`;
 }
 

@@ -45,7 +45,8 @@ describe("AT-1: add an application with only a title", () => {
 describe("AT-2: with 50 applications present, add a column", () => {
   it("all 50 show it as empty and the add form includes it", async () => {
     const cols = await listColumns(trackId);
-    for (let i = 1; i <= 50; i++) expect((await createApplication(`App ${i}`, trackId, buildCreateValues(cols, {}))).ok).toBe(true);
+    for (let i = 1; i <= 50; i++)
+      expect((await createApplication(`App ${i}`, trackId, buildCreateValues(cols, {}))).ok).toBe(true);
     expect(await listApplicationRows(trackId)).toHaveLength(50);
 
     const added = await addColumn(trackId, "Contact person", "text");

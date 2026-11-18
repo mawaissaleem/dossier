@@ -7,9 +7,12 @@ const value = (type: Parameters<typeof parseCell>[0], raw: unknown) => {
 };
 
 describe("parseCell", () => {
-  it.each(["text", "number", "date", "link", "checkbox", "single_select"] as const)("%s: blanks are valid blanks", (t) => {
-    for (const raw of [null, undefined, "", "   "]) expect(parseCell(t, raw)).toEqual({ ok: true, value: null });
-  });
+  it.each(["text", "number", "date", "link", "checkbox", "single_select"] as const)(
+    "%s: blanks are valid blanks",
+    (t) => {
+      for (const raw of [null, undefined, "", "   "]) expect(parseCell(t, raw)).toEqual({ ok: true, value: null });
+    },
+  );
 
   it("round-trips each type", () => {
     expect(value("text", "  hello ")).toBe("hello");
@@ -26,12 +29,37 @@ describe("parseCell", () => {
   });
 
   it.each([
-    ["number", NaN], ["number", Infinity], ["number", "abc"], ["number", true],
-    ["number", "0x10"], ["number", "1e3"], ["number", "Infinity"], ["number", "1,5"], ["number", "--1"], ["number", "1 2"], ["number", "."], ["number", "1".repeat(400)],
-    ["date", "2026-02-30"], ["date", "2026-13-01"], ["date", "2025-02-29"], ["date", "26-1-1"], ["date", 20260101],
-    ["link", "javascript:alert(1)"], ["link", "ftp://example.com"], ["link", "https://"], ["link", "a b"], ["link", 5],
-    ["checkbox", "true"], ["checkbox", 1],
-    ["single_select", 1.5], ["single_select", "1.5"], ["single_select", "abc"], ["single_select", NaN], ["single_select", [7]], ["single_select", true], ["single_select", { toString: () => "3" }],
+    ["number", NaN],
+    ["number", Infinity],
+    ["number", "abc"],
+    ["number", true],
+    ["number", "0x10"],
+    ["number", "1e3"],
+    ["number", "Infinity"],
+    ["number", "1,5"],
+    ["number", "--1"],
+    ["number", "1 2"],
+    ["number", "."],
+    ["number", "1".repeat(400)],
+    ["date", "2026-02-30"],
+    ["date", "2026-13-01"],
+    ["date", "2025-02-29"],
+    ["date", "26-1-1"],
+    ["date", 20260101],
+    ["link", "javascript:alert(1)"],
+    ["link", "ftp://example.com"],
+    ["link", "https://"],
+    ["link", "a b"],
+    ["link", 5],
+    ["checkbox", "true"],
+    ["checkbox", 1],
+    ["single_select", 1.5],
+    ["single_select", "1.5"],
+    ["single_select", "abc"],
+    ["single_select", NaN],
+    ["single_select", [7]],
+    ["single_select", true],
+    ["single_select", { toString: () => "3" }],
     ["text", 5],
   ] as const)("rejects %s %j", (t, raw) => {
     expect(parseCell(t, raw).ok).toBe(false);
@@ -39,7 +67,10 @@ describe("parseCell", () => {
 
   it("caps text and the stored link at MAX_TEXT, so an over-long stored default decodes as no default", () => {
     expect(value("text", "x".repeat(MAX_TEXT))).toHaveLength(MAX_TEXT);
-    expect(parseCell("text", "x".repeat(MAX_TEXT + 1))).toEqual({ ok: false, error: "Text must be at most 10,000 characters." });
+    expect(parseCell("text", "x".repeat(MAX_TEXT + 1))).toEqual({
+      ok: false,
+      error: "Text must be at most 10,000 characters.",
+    });
     const link = `https://a.co/${"x".repeat(MAX_TEXT - 13)}`;
     expect(value("link", link)).toBe(link);
     expect(parseCell("link", `${link}x`)).toEqual({ ok: false, error: "Link must be at most 10,000 characters." });
@@ -67,10 +98,15 @@ describe("parseCell", () => {
     expect(value("link", "HTTPS://Example.COM/Path")).toBe("https://example.com/Path");
   });
 
-  it.each(["a b", "https://exa mple.com", "https://example.com/a\nb", "https://example.com/\tx", "example.com\u0000", "https://example.com/\u007f", "https://example.com/a\u00a0b"])(
-    "rejects whitespace/control characters in a link: %j",
-    (raw) => expect(parseCell("link", raw).ok).toBe(false),
-  );
+  it.each([
+    "a b",
+    "https://exa mple.com",
+    "https://example.com/a\nb",
+    "https://example.com/\tx",
+    "example.com\u0000",
+    "https://example.com/\u007f",
+    "https://example.com/a\u00a0b",
+  ])("rejects whitespace/control characters in a link: %j", (raw) => expect(parseCell("link", raw).ok).toBe(false));
 });
 
 describe("safeHref", () => {
@@ -79,8 +115,21 @@ describe("safeHref", () => {
   });
 
   it.each([
-    "javascript:alert(1)", "JaVaScRiPt:alert(1)", " javascript:alert(1)", "data:text/html,<b>x</b>", "vbscript:x", "file:///etc/passwd", "ftp://example.com",
-    "/relative/path", "example.com", "//example.com", "https://", "http://", "not a url", "", "https://exa\nmple.com",
+    "javascript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    " javascript:alert(1)",
+    "data:text/html,<b>x</b>",
+    "vbscript:x",
+    "file:///etc/passwd",
+    "ftp://example.com",
+    "/relative/path",
+    "example.com",
+    "//example.com",
+    "https://",
+    "http://",
+    "not a url",
+    "",
+    "https://exa\nmple.com",
   ])("rejects %j", (u) => expect(safeHref(u)).toBeNull());
 });
 

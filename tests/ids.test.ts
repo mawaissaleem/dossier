@@ -6,6 +6,7 @@ describe("isId", () => {
     for (const n of [1, 2, 9007199254740991]) expect(isId(n)).toBe(true);
   });
   it("rejects everything else", () => {
-    for (const n of [0, -1, 1.5, NaN, Infinity, 9007199254740992, "1", null, undefined, {}, true]) expect(isId(n)).toBe(false);
+    for (const n of [0, -1, 1.5, NaN, Infinity, 9007199254740992, "1", null, undefined, {}, true])
+      expect(isId(n)).toBe(false);
   });
 });

@@ -8,7 +8,11 @@ const DEVICE = /^(con|prn|aux|nul|com[1-9\u00b9\u00b2\u00b3]|lpt[1-9\u00b9\u00b2
 const utf8 = new TextEncoder();
 
 export function safeName(input: string, fallback: string, max = 80, maxBytes = 200): string {
-  let s = input.normalize("NFC").replace(/[<>:"/\\|?*\u0000-\u001f\u007f-\u009f]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_");
+  let s = input
+    .normalize("NFC")
+    .replace(/[<>:"/\\|?*\u0000-\u001f\u007f-\u009f]/g, "_")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_");
   const chars = Array.from(s).slice(0, max);
   while (utf8.encode(chars.join("")).length > maxBytes) chars.pop();
   s = chars.join("").replace(/^[._ ]+|[._ ]+$/g, "");

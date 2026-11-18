@@ -39,8 +39,11 @@ describe("saveBackupDestination", () => {
   it("refuses blank, non-string, relative, missing and file paths, and saves nothing", async () => {
     writeFileSync(join(work, "f.txt"), "x");
     const cases: [unknown, RegExp][] = [
-      ["   ", /full path/], [42, /full path/], ["rel/dir", /full path of an existing folder/],
-      [join(work, "nope"), /does not exist/], [join(work, "f.txt"), /file, not a folder/],
+      ["   ", /full path/],
+      [42, /full path/],
+      ["rel/dir", /full path of an existing folder/],
+      [join(work, "nope"), /does not exist/],
+      [join(work, "f.txt"), /file, not a folder/],
     ];
     for (const [input, re] of cases) {
       const r = await saveBackupDestination(input);

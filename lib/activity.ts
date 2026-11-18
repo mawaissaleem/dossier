@@ -3,10 +3,29 @@
 import type { ActivityKind } from "./db/schema";
 import type { CounterEntry } from "./filename";
 
-export type StatusChangedDetails = { columnId: number; fromOptionId: number | null; fromLabel: string | null; toOptionId: number | null; toLabel: string | null }; // null = blank
-export type FileUploadedDetails = { fileId: number; originalName: string; storedName: string; label: string; uploadDate: string };
+export type StatusChangedDetails = {
+  columnId: number;
+  fromOptionId: number | null;
+  fromLabel: string | null;
+  toOptionId: number | null;
+  toLabel: string | null;
+}; // null = blank
+export type FileUploadedDetails = {
+  fileId: number;
+  originalName: string;
+  storedName: string;
+  label: string;
+  uploadDate: string;
+};
 // submissionCount > 0: a record of the file stays in them. counter: the FR-6.2 counter entry, so the stored name stays reserved once the row is gone (absent in events written before it existed).
-export type FileDeletedDetails = { fileId: number; originalName: string; storedName: string; label: string; submissionCount: number; counter?: CounterEntry };
+export type FileDeletedDetails = {
+  fileId: number;
+  originalName: string;
+  storedName: string;
+  label: string;
+  submissionCount: number;
+  counter?: CounterEntry;
+};
 export type SubmissionCreatedDetails = { submissionId: number; date: string; fileCount: number; fileNames: string[] }; // stored names
 
 export type ActivityDetails =
@@ -21,28 +40,74 @@ const isStr = (v: unknown): v is string => typeof v === "string";
 const orNull = <T>(v: unknown, ok: (x: unknown) => x is T): v is T | null => v === null || ok(v);
 const isCounter = (v: unknown): v is CounterEntry => {
   const c = v as Record<string, unknown> | null;
-  return typeof c === "object" && c !== null && isStr(c.baseName) && isStr(c.uploadDate) && isStr(c.extension) && isInt(c.seq);
+  return (
+    typeof c === "object" &&
+    c !== null &&
+    isStr(c.baseName) &&
+    isStr(c.uploadDate) &&
+    isStr(c.extension) &&
+    isInt(c.seq)
+  );
 };
 
 function shape(kind: ActivityKind, o: Record<string, unknown>): ActivityDetails | null {
   switch (kind) {
     case "status_changed":
-      return isInt(o.columnId) && orNull(o.fromOptionId, isInt) && orNull(o.fromLabel, isStr) && orNull(o.toOptionId, isInt) && orNull(o.toLabel, isStr)
-        ? { kind, columnId: o.columnId, fromOptionId: o.fromOptionId, fromLabel: o.fromLabel, toOptionId: o.toOptionId, toLabel: o.toLabel }
+      return isInt(o.columnId) &&
+        orNull(o.fromOptionId, isInt) &&
+        orNull(o.fromLabel, isStr) &&
+        orNull(o.toOptionId, isInt) &&
+        orNull(o.toLabel, isStr)
+        ? {
+            kind,
+            columnId: o.columnId,
+            fromOptionId: o.fromOptionId,
+            fromLabel: o.fromLabel,
+            toOptionId: o.toOptionId,
+            toLabel: o.toLabel,
+          }
         : null;
     case "file_uploaded":
       return isInt(o.fileId) && isStr(o.originalName) && isStr(o.storedName) && isStr(o.label) && isStr(o.uploadDate)
-        ? { kind, fileId: o.fileId, originalName: o.originalName, storedName: o.storedName, label: o.label, uploadDate: o.uploadDate }
+        ? {
+            kind,
+            fileId: o.fileId,
+            originalName: o.originalName,
+            storedName: o.storedName,
+            label: o.label,
+            uploadDate: o.uploadDate,
+          }
         : null;
     case "file_deleted":
-      return isInt(o.fileId) && isStr(o.originalName) && isStr(o.storedName) && isStr(o.label) && isInt(o.submissionCount) && (o.counter === undefined || isCounter(o.counter))
+      return isInt(o.fileId) &&
+        isStr(o.originalName) &&
+        isStr(o.storedName) &&
+        isStr(o.label) &&
+        isInt(o.submissionCount) &&
+        (o.counter === undefined || isCounter(o.counter))
         ? {
-            kind, fileId: o.fileId, originalName: o.originalName, storedName: o.storedName, label: o.label, submissionCount: o.submissionCount,
-            ...(o.counter && { counter: { baseName: o.counter.baseName, uploadDate: o.counter.uploadDate, extension: o.counter.extension, seq: o.counter.seq } }),
+            kind,
+            fileId: o.fileId,
+            originalName: o.originalName,
+            storedName: o.storedName,
+            label: o.label,
+            submissionCount: o.submissionCount,
+            ...(o.counter && {
+              counter: {
+                baseName: o.counter.baseName,
+                uploadDate: o.counter.uploadDate,
+                extension: o.counter.extension,
+                seq: o.counter.seq,
+              },
+            }),
           }
         : null;
     case "submission_created":
-      return isInt(o.submissionId) && isStr(o.date) && isInt(o.fileCount) && Array.isArray(o.fileNames) && o.fileNames.every(isStr)
+      return isInt(o.submissionId) &&
+        isStr(o.date) &&
+        isInt(o.fileCount) &&
+        Array.isArray(o.fileNames) &&
+        o.fileNames.every(isStr)
         ? { kind, submissionId: o.submissionId, date: o.date, fileCount: o.fileCount, fileNames: o.fileNames }
         : null;
   }

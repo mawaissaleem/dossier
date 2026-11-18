@@ -35,9 +35,24 @@ export function NewApplicationForm({ trackId, columns }: { trackId: number; colu
 
   return (
     <form aria-label="Add application" onSubmit={submit} className="flex max-w-3xl flex-col gap-4">
-      <ApplicationFields title={title} onTitleChange={setTitle} columns={columns} state={{ ...defaultState(columns), ...fields }} onChange={(id, v) => setFields((f) => ({ ...f, [id]: v }))} error={error} />
-      {error && errorField(error, columns) === null && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <div><Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button></div>
+      <ApplicationFields
+        title={title}
+        onTitleChange={setTitle}
+        columns={columns}
+        state={{ ...defaultState(columns), ...fields }}
+        onChange={(id, v) => setFields((f) => ({ ...f, [id]: v }))}
+        error={error}
+      />
+      {error && errorField(error, columns) === null && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Saving…" : "Save"}
+        </Button>
+      </div>
     </form>
   );
 }

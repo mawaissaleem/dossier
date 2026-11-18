@@ -40,20 +40,49 @@ import { pipeline } from "node:stream/promises";
 import { openPromise, type Entry, type ZipFile } from "yauzl";
 import { DB_ENTRY, FILES_PREFIX, MANIFEST_NAME, parseManifest } from "../backup";
 import { getBackupDestination } from "../db/backup";
-import { currentCounts, finalizeStagedDb, inspectBackupDb, type FileFlags, removeStaged, stagedDatabasePath, swapDatabase } from "../db/restore";
+import {
+  currentCounts,
+  finalizeStagedDb,
+  inspectBackupDb,
+  type FileFlags,
+  removeStaged,
+  stagedDatabasePath,
+  swapDatabase,
+} from "../db/restore";
 import { getFilesRoot } from "../db/settings";
-import { checkListing, LIMITS, parseExpected, sameCounts, STAGE_PREFIX, type Counts, type ZipEntryInfo } from "../restore";
+import {
+  checkListing,
+  LIMITS,
+  parseExpected,
+  sameCounts,
+  STAGE_PREFIX,
+  type Counts,
+  type ZipEntryInfo,
+} from "../restore";
 import { createBackup } from "./backup";
 import { isFullyAbsolute } from "./relative";
 import { isInside, validateFilesRoot } from "./root";
 
 // `changed` / `missing`: relative paths of files the backup's database lists whose bytes differ from the record / that are not in the zip.
-export type BackupInfo = { createdAt: string; counts: Counts; fileCount: number; filesBytes: number; extraFiles: number; schemaOlder: boolean; changed: string[]; missing: string[] };
+export type BackupInfo = {
+  createdAt: string;
+  counts: Counts;
+  fileCount: number;
+  filesBytes: number;
+  extraFiles: number;
+  schemaOlder: boolean;
+  changed: string[];
+  missing: string[];
+};
 export type CheckResult = { ok: true; info: BackupInfo } | { ok: false; error: string };
-export type RestoreResult = { ok: true; safetyBackupPath: string; createdAt: string; counts: Counts; warnings: string[] } | { ok: false; error: string };
+export type RestoreResult =
+  | { ok: true; safetyBackupPath: string; createdAt: string; counts: Counts; warnings: string[] }
+  | { ok: false; error: string };
 
 class ShownError extends Error {} // its message is already written for the user
-const refuse = (message: string): never => { throw new ShownError(message); };
+const refuse = (message: string): never => {
+  throw new ShownError(message);
+};
 const fail = (error: string): { ok: false; error: string } => ({ ok: false, error });
 
 const SPACE_SLACK = 16 * 1024 ** 2; // room for the database to grow while it is migrated
@@ -62,7 +91,10 @@ const stageName = () => `${STAGE_PREFIX}${randomBytes(6).toString("hex")}`;
 async function checkZipPath(input: unknown): Promise<string> {
   const typed = typeof input === "string" ? input.trim() : "";
   if (typed === "") return refuse("Enter the full path of the backup zip.");
-  if (typed.includes("\0") || !isFullyAbsolute(typed)) return refuse("Use the full path of the zip, such as /home/you/Backups/dossier-backup-20261110-1432.zip. Relative paths and ~ are not accepted.");
+  if (typed.includes("\0") || !isFullyAbsolute(typed))
+    return refuse(
+      "Use the full path of the zip, such as /home/you/Backups/dossier-backup-20261110-1432.zip. Relative paths and ~ are not accepted.",
+    );
   let real: string;
   try {
     real = await realpath(/*turbopackIgnore: true*/ typed);
@@ -73,7 +105,10 @@ async function checkZipPath(input: unknown): Promise<string> {
   }
   const root = await getFilesRoot();
   const rootReal = root ? await realpath(/*turbopackIgnore: true*/ root).catch(() => null) : null;
-  if (rootReal && isInside(real, rootReal)) return refuse("This backup is inside your files folder, which a restore replaces. Move the zip somewhere else first.");
+  if (rootReal && isInside(real, rootReal))
+    return refuse(
+      "This backup is inside your files folder, which a restore replaces. Move the zip somewhere else first.",
+    );
   return real;
 }
 
@@ -81,15 +116,29 @@ const entryInfo = (e: Entry): ZipEntryInfo => {
   const raw = e.fileNameRaw;
   const name = raw.toString("utf8");
   // Names are UTF-8. A name with other bytes and no UTF-8 flag is legacy CP437: its meaning is ambiguous, so it is refused.
-  if (name.includes("�") || (raw.some((b) => b > 0x7f) && !(e.generalPurposeBitFlag & 0x800))) refuse("The backup has an entry whose name Dossier cannot read.");
-  return { name, flags: e.generalPurposeBitFlag, method: e.compressionMethod, compressedSize: e.compressedSize, uncompressedSize: e.uncompressedSize, versionMadeBy: e.versionMadeBy, externalAttributes: e.externalFileAttributes };
+  if (name.includes("�") || (raw.some((b) => b > 0x7f) && !(e.generalPurposeBitFlag & 0x800)))
+    refuse("The backup has an entry whose name Dossier cannot read.");
+  return {
+    name,
+    flags: e.generalPurposeBitFlag,
+    method: e.compressionMethod,
+    compressedSize: e.compressedSize,
+    uncompressedSize: e.uncompressedSize,
+    versionMadeBy: e.versionMadeBy,
+    externalAttributes: e.externalFileAttributes,
+  };
 };
 
 // Streams one entry through a SHA-256 and into `out` (created exclusively, so nothing is overwritten) or nowhere. yauzl errors the stream
 // if the real size differs from the declared one.
 async function pump(zip: ZipFile, entry: Entry, out: string | null, mode: number): Promise<string> {
   const hash = createHash("sha256");
-  const tap = new Transform({ transform(chunk, _enc, cb) { hash.update(chunk); cb(null, chunk); } });
+  const tap = new Transform({
+    transform(chunk, _enc, cb) {
+      hash.update(chunk);
+      cb(null, chunk);
+    },
+  });
   const sink = out ? createWriteStream(out, { flags: "wx", mode }) : new Writable({ write: (_c, _e, cb) => cb() });
   await pipeline(await zip.openReadStreamPromise(entry), tap, sink);
   return hash.digest("hex");
@@ -116,7 +165,10 @@ async function checkSpace(needs: { dir: string; bytes: number }[]): Promise<void
   }
   for (const { dir, bytes } of byDevice.values()) {
     const fs = await statfs(/*turbopackIgnore: true*/ dir).catch(() => null);
-    if (fs && bytes > fs.bavail * fs.bsize) refuse(`There is not enough free disk space to unpack this backup next to ${dir}: it needs about ${Math.ceil(bytes / 1024 ** 2)} MB.`);
+    if (fs && bytes > fs.bavail * fs.bsize)
+      refuse(
+        `There is not enough free disk space to unpack this backup next to ${dir}: it needs about ${Math.ceil(bytes / 1024 ** 2)} MB.`,
+      );
   }
 }
 
@@ -129,7 +181,12 @@ async function readBackup(zipPathInput: unknown, dbOut: string, files?: FilesTar
   const path = await checkZipPath(zipPathInput);
   let zip: ZipFile;
   try {
-    zip = await openPromise(/*turbopackIgnore: true*/ path, { lazyEntries: true, autoClose: false, decodeStrings: false, validateEntrySizes: true });
+    zip = await openPromise(/*turbopackIgnore: true*/ path, {
+      lazyEntries: true,
+      autoClose: false,
+      decodeStrings: false,
+      validateEntrySizes: true,
+    });
   } catch {
     return refuse("That file is not a readable zip. It may be damaged or incomplete.");
   }
@@ -154,7 +211,9 @@ async function readBackup(zipPathInput: unknown, dbOut: string, files?: FilesTar
     if (!manifest.ok) return refuse(manifest.error);
     const filesBytes = [...listing.files.values()].reduce((s, n) => s + n, 0);
     if (manifest.manifest.fileCount !== listing.files.size || manifest.manifest.filesBytes !== filesBytes) {
-      return refuse("The backup's file list does not match its manifest, so it is incomplete or was changed. It was not restored.");
+      return refuse(
+        "The backup's file list does not match its manifest, so it is incomplete or was changed. It was not restored.",
+      );
     }
     if (files && listing.files.size > 0 && "refuse" in files) return refuse(files.refuse);
 
@@ -186,7 +245,16 @@ async function readBackup(zipPathInput: unknown, dbOut: string, files?: FilesTar
     const extras = [...listing.files.keys()].filter((p) => !listed.has(p));
     if (outDir) for (const rel of extras) await unpack(rel);
 
-    const info = { createdAt: manifest.manifest.createdAt, counts: db.info.counts, fileCount: listing.files.size, filesBytes, extraFiles: extras.length, schemaOlder: db.info.schemaOlder, changed: flags.changed, missing: flags.missing };
+    const info = {
+      createdAt: manifest.manifest.createdAt,
+      counts: db.info.counts,
+      fileCount: listing.files.size,
+      filesBytes,
+      extraFiles: extras.length,
+      schemaOlder: db.info.schemaOlder,
+      changed: flags.changed,
+      missing: flags.missing,
+    };
     return { info, counts: db.info.counts, flags };
   } finally {
     zip.close();
@@ -240,7 +308,9 @@ export async function swapFiles(root: string, stage: string): Promise<FilesSwap>
       placed.push(n);
     }
   } catch (e) {
-    await undo().catch(() => refuse(`The restore failed and the files folder could not be put back. Your previous files are in ${aside}.`));
+    await undo().catch(() =>
+      refuse(`The restore failed and the files folder could not be put back. Your previous files are in ${aside}.`),
+    );
     throw e;
   }
   return { undo, aside, discard: () => rm(aside, { recursive: true, force: true }) };
@@ -250,14 +320,22 @@ export async function restoreFromBackup(zipPath: unknown, expectedInput: unknown
   const expected = parseExpected(expectedInput);
   if (!expected) return fail("Check the backup again, then restore.");
   const destination = await getBackupDestination();
-  if (!destination) return fail("Save a backup folder in the Backup section first. Dossier saves a safety backup of your current data there before it replaces anything.");
+  if (!destination)
+    return fail(
+      "Save a backup folder in the Backup section first. Dossier saves a safety backup of your current data there before it replaces anything.",
+    );
 
   const root = await getFilesRoot();
   const rootCheck = root ? await validateFilesRoot(root) : null;
   const rootPath = rootCheck?.ok ? rootCheck.path : null;
   const files: FilesTarget = rootPath
     ? { out: join(rootPath, stageName()) }
-    : { refuse: rootCheck && !rootCheck.ok ? `The files folder cannot be used: ${rootCheck.error} Fix it in Settings, then restore.` : "This backup holds files, but no files folder is set. Choose the files folder in Settings first, then restore." };
+    : {
+        refuse:
+          rootCheck && !rootCheck.ok
+            ? `The files folder cannot be used: ${rootCheck.error} Fix it in Settings, then restore.`
+            : "This backup holds files, but no files folder is set. Choose the files folder in Settings first, then restore.",
+      };
 
   const stagedDb = stagedDatabasePath();
   const stageDir = "out" in files ? files.out : null;
@@ -265,8 +343,10 @@ export async function restoreFromBackup(zipPath: unknown, expectedInput: unknown
   let dbSwap: ReturnType<typeof swapDatabase> | undefined;
   try {
     const read = await readBackup(zipPath, stagedDb, files);
-    if (read.info.createdAt !== expected.createdAt) return fail("The backup file changed since it was checked. Check it again.");
-    if (!sameCounts(currentCounts(), expected.counts)) return fail("Your data changed since the confirmation was shown. Nothing was restored. Check again.");
+    if (read.info.createdAt !== expected.createdAt)
+      return fail("The backup file changed since it was checked. Check it again.");
+    if (!sameCounts(currentCounts(), expected.counts))
+      return fail("Your data changed since the confirmation was shown. Nothing was restored. Check again.");
 
     const safety = await createBackup(destination);
     if (!safety.ok) return fail(`Nothing was changed: the safety backup of your current data failed. ${safety.error}`);
@@ -278,15 +358,36 @@ export async function restoreFromBackup(zipPath: unknown, expectedInput: unknown
       if (!sameCounts(currentCounts(), read.counts)) throw new Error("the restored data did not match the backup");
     } catch (e) {
       const stuck: string[] = [];
-      try { dbSwap?.undo(); } catch { stuck.push("the database"); }
-      try { await filesSwap?.undo(); } catch { stuck.push("the files folder"); }
-      if (stuck.length) return fail(`The restore failed and ${stuck.join(" and ")} could not be put back. Restore the safety backup ${safety.path} by hand. (${(e as Error).message})`);
+      try {
+        dbSwap?.undo();
+      } catch {
+        stuck.push("the database");
+      }
+      try {
+        await filesSwap?.undo();
+      } catch {
+        stuck.push("the files folder");
+      }
+      if (stuck.length)
+        return fail(
+          `The restore failed and ${stuck.join(" and ")} could not be put back. Restore the safety backup ${safety.path} by hand. (${(e as Error).message})`,
+        );
       throw e;
     }
 
     const warnings: string[] = [];
-    try { dbSwap!.discard(); } catch { warnings.push("The old database copy could not be deleted."); }
-    try { await filesSwap?.discard(); } catch { warnings.push(`The old files could not all be deleted; they are in ${filesSwap?.aside}. They are also in the safety backup.`); }
+    try {
+      dbSwap!.discard();
+    } catch {
+      warnings.push("The old database copy could not be deleted.");
+    }
+    try {
+      await filesSwap?.discard();
+    } catch {
+      warnings.push(
+        `The old files could not all be deleted; they are in ${filesSwap?.aside}. They are also in the safety backup.`,
+      );
+    }
     return { ok: true, safetyBackupPath: safety.path, createdAt: read.info.createdAt, counts: read.counts, warnings };
   } catch (e) {
     return fail(explain(e) + (e instanceof ShownError ? "" : " Your previous data is unchanged."));

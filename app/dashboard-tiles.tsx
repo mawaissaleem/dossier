@@ -12,10 +12,29 @@ const C = 2 * Math.PI * R;
 // FR-9.4: the ring (DESIGN.md "Dashboard"), 64px beside the tile's text. The figure is one image with the sentence as its label; the SVG is decoration. The count is in the tile's value.
 function Ring({ count, capacity, ratio, met }: { count: number; capacity: number; ratio: number; met: boolean }) {
   return (
-    <span role="img" aria-label={`${count} of ${capacity} applications submitted this week`} className="size-16 shrink-0">
+    <span
+      role="img"
+      aria-label={`${count} of ${capacity} applications submitted this week`}
+      className="size-16 shrink-0"
+    >
       <svg aria-hidden viewBox="0 0 120 120" className="size-full -rotate-90">
-        <circle cx="60" cy="60" r={R} strokeWidth="12" className={`stroke-border ${met ? "fill-muted" : "fill-none"}`} />
-        <circle cx="60" cy="60" r={R} fill="none" strokeWidth="12" strokeLinecap={ratio > 0 ? "round" : "butt"} className="stroke-accent" strokeDasharray={`${ratio * C} ${C}`} />
+        <circle
+          cx="60"
+          cy="60"
+          r={R}
+          strokeWidth="12"
+          className={`stroke-border ${met ? "fill-muted" : "fill-none"}`}
+        />
+        <circle
+          cx="60"
+          cy="60"
+          r={R}
+          fill="none"
+          strokeWidth="12"
+          strokeLinecap={ratio > 0 ? "round" : "butt"}
+          className="stroke-accent"
+          strokeDasharray={`${ratio * C} ${C}`}
+        />
       </svg>
     </span>
   );
@@ -27,7 +46,12 @@ function Ring({ count, capacity, ratio, met }: { count: number; capacity: number
 export async function DashboardTiles() {
   await connection();
   const today = localToday();
-  const [overdue, upcoming, week, { labels, wins }] = await Promise.all([getOverdueAlerts(today), getUpcomingDeadlines(today, 1), getWeeklyProgress(today), getWins()]);
+  const [overdue, upcoming, week, { labels, wins }] = await Promise.all([
+    getOverdueAlerts(today),
+    getUpcomingDeadlines(today, 1),
+    getWeeklyProgress(today),
+    getWins(),
+  ]);
   const o = overdueTile(overdue);
   const d = deadlineTile(upcoming[0]);
   const hasWins = labels.length > 0;
@@ -44,7 +68,15 @@ export async function DashboardTiles() {
         lead={<Ring count={week.count} capacity={week.capacity} ratio={week.ratio} met={week.met} />}
         className={hasWins ? span : `${span} sm:max-xl:col-span-2`}
       />
-      {hasWins && <StatTile href="#wins" label="Wins" value={String(wins.length)} hint={wins.length ? winCountsText(wins, labels) : noWinsText(labels)} className={span} />}
+      {hasWins && (
+        <StatTile
+          href="#wins"
+          label="Wins"
+          value={String(wins.length)}
+          hint={wins.length ? winCountsText(wins, labels) : noWinsText(labels)}
+          className={span}
+        />
+      )}
     </>
   );
 }

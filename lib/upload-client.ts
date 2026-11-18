@@ -8,7 +8,9 @@ export const chooseLabel = (choice: string, custom: string) => (choice === CUSTO
 
 // Refuses early what the route would refuse with 413. Counts file bytes only (the route also counts the form overhead).
 export function sizeError(sizes: number[]): string | null {
-  return sizes.reduce((a, b) => a + b, 0) > MAX_UPLOAD_BYTES ? "Too large (max 50 MB per upload). Choose fewer or smaller files." : null;
+  return sizes.reduce((a, b) => a + b, 0) > MAX_UPLOAD_BYTES
+    ? "Too large (max 50 MB per upload). Choose fewer or smaller files."
+    : null;
 }
 
 export type UploadOutcome = {
@@ -22,26 +24,55 @@ export type UploadOutcome = {
 
 // Maps the route's answer (see app/api/applications/[id]/files/route.ts) to what the form shows. `body` is the parsed JSON or undefined.
 export function describeResponse(status: number, body: unknown): UploadOutcome {
-  const b = (body && typeof body === "object" ? body : {}) as { files?: unknown; duplicates?: unknown; error?: unknown; errors?: Record<string, unknown> };
-  const stored = Array.isArray(b.files) ? b.files.flatMap((f) => (typeof f?.storedName === "string" ? [f.storedName] : [])) : [];
-  const duplicates = Array.isArray(b.duplicates) ? b.duplicates.flatMap((d) => (typeof d?.originalName === "string" && typeof d?.storedName === "string" ? [{ originalName: d.originalName, storedName: d.storedName }] : [])) : [];
-  const out = (message: string | null, extra: Partial<UploadOutcome> = {}): UploadOutcome => ({ ok: false, stored, duplicates, message, fieldErrors: {}, settingsLink: false, ...extra });
+  const b = (body && typeof body === "object" ? body : {}) as {
+    files?: unknown;
+    duplicates?: unknown;
+    error?: unknown;
+    errors?: Record<string, unknown>;
+  };
+  const stored = Array.isArray(b.files)
+    ? b.files.flatMap((f) => (typeof f?.storedName === "string" ? [f.storedName] : []))
+    : [];
+  const duplicates = Array.isArray(b.duplicates)
+    ? b.duplicates.flatMap((d) =>
+        typeof d?.originalName === "string" && typeof d?.storedName === "string"
+          ? [{ originalName: d.originalName, storedName: d.storedName }]
+          : [],
+      )
+    : [];
+  const out = (message: string | null, extra: Partial<UploadOutcome> = {}): UploadOutcome => ({
+    ok: false,
+    stored,
+    duplicates,
+    message,
+    fieldErrors: {},
+    settingsLink: false,
+    ...extra,
+  });
   if (status === 201 || status === 200) return out(null, { ok: true });
   if (status === 400 && b.errors) {
     const str = (v: unknown) => (typeof v === "string" ? v : undefined);
-    const fieldErrors = { label: str(b.errors.label), uploadDate: str(b.errors.uploadDate), files: str(b.errors.files) };
+    const fieldErrors = {
+      label: str(b.errors.label),
+      uploadDate: str(b.errors.uploadDate),
+      files: str(b.errors.files),
+    };
     return out(Object.values(fieldErrors).some(Boolean) ? null : "Check the fields and try again.", { fieldErrors });
   }
   if (status === 400) return out("The upload was not understood. Try again.");
   if (status === 403) return out("Refused: uploads only work from this computer's own address.");
   if (status === 404) return out("This application no longer exists. Nothing was saved.");
-  if (status === 409) return out(typeof b.error === "string" && b.error ? b.error : "The files folder is not set or cannot be used.", { settingsLink: true });
+  if (status === 409)
+    return out(typeof b.error === "string" && b.error ? b.error : "The files folder is not set or cannot be used.", {
+      settingsLink: true,
+    });
   if (status === 413) return out("Too large (max 50 MB per upload). Nothing was saved.");
   const detail = typeof b.error === "string" ? ` ${b.error}` : "";
   return out(`The upload failed.${detail}${stored.length ? " Files stored before the failure are kept." : ""}`);
 }
 
-export const duplicateMessage = (d: { originalName: string; storedName: string }) => `Identical file already uploaded: ${d.originalName} matches ${d.storedName}`;
+export const duplicateMessage = (d: { originalName: string; storedName: string }) =>
+  `Identical file already uploaded: ${d.originalName} matches ${d.storedName}`;
 
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;

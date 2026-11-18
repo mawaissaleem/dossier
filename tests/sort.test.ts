@@ -4,12 +4,29 @@ import type { ColumnItem } from "@/lib/db/columns";
 import { nextSort, parseSort, sortRows, withSort } from "@/lib/sort";
 
 const col = (id: number, type: ColumnItem["type"], over: Partial<ColumnItem> = {}): ColumnItem => ({
-  id, name: `c${id}`, type, hidden: false, isStatus: false, defaultValue: null, options: [], ...over,
+  id,
+  name: `c${id}`,
+  type,
+  hidden: false,
+  isStatus: false,
+  defaultValue: null,
+  options: [],
+  ...over,
 });
-const row = (id: number, v: ApplicationRow["values"][number], title = `t${id}`): ApplicationRow => ({ id, title, values: { 1: v } });
+const row = (id: number, v: ApplicationRow["values"][number], title = `t${id}`): ApplicationRow => ({
+  id,
+  title,
+  values: { 1: v },
+});
 const ids = (rs: ApplicationRow[]) => rs.map((r) => r.id);
 const run = (c: ColumnItem, vals: ApplicationRow["values"][number][], dir: "asc" | "desc") =>
-  ids(sortRows(vals.map((v, i) => row(i + 1, v)), [c], { id: "col-1", dir }));
+  ids(
+    sortRows(
+      vals.map((v, i) => row(i + 1, v)),
+      [c],
+      { id: "col-1", dir },
+    ),
+  );
 
 describe("sortRows", () => {
   it("text and link: case-insensitive natural order", () => {
@@ -33,11 +50,13 @@ describe("sortRows", () => {
     expect(run(col(1, "checkbox"), v, "desc")).toEqual([4, 1, 3, 2]);
   });
   it("single_select: by option position, not label or id", () => {
-    const c = col(1, "single_select", { options: [
-      { id: 30, label: "Zed", color: "blue", position: 0 },
-      { id: 10, label: "Alpha", color: "blue", position: 1 },
-      { id: 20, label: "Mid", color: "blue", position: 2 },
-    ] });
+    const c = col(1, "single_select", {
+      options: [
+        { id: 30, label: "Zed", color: "blue", position: 0 },
+        { id: 10, label: "Alpha", color: "blue", position: 1 },
+        { id: 20, label: "Mid", color: "blue", position: 2 },
+      ],
+    });
     expect(run(c, [20, 10, 30], "asc")).toEqual([3, 2, 1]);
     expect(run(c, [20, 10, 30], "desc")).toEqual([1, 2, 3]);
   });

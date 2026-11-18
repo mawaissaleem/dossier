@@ -20,7 +20,12 @@ export function NavItems({ tracks, onSearch }: { tracks: React.ReactNode; onSear
       </Suspense>
       <SearchRailButton before={onSearch} />
       <Suspense>
-        <NavLink href="/settings" icon={<SettingsIcon aria-hidden />} label="Settings" className="max-md:ml-auto md:mt-auto wide:mt-auto wide:ml-0" />
+        <NavLink
+          href="/settings"
+          icon={<SettingsIcon aria-hidden />}
+          label="Settings"
+          className="max-md:ml-auto md:mt-auto wide:mt-auto wide:ml-0"
+        />
       </Suspense>
       <ThemeMenu />
     </>

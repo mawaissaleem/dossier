@@ -5,18 +5,24 @@ const body = (s: string) => s.replace(/^﻿/, "");
 
 describe("toCsv", () => {
   it("starts with a BOM, uses CRLF and ends the last line with CRLF", () => {
-    const s = toCsv([["a", "b"], ["c", "d"]]);
+    const s = toCsv([
+      ["a", "b"],
+      ["c", "d"],
+    ]);
     expect(s.charCodeAt(0)).toBe(0xfeff);
     expect(body(s)).toBe("a,b\r\nc,d\r\n");
   });
   it("quotes commas, quotes, CR and LF and doubles quotes", () => {
-    expect(body(toCsv([["a,b", 'say "hi"', "l1\nl2", "l1\r\nl2", "x\ry"]]))).toBe('"a,b","say ""hi""","l1\nl2","l1\r\nl2","x\ry"\r\n');
+    expect(body(toCsv([["a,b", 'say "hi"', "l1\nl2", "l1\r\nl2", "x\ry"]]))).toBe(
+      '"a,b","say ""hi""","l1\nl2","l1\r\nl2","x\ry"\r\n',
+    );
   });
   it("leaves blanks empty and keeps unicode", () => {
     expect(body(toCsv([[null, "Zürich", "日本"]]))).toBe(",Zürich,日本\r\n");
   });
   it("prefixes a string that starts with = + - @ tab or CR with an apostrophe", () => {
-    for (const s of ["=SUM(A1)", "+1", "-5", "@x", "\tx", "\rx"]) expect(body(toCsv([[s]])).replace(/"/g, "")).toBe(`'${s}\r\n`);
+    for (const s of ["=SUM(A1)", "+1", "-5", "@x", "\tx", "\rx"])
+      expect(body(toCsv([[s]])).replace(/"/g, "")).toBe(`'${s}\r\n`);
     expect(body(toCsv([["a=b", "'=x", " =x"]]))).toBe("a=b,'=x, =x\r\n");
   });
   it("writes numbers plain and never prefixes them", () => {
@@ -26,7 +32,15 @@ describe("toCsv", () => {
 
 describe("trackCsv", () => {
   const cols = [
-    { id: 1, name: "Status", type: "single_select", options: [{ id: 10, label: "Applied" }, { id: 11, label: "=Offer" }] },
+    {
+      id: 1,
+      name: "Status",
+      type: "single_select",
+      options: [
+        { id: 10, label: "Applied" },
+        { id: 11, label: "=Offer" },
+      ],
+    },
     { id: 2, name: "Done", type: "checkbox", options: [] },
     { id: 3, name: "Deadline", type: "date", options: [] },
     { id: 4, name: "Score", type: "number", options: [] },
@@ -45,9 +59,14 @@ describe("trackCsv", () => {
     );
   });
   it("guards a column name and a title too", () => {
-    expect(body(trackCsv([{ id: 1, name: "=x", type: "text", options: [] }], [{ title: "@t", archived: false, values: { 1: "-1" } }]))).toBe(
-      "Title,'=x,Archived\r\n'@t,'-1,No\r\n",
-    );
+    expect(
+      body(
+        trackCsv(
+          [{ id: 1, name: "=x", type: "text", options: [] }],
+          [{ title: "@t", archived: false, values: { 1: "-1" } }],
+        ),
+      ),
+    ).toBe("Title,'=x,Archived\r\n'@t,'-1,No\r\n");
   });
 });
 

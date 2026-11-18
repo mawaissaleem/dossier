@@ -7,9 +7,17 @@ export async function multipart(form: FormData): Promise<{ body: Uint8Array<Arra
   const chunks: Uint8Array[] = [];
   for (const [name, value] of form) {
     if (typeof value === "string") {
-      chunks.push(enc.encode(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value.replace(/\r?\n|\r/g, "\r\n")}\r\n`));
+      chunks.push(
+        enc.encode(
+          `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value.replace(/\r?\n|\r/g, "\r\n")}\r\n`,
+        ),
+      );
     } else {
-      chunks.push(enc.encode(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"; filename="${value.name}"\r\nContent-Type: ${value.type || "application/octet-stream"}\r\n\r\n`));
+      chunks.push(
+        enc.encode(
+          `--${boundary}\r\nContent-Disposition: form-data; name="${name}"; filename="${value.name}"\r\nContent-Type: ${value.type || "application/octet-stream"}\r\n\r\n`,
+        ),
+      );
       chunks.push(new Uint8Array(await value.arrayBuffer()), enc.encode("\r\n"));
     }
   }

@@ -24,7 +24,9 @@ export type BackupManifest = {
   filesBytes: number; // their total size (the database copy is not counted)
 };
 
-export function buildManifest(input: Omit<BackupManifest, "format" | "formatVersion" | "databaseEntry">): BackupManifest {
+export function buildManifest(
+  input: Omit<BackupManifest, "format" | "formatVersion" | "databaseEntry">,
+): BackupManifest {
   return { format: BACKUP_FORMAT, formatVersion: BACKUP_FORMAT_VERSION, databaseEntry: DB_ENTRY, ...input };
 }
 
@@ -37,12 +39,16 @@ export function parseManifest(input: unknown): ManifestResult {
   if (typeof input !== "object" || input === null) return bad("The backup manifest is not an object.");
   const m = input as Record<string, unknown>;
   if (m.format !== BACKUP_FORMAT) return bad("This is not a Dossier backup.");
-  if (m.formatVersion !== BACKUP_FORMAT_VERSION) return bad("This backup was made by a different version of Dossier and cannot be read.");
-  if (typeof m.createdAt !== "string" || Number.isNaN(Date.parse(m.createdAt))) return bad("The backup manifest has no valid date.");
+  if (m.formatVersion !== BACKUP_FORMAT_VERSION)
+    return bad("This backup was made by a different version of Dossier and cannot be read.");
+  if (typeof m.createdAt !== "string" || Number.isNaN(Date.parse(m.createdAt)))
+    return bad("The backup manifest has no valid date.");
   const s = m.schema as Record<string, unknown> | null;
-  if (typeof s !== "object" || s === null || !isCount(s.migrations) || !(s.latest === null || isCount(s.latest))) return bad("The backup manifest has no valid schema version.");
+  if (typeof s !== "object" || s === null || !isCount(s.migrations) || !(s.latest === null || isCount(s.latest)))
+    return bad("The backup manifest has no valid schema version.");
   if (m.databaseEntry !== DB_ENTRY) return bad("The backup manifest names an unknown database entry.");
-  if (!(m.filesRoot === null || typeof m.filesRoot === "string") || !isCount(m.fileCount) || !isCount(m.filesBytes)) return bad("The backup manifest is incomplete.");
+  if (!(m.filesRoot === null || typeof m.filesRoot === "string") || !isCount(m.fileCount) || !isCount(m.filesBytes))
+    return bad("The backup manifest is incomplete.");
   return { ok: true, manifest: m as BackupManifest };
 }
 

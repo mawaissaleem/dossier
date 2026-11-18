@@ -16,14 +16,36 @@ export async function getPipelineCounts(): Promise<TrackPipeline[]> {
   const rows = db
     .select({ trackId: applications.trackId, optionId: cellValues.valueOptionId, n: sql<number>`count(*)` })
     .from(applications)
-    .leftJoin(columns, and(eq(columns.trackId, applications.trackId), eq(columns.isStatus, true), eq(columns.userId, userId)))
-    .leftJoin(cellValues, and(eq(cellValues.applicationId, applications.id), eq(cellValues.columnId, columns.id), eq(cellValues.userId, userId)))
+    .leftJoin(
+      columns,
+      and(eq(columns.trackId, applications.trackId), eq(columns.isStatus, true), eq(columns.userId, userId)),
+    )
+    .leftJoin(
+      cellValues,
+      and(
+        eq(cellValues.applicationId, applications.id),
+        eq(cellValues.columnId, columns.id),
+        eq(cellValues.userId, userId),
+      ),
+    )
     .where(and(eq(applications.userId, userId), eq(applications.archived, false)))
     .groupBy(applications.trackId, cellValues.valueOptionId)
     .all();
   const statusCols = new Map(
-    db.select({ id: columns.id, trackId: columns.trackId }).from(columns).where(and(eq(columns.userId, userId), eq(columns.isStatus, true))).orderBy(asc(columns.id)).all().map((c) => [c.trackId, c.id]),
+    db
+      .select({ id: columns.id, trackId: columns.trackId })
+      .from(columns)
+      .where(and(eq(columns.userId, userId), eq(columns.isStatus, true)))
+      .orderBy(asc(columns.id))
+      .all()
+      .map((c) => [c.trackId, c.id]),
   );
-  const tracks = (await listTracks()).map((t) => ({ id: t.id, name: t.name, color: t.color, statusColumnId: statusCols.get(t.id) ?? null, options: statusOptions(t.id) }));
+  const tracks = (await listTracks()).map((t) => ({
+    id: t.id,
+    name: t.name,
+    color: t.color,
+    statusColumnId: statusCols.get(t.id) ?? null,
+    options: statusOptions(t.id),
+  }));
   return pipelineCounts(rows, tracks);
 }

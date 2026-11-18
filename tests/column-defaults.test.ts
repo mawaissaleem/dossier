@@ -27,18 +27,38 @@ beforeEach(() => {
   vi.mocked(refresh).mockClear();
   db = useTestDb();
   trackId = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-  ids = { text: col("t", "text", 0), number: col("n", "number", 1), date: col("d", "date", 2), link: col("l", "link", 3), checkbox: col("c", "checkbox", 4), single_select: col("s", "single_select", 5) };
-  optA = db.insert(columnOptions).values({ userId: "local", columnId: ids.single_select, label: "A", color: "blue", position: 0 }).returning().get().id;
-  optB = db.insert(columnOptions).values({ userId: "local", columnId: ids.single_select, label: "B", color: "red", position: 1 }).returning().get().id;
+  ids = {
+    text: col("t", "text", 0),
+    number: col("n", "number", 1),
+    date: col("d", "date", 2),
+    link: col("l", "link", 3),
+    checkbox: col("c", "checkbox", 4),
+    single_select: col("s", "single_select", 5),
+  };
+  optA = db
+    .insert(columnOptions)
+    .values({ userId: "local", columnId: ids.single_select, label: "A", color: "blue", position: 0 })
+    .returning()
+    .get().id;
+  optB = db
+    .insert(columnOptions)
+    .values({ userId: "local", columnId: ids.single_select, label: "B", color: "red", position: 1 })
+    .returning()
+    .get().id;
 });
 afterEach(dropTestDb);
 
 describe("setColumnDefault", () => {
   it("sets, then clears, a default for each of the six types", async () => {
-    const cases = () => [
-      ["text", " Remote ", "Remote"], ["number", "4.5", "4.5"], ["date", "2026-03-04", "2026-03-04"],
-      ["link", "example.com", "https://example.com/"], ["checkbox", true, "true"], ["single_select", optB, String(optB)],
-    ] as const;
+    const cases = () =>
+      [
+        ["text", " Remote ", "Remote"],
+        ["number", "4.5", "4.5"],
+        ["date", "2026-03-04", "2026-03-04"],
+        ["link", "example.com", "https://example.com/"],
+        ["checkbox", true, "true"],
+        ["single_select", optB, String(optB)],
+      ] as const;
     for (const [type, raw, text] of cases()) {
       expect(await setColumnDefault(ids[type], raw)).toEqual({ ok: true });
       expect(stored(ids[type])).toBe(text);
@@ -53,8 +73,17 @@ describe("setColumnDefault", () => {
   });
 
   it.each([
-    ["number", "abc"], ["number", true], ["date", "2026-02-30"], ["link", "javascript:alert(1)"], ["checkbox", "yes"], ["text", 5],
-    ["single_select", 99999], ["single_select", "x"], ["single_select", 1.5], ["text", "x".repeat(10_001)], ["link", `a.com/${"x".repeat(10_000)}`],
+    ["number", "abc"],
+    ["number", true],
+    ["date", "2026-02-30"],
+    ["link", "javascript:alert(1)"],
+    ["checkbox", "yes"],
+    ["text", 5],
+    ["single_select", 99999],
+    ["single_select", "x"],
+    ["single_select", 1.5],
+    ["text", "x".repeat(10_001)],
+    ["link", `a.com/${"x".repeat(10_000)}`],
   ] as const)("rejects an invalid %s default %j and changes nothing", async (type, raw) => {
     const r = await setColumnDefault(ids[type], raw as string);
     expect(r.ok).toBe(false);
@@ -64,14 +93,24 @@ describe("setColumnDefault", () => {
 
   it("rejects an option that belongs to another column or another user, and bad ids or value shapes", async () => {
     const other = col("s2", "single_select", 6);
-    const foreignOpt = db.insert(columnOptions).values({ userId: "local", columnId: other, label: "X", color: "red", position: 0 }).returning().get().id;
+    const foreignOpt = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: other, label: "X", color: "red", position: 0 })
+      .returning()
+      .get().id;
     expect((await setColumnDefault(ids.single_select, foreignOpt)).ok).toBe(false);
     const t2 = db.insert(tracks).values({ userId: "someone-else", name: "X", position: 0 }).returning().get().id;
     const fcol = col("S", "single_select", 0, t2, "someone-else");
-    const fopt = db.insert(columnOptions).values({ userId: "someone-else", columnId: fcol, label: "A", color: "red", position: 0 }).returning().get().id;
+    const fopt = db
+      .insert(columnOptions)
+      .values({ userId: "someone-else", columnId: fcol, label: "A", color: "red", position: 0 })
+      .returning()
+      .get().id;
     expect((await setColumnDefault(ids.single_select, fopt)).ok).toBe(false);
-    for (const id of [0, -1, 1.5, "1", NaN]) expect(await setColumnDefault(id as number, "x")).toEqual({ ok: false, error: "Column not found." });
-    for (const v of [{}, [], undefined]) expect((await setColumnDefault(ids.text, v as unknown as string)).ok).toBe(false);
+    for (const id of [0, -1, 1.5, "1", NaN])
+      expect(await setColumnDefault(id as number, "x")).toEqual({ ok: false, error: "Column not found." });
+    for (const v of [{}, [], undefined])
+      expect((await setColumnDefault(ids.text, v as unknown as string)).ok).toBe(false);
     expect(stored(ids.single_select)).toBeNull();
     expect(stored(ids.text)).toBeNull();
     expect(refresh).not.toHaveBeenCalled();
@@ -95,7 +134,12 @@ describe("createApplication pre-fills defaults", () => {
     await setColumnDefault(ids.single_select, optB);
     const id = await newApp();
     expect((await getApplicationDetail(id))!.values).toEqual({
-      [ids.text]: "Remote", [ids.number]: 10, [ids.date]: "2026-01-02", [ids.link]: "https://example.com/", [ids.checkbox]: false, [ids.single_select]: optB,
+      [ids.text]: "Remote",
+      [ids.number]: 10,
+      [ids.date]: "2026-01-02",
+      [ids.link]: "https://example.com/",
+      [ids.checkbox]: false,
+      [ids.single_select]: optB,
     });
     const id2 = await newApp("B"); // no defaults on these two
     await setColumnDefault(ids.text, null);
@@ -115,7 +159,12 @@ describe("createApplication pre-fills defaults", () => {
   });
 
   it.each([
-    ["text", "   "], ["number", "0x10"], ["date", "2026-02-30"], ["link", "javascript:alert(1)"], ["checkbox", "maybe"], ["single_select", "abc"],
+    ["text", "   "],
+    ["number", "0x10"],
+    ["date", "2026-02-30"],
+    ["link", "javascript:alert(1)"],
+    ["checkbox", "maybe"],
+    ["single_select", "abc"],
     ["single_select", "99999"],
   ] as const)("skips an invalid %s default %j: the application is still created", async (type, text) => {
     db.update(columns).set({ defaultValue: text }).where(eq(columns.id, ids[type])).run();
@@ -126,8 +175,15 @@ describe("createApplication pre-fills defaults", () => {
 
   it("skips an option default that belongs to another column", async () => {
     const other = col("s2", "single_select", 6);
-    const foreignOpt = db.insert(columnOptions).values({ userId: "local", columnId: other, label: "X", color: "red", position: 0 }).returning().get().id;
-    db.update(columns).set({ defaultValue: String(foreignOpt) }).where(eq(columns.id, ids.single_select)).run();
+    const foreignOpt = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: other, label: "X", color: "red", position: 0 })
+      .returning()
+      .get().id;
+    db.update(columns)
+      .set({ defaultValue: String(foreignOpt) })
+      .where(eq(columns.id, ids.single_select))
+      .run();
     await setColumnDefault(ids.text, "kept");
     const id = await newApp();
     expect((await getApplicationDetail(id))!.values).toMatchObject({ [ids.single_select]: null, [ids.text]: "kept" });

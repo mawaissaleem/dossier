@@ -1,7 +1,16 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { addOption as insert, deleteOption as remove, getOptionDeleteImpact, reorderOptions as reorder, updateOption as update, type AddOptionResult, type OptionDeleteImpact, type OptionResult } from "@/lib/db/options";
+import {
+  addOption as insert,
+  deleteOption as remove,
+  getOptionDeleteImpact,
+  reorderOptions as reorder,
+  updateOption as update,
+  type AddOptionResult,
+  type OptionDeleteImpact,
+  type OptionResult,
+} from "@/lib/db/options";
 import { isId } from "@/lib/ids";
 
 // Runs on any POST, so the argument types are checked here; label, colour and ownership rules live in the data layer.
@@ -14,11 +23,19 @@ export async function addOption(columnId: number, label: string): Promise<AddOpt
   return r;
 }
 
-export async function updateOption(columnId: number, optionId: number, patch: { label?: string; color?: string }): Promise<OptionResult> {
+export async function updateOption(
+  columnId: number,
+  optionId: number,
+  patch: { label?: string; color?: string },
+): Promise<OptionResult> {
   if (!isId(columnId)) return { ok: false, error: "Column not found." };
   if (!isId(optionId)) return { ok: false, error: "Option not found." };
-  if (typeof patch !== "object" || patch === null || Array.isArray(patch)) return { ok: false, error: "Nothing to change." };
-  if ((patch.label !== undefined && typeof patch.label !== "string") || (patch.color !== undefined && typeof patch.color !== "string")) {
+  if (typeof patch !== "object" || patch === null || Array.isArray(patch))
+    return { ok: false, error: "Nothing to change." };
+  if (
+    (patch.label !== undefined && typeof patch.label !== "string") ||
+    (patch.color !== undefined && typeof patch.color !== "string")
+  ) {
     return { ok: false, error: "Nothing to change." };
   }
   const r = await update(columnId, optionId, { label: patch.label, color: patch.color }); // only the two known keys reach the data layer
@@ -37,7 +54,9 @@ export async function reorderOptions(columnId: number, orderedIds: number[]): Pr
 }
 
 // Read on each dialog open so the count is never stale page data.
-export async function fetchOptionDeleteImpact(optionId: number): Promise<({ ok: true } & OptionDeleteImpact) | { ok: false; error: string }> {
+export async function fetchOptionDeleteImpact(
+  optionId: number,
+): Promise<({ ok: true } & OptionDeleteImpact) | { ok: false; error: string }> {
   if (!isId(optionId)) return { ok: false, error: "Option not found." };
   const impact = await getOptionDeleteImpact(optionId);
   return impact ? { ok: true, ...impact } : { ok: false, error: "Option not found." };
@@ -45,11 +64,17 @@ export async function fetchOptionDeleteImpact(optionId: number): Promise<({ ok: 
 
 // `confirm` must be literally true and `reassignTo` explicit: another option's id, or null to leave those applications blank (FR-3.4, NFR-4).
 // `expectedUseCount` is the count the dialog showed; the data layer refuses if it changed since.
-export async function deleteOption(optionId: number, choice: { confirm: boolean; reassignTo: number | null; expectedUseCount: number }): Promise<OptionResult> {
-  if (typeof choice !== "object" || choice === null || choice.confirm !== true) return { ok: false, error: "Deleting must be confirmed." };
-  if (!Number.isSafeInteger(choice.expectedUseCount) || choice.expectedUseCount < 0) return { ok: false, error: "Deleting must be confirmed." };
+export async function deleteOption(
+  optionId: number,
+  choice: { confirm: boolean; reassignTo: number | null; expectedUseCount: number },
+): Promise<OptionResult> {
+  if (typeof choice !== "object" || choice === null || choice.confirm !== true)
+    return { ok: false, error: "Deleting must be confirmed." };
+  if (!Number.isSafeInteger(choice.expectedUseCount) || choice.expectedUseCount < 0)
+    return { ok: false, error: "Deleting must be confirmed." };
   if (!isId(optionId)) return { ok: false, error: "Option not found." };
-  if (choice.reassignTo !== null && !isId(choice.reassignTo)) return { ok: false, error: "Choose another option of this column to reassign to." };
+  if (choice.reassignTo !== null && !isId(choice.reassignTo))
+    return { ok: false, error: "Choose another option of this column to reassign to." };
   const r = await remove(optionId, choice.reassignTo, choice.expectedUseCount);
   if (r.ok) refresh();
   return r;

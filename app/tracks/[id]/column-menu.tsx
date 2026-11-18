@@ -4,15 +4,37 @@ import { useId, useRef, useState, useTransition } from "react";
 import { decodeDefault } from "@/lib/cells";
 import { createLatest } from "@/lib/latest";
 import type { ColumnItem } from "@/lib/db/columns";
-import { ArrowLeftIcon, ArrowRightIcon, CircleDotIcon, EllipsisVerticalIcon, EyeOffIcon, ListIcon, PencilIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CircleDotIcon,
+  EllipsisVerticalIcon,
+  EyeOffIcon,
+  ListIcon,
+  PencilIcon,
+  SlidersHorizontalIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useReturnFocus } from "@/components/use-return-focus";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { OptionEditor, type DeleteChoice, type OptionImpact, type OptionPatch } from "./option-editor";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -23,7 +45,19 @@ const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 // `act(fn)` defers an item's action until the menu has closed and focus is back on the trigger, so a disabled-while-saving item never strands
 // focus and a modal dialog opened by fn returns focus to the trigger when it closes.
 // `error` renders outside the menu so a failed action's message is visible after the menu has closed.
-function Dropdown({ label, summary, size, error, children }: { label: string; summary: React.ReactNode; size: "icon-xs" | "sm"; error?: string | null; children: (act: (fn: () => void) => () => void) => React.ReactNode }) {
+function Dropdown({
+  label,
+  summary,
+  size,
+  error,
+  children,
+}: {
+  label: string;
+  summary: React.ReactNode;
+  size: "icon-xs" | "sm";
+  error?: string | null;
+  children: (act: (fn: () => void) => () => void) => React.ReactNode;
+}) {
   const trigger = useRef<HTMLButtonElement>(null);
   const next = useRef<(() => void) | null>(null);
   const act = (fn: () => void) => () => {
@@ -33,7 +67,16 @@ function Dropdown({ label, summary, size, error, children }: { label: string; su
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button ref={trigger} type="button" variant="ghost" size={size} aria-label={label} className="text-muted-foreground">{summary}</Button>
+          <Button
+            ref={trigger}
+            type="button"
+            variant="ghost"
+            size={size}
+            aria-label={label}
+            className="text-muted-foreground"
+          >
+            {summary}
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           className="w-auto min-w-40"
@@ -49,14 +92,34 @@ function Dropdown({ label, summary, size, error, children }: { label: string; su
           {children(act)}
         </DropdownMenuContent>
       </DropdownMenu>
-      {error && <p role="alert" className="w-0 min-w-full text-xs font-normal text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="w-0 min-w-full text-xs font-normal text-destructive">
+          {error}
+        </p>
+      )}
     </>
   );
 }
 
 // Header menu for one track column: Rename, Edit options (single-select), Use as status column, Default value, Hide, Move left, Move right, Delete (not on Status). No type change (FR-2.5).
 // first/last are among the *visible* columns, matching what the move actions do.
-export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLoadImpact, onDelete, onAddOption, onUpdateOption, onReorderOptions, onLoadOptionImpact, onDeleteOption, onSetStatus, onSetDefault }: {
+export function ColumnMenu({
+  column,
+  first,
+  last,
+  onRename,
+  onHide,
+  onMove,
+  onLoadImpact,
+  onDelete,
+  onAddOption,
+  onUpdateOption,
+  onReorderOptions,
+  onLoadOptionImpact,
+  onDeleteOption,
+  onSetStatus,
+  onSetDefault,
+}: {
   column: ColumnItem;
   first: boolean;
   last: boolean;
@@ -111,14 +174,25 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
 
   function openDefault() {
     const current = decodeDefault(column.type, column.defaultValue);
-    setDraft(current === null || (column.type === "single_select" && !column.options.some((o) => o.id === current)) ? "" : String(current)); // a dangling option shows as No default
+    setDraft(
+      current === null || (column.type === "single_select" && !column.options.some((o) => o.id === current))
+        ? ""
+        : String(current),
+    ); // a dangling option shows as No default
     setDefError(null);
     back.remember();
     setDefOpen(true);
   }
 
   // Blank = no default. The server validates by column type; the select/checkbox drafts are converted to what it expects.
-  const draftValue = () => (draft === "" ? null : column.type === "checkbox" ? draft === "true" : column.type === "single_select" ? Number(draft) : draft);
+  const draftValue = () =>
+    draft === ""
+      ? null
+      : column.type === "checkbox"
+        ? draft === "true"
+        : column.type === "single_select"
+          ? Number(draft)
+          : draft;
 
   function openOptions() {
     back.remember();
@@ -143,27 +217,83 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
 
   return (
     <>
-      <Dropdown label={`Column menu: ${column.name}`} summary={<EllipsisVerticalIcon aria-hidden="true" />} size="icon-xs" error={menuError}>
+      <Dropdown
+        label={`Column menu: ${column.name}`}
+        summary={<EllipsisVerticalIcon aria-hidden="true" />}
+        size="icon-xs"
+        error={menuError}
+      >
         {(act) => (
           <>
-            <DropdownMenuItem onSelect={act(openRename)}><PencilIcon aria-hidden="true" />Rename</DropdownMenuItem>
-            {column.type === "single_select" && <DropdownMenuItem onSelect={act(openOptions)}><ListIcon aria-hidden="true" />Edit options…</DropdownMenuItem>}
-            {column.type === "single_select" && !column.isStatus && <DropdownMenuItem disabled={pending} onSelect={act(() => run(onSetStatus))}><CircleDotIcon aria-hidden="true" />Use as status column</DropdownMenuItem>}
-            <DropdownMenuItem onSelect={act(openDefault)}><SlidersHorizontalIcon aria-hidden="true" />Default value…</DropdownMenuItem>
-            <DropdownMenuItem disabled={pending} onSelect={act(() => run(onHide))}><EyeOffIcon aria-hidden="true" />Hide</DropdownMenuItem>
-            <DropdownMenuItem disabled={pending || first} onSelect={act(() => run(() => onMove("left")))}><ArrowLeftIcon aria-hidden="true" />Move left</DropdownMenuItem>
-            <DropdownMenuItem disabled={pending || last} onSelect={act(() => run(() => onMove("right")))}><ArrowRightIcon aria-hidden="true" />Move right</DropdownMenuItem>
-            {!column.isStatus && <DropdownMenuItem variant="destructive" disabled={pending} onSelect={act(openDelete)}><Trash2Icon aria-hidden="true" />Delete column…</DropdownMenuItem>}
+            <DropdownMenuItem onSelect={act(openRename)}>
+              <PencilIcon aria-hidden="true" />
+              Rename
+            </DropdownMenuItem>
+            {column.type === "single_select" && (
+              <DropdownMenuItem onSelect={act(openOptions)}>
+                <ListIcon aria-hidden="true" />
+                Edit options…
+              </DropdownMenuItem>
+            )}
+            {column.type === "single_select" && !column.isStatus && (
+              <DropdownMenuItem disabled={pending} onSelect={act(() => run(onSetStatus))}>
+                <CircleDotIcon aria-hidden="true" />
+                Use as status column
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={act(openDefault)}>
+              <SlidersHorizontalIcon aria-hidden="true" />
+              Default value…
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={pending} onSelect={act(() => run(onHide))}>
+              <EyeOffIcon aria-hidden="true" />
+              Hide
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={pending || first} onSelect={act(() => run(() => onMove("left")))}>
+              <ArrowLeftIcon aria-hidden="true" />
+              Move left
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={pending || last} onSelect={act(() => run(() => onMove("right")))}>
+              <ArrowRightIcon aria-hidden="true" />
+              Move right
+            </DropdownMenuItem>
+            {!column.isStatus && (
+              <DropdownMenuItem variant="destructive" disabled={pending} onSelect={act(openDelete)}>
+                <Trash2Icon aria-hidden="true" />
+                Delete column…
+              </DropdownMenuItem>
+            )}
           </>
         )}
       </Dropdown>
-      {column.type === "single_select" && <OptionEditor column={column} open={optOpen} onOpenChange={setOptOpen} onCloseAutoFocus={back.onCloseAutoFocus} onAdd={onAddOption} onUpdate={onUpdateOption} onReorder={onReorderOptions} onLoadImpact={onLoadOptionImpact} onDelete={onDeleteOption} />}
-      <Dialog open={defOpen} onOpenChange={(o) => { if (o || !pending) setDefOpen(o); }}>
+      {column.type === "single_select" && (
+        <OptionEditor
+          column={column}
+          open={optOpen}
+          onOpenChange={setOptOpen}
+          onCloseAutoFocus={back.onCloseAutoFocus}
+          onAdd={onAddOption}
+          onUpdate={onUpdateOption}
+          onReorder={onReorderOptions}
+          onLoadImpact={onLoadOptionImpact}
+          onDelete={onDeleteOption}
+        />
+      )}
+      <Dialog
+        open={defOpen}
+        onOpenChange={(o) => {
+          if (o || !pending) setDefOpen(o);
+        }}
+      >
         <DialogContent showCloseButton={false} className="sm:max-w-md" onCloseAutoFocus={back.onCloseAutoFocus}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              run(() => onSetDefault(draftValue()), () => setDefOpen(false), setDefError);
+              run(
+                () => onSetDefault(draftValue()),
+                () => setDefOpen(false),
+                setDefError,
+              );
             }}
             className="grid gap-4"
           >
@@ -174,7 +304,12 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={`${uid}-def`}>New applications start with</Label>
               {column.type === "checkbox" || column.type === "single_select" ? (
-                <NativeSelect id={`${uid}-def`} value={draft} onChange={(e) => setDraft(e.target.value)} className="w-full">
+                <NativeSelect
+                  id={`${uid}-def`}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  className="w-full"
+                >
                   <NativeSelectOption value="">No default</NativeSelectOption>
                   {column.type === "checkbox" ? (
                     <>
@@ -182,7 +317,11 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
                       <NativeSelectOption value="false">Unchecked</NativeSelectOption>
                     </>
                   ) : (
-                    column.options.map((o) => <NativeSelectOption key={o.id} value={String(o.id)}>{o.label}</NativeSelectOption>)
+                    column.options.map((o) => (
+                      <NativeSelectOption key={o.id} value={String(o.id)}>
+                        {o.label}
+                      </NativeSelectOption>
+                    ))
                   )}
                 </NativeSelect>
               ) : (
@@ -195,11 +334,32 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
                 />
               )}
             </div>
-            {defError && <p role="alert" className="text-sm text-destructive">{defError}</p>}
+            {defError && (
+              <p role="alert" className="text-sm text-destructive">
+                {defError}
+              </p>
+            )}
             <DialogFooter>
-              <Button type="button" variant="outline" disabled={pending} onClick={() => setDefOpen(false)}>Cancel</Button>
-              <Button type="button" variant="outline" disabled={pending} onClick={() => run(() => onSetDefault(null), () => setDefOpen(false), setDefError)}>No default</Button>
-              <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
+              <Button type="button" variant="outline" disabled={pending} onClick={() => setDefOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={() =>
+                  run(
+                    () => onSetDefault(null),
+                    () => setDefOpen(false),
+                    setDefError,
+                  )
+                }
+              >
+                No default
+              </Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Saving…" : "Save"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -214,11 +374,14 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
             "Counting values…"
           ) : impact.ok ? (
             <>
-              This permanently deletes the column <strong>{impact.name}</strong> and the values in it: {plural(impact.valueCount, "application")} {impact.valueCount === 1 ? "holds" : "hold"} a value
+              This permanently deletes the column <strong>{impact.name}</strong> and the values in it:{" "}
+              {plural(impact.valueCount, "application")} {impact.valueCount === 1 ? "holds" : "hold"} a value
               {impact.archivedCount > 0 ? `, including ${impact.archivedCount} archived` : ""}. This cannot be undone.
             </>
           ) : (
-            <span role="alert" className="text-destructive">{impact.error}</span>
+            <span role="alert" className="text-destructive">
+              {impact.error}
+            </span>
           )
         }
         error={delError}
@@ -227,14 +390,33 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
         confirmDisabled={!impact?.ok}
         busy={pending}
         // A refusal (e.g. the count changed meanwhile) shows the fresh count before confirm re-enables.
-        onConfirm={() => impact?.ok && run(() => onDelete(impact.valueCount), () => setDelOpen(false), (m) => { setDelError(m); loadImpact(); })}
+        onConfirm={() =>
+          impact?.ok &&
+          run(
+            () => onDelete(impact.valueCount),
+            () => setDelOpen(false),
+            (m) => {
+              setDelError(m);
+              loadImpact();
+            },
+          )
+        }
       />
-      <Dialog open={renameOpen} onOpenChange={(o) => { if (o || !pending) setRenameOpen(o); }}>
+      <Dialog
+        open={renameOpen}
+        onOpenChange={(o) => {
+          if (o || !pending) setRenameOpen(o);
+        }}
+      >
         <DialogContent showCloseButton={false} className="sm:max-w-md" onCloseAutoFocus={back.onCloseAutoFocus}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              run(() => onRename(name), () => setRenameOpen(false), setError);
+              run(
+                () => onRename(name),
+                () => setRenameOpen(false),
+                setError,
+              );
             }}
             className="grid gap-4"
           >
@@ -246,10 +428,18 @@ export function ColumnMenu({ column, first, last, onRename, onHide, onMove, onLo
               <Label htmlFor={`${uid}-name`}>Name</Label>
               <Input id={`${uid}-name`} required value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
             <DialogFooter>
-              <Button type="button" variant="outline" disabled={pending} onClick={() => setRenameOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Rename"}</Button>
+              <Button type="button" variant="outline" disabled={pending} onClick={() => setRenameOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Saving…" : "Rename"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -264,7 +454,17 @@ export function HiddenColumns({ columns, onShow }: { columns: ColumnItem[]; onSh
   const [pending, startTransition] = useTransition();
   if (columns.length === 0) return null;
   return (
-    <Dropdown label={`Hidden columns (${columns.length})`} summary={<><EyeOffIcon aria-hidden="true" />Hidden columns ({columns.length})</>} size="sm" error={error}>
+    <Dropdown
+      label={`Hidden columns (${columns.length})`}
+      summary={
+        <>
+          <EyeOffIcon aria-hidden="true" />
+          Hidden columns ({columns.length})
+        </>
+      }
+      size="sm"
+      error={error}
+    >
       {(act) =>
         columns.map((c) => (
           <DropdownMenuItem

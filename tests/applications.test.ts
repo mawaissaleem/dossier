@@ -54,12 +54,19 @@ describe("listApplications", () => {
   it("returns only this track's non-archived rows for the current user, newest first", async () => {
     const other = db.insert(tracks).values({ userId: "local", name: "PhD", position: 1 }).returning().get().id;
     const add = (v: Partial<typeof applications.$inferInsert> & { title: string }) =>
-      db.insert(applications).values({ userId: "local", trackId, ...v }).returning().get().id;
+      db
+        .insert(applications)
+        .values({ userId: "local", trackId, ...v })
+        .returning()
+        .get().id;
     const a = add({ title: "first" });
     add({ title: "archived", archived: true });
     add({ title: "other track", trackId: other });
     add({ title: "other user", userId: "someone-else" });
     const c = add({ title: "second" });
-    expect(await listApplications(trackId)).toEqual([{ id: c, title: "second" }, { id: a, title: "first" }]);
+    expect(await listApplications(trackId)).toEqual([
+      { id: c, title: "second" },
+      { id: a, title: "first" },
+    ]);
   });
 });

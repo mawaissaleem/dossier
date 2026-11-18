@@ -4,7 +4,13 @@ import type { TrackOverview } from "@/lib/track-overview";
 import { TrackMarker } from "../track-marker";
 
 // Up to six chips: the track's colour tile, "Job · Board" and when. Each is one link to that track in that view. `items` is already cleaned (no deleted tracks).
-export function RecentlyViewed({ items, tracks }: { items: readonly (ViewedTrack & { when: string })[]; tracks: ReadonlyMap<number, TrackOverview> }) {
+export function RecentlyViewed({
+  items,
+  tracks,
+}: {
+  items: readonly (ViewedTrack & { when: string })[];
+  tracks: ReadonlyMap<number, TrackOverview>;
+}) {
   return (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-2.5">
       {items.map((v) => {
@@ -17,7 +23,9 @@ export function RecentlyViewed({ items, tracks }: { items: readonly (ViewedTrack
             >
               <TrackMarker name={t.name} color={t.color} className="size-8 text-sm" />
               <span className="min-w-0">
-                <span className="block truncate text-base font-medium">{t.name} · {TRACK_VIEW_LABELS[v.view]}</span>
+                <span className="block truncate text-base font-medium">
+                  {t.name} · {TRACK_VIEW_LABELS[v.view]}
+                </span>
                 <span className="block text-xs text-muted-foreground">{v.when}</span>
               </span>
             </Link>

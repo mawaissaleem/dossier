@@ -13,7 +13,8 @@ export async function checkApplicationFiles(applicationId: number): Promise<Chec
     const r = await verifyStoredFile(id);
     if (r.ok) counts[r.integrity]++;
     else if (r.kind === "missing") counts.missing++;
-    else if (r.kind === "setup") return { ok: false, error: r.error }; // no files folder: every file would fail the same way
+    else if (r.kind === "setup")
+      return { ok: false, error: r.error }; // no files folder: every file would fail the same way
     else counts.failed++;
   }
   return { ok: true, summary: checkSummary(counts), counts };

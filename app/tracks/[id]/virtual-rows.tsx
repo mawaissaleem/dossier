@@ -18,19 +18,40 @@ import { SelectCell } from "./select-cell";
 const cell = "h-10 border-b border-r border-border px-2 py-1 align-middle";
 const HEAD_H = 36; // h-9 header, sticky above the body
 const ROW_H = 41; // measured: the h-10 cell plus its 1px line
-const TABBABLE = 'a[href], button:not([disabled]), select:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const TABBABLE =
+  'a[href], button:not([disabled]), select:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const tabbables = (tr: Element) => [...tr.querySelectorAll<HTMLElement>(TABBABLE)];
 const rowOf = (el: EventTarget) => (el as HTMLElement).closest<HTMLElement>("tr[data-id]");
 
 // Stands in for the rows that are not mounted: one empty cell, so every browser honours the height.
-const Gap = ({ height, span }: { height: number; span: number }) => <tr aria-hidden="true"><td colSpan={span} style={{ height }} className="p-0" /></tr>;
+const Gap = ({ height, span }: { height: number; span: number }) => (
+  <tr aria-hidden="true">
+    <td colSpan={span} style={{ height }} className="p-0" />
+  </tr>
+);
 
 // One application row. Memoised: a scroll re-renders the window, but a row that stays in it is not rendered again.
-const Row = memo(function Row({ row, index, columns, measure }: { row: ApplicationRow; index: number; columns: ColumnItem[]; measure: (el: HTMLTableRowElement | null) => void }) {
+const Row = memo(function Row({
+  row,
+  index,
+  columns,
+  measure,
+}: {
+  row: ApplicationRow;
+  index: number;
+  columns: ColumnItem[];
+  measure: (el: HTMLTableRowElement | null) => void;
+}) {
   return (
     <tr ref={measure} data-index={index} data-id={row.id} aria-rowindex={index + 2} className="group hover:bg-muted">
       <td className={cn(cell, "sticky left-0 z-10 bg-card group-hover:bg-muted")}>
-        <Link href={`/applications/${row.id}`} title={row.title} className="block max-w-80 truncate rounded-sm font-medium text-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">{row.title}</Link>
+        <Link
+          href={`/applications/${row.id}`}
+          title={row.title}
+          className="block max-w-80 truncate rounded-sm font-medium text-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {row.title}
+        </Link>
       </td>
       {columns.map((col) => {
         const value = row.values[col.id];
@@ -43,7 +64,14 @@ const Row = memo(function Row({ row, index, columns, measure }: { row: Applicati
             ) : col.type === "single_select" ? (
               <SelectCell applicationId={row.id} columnId={col.id} value={value} options={col.options} label={label} />
             ) : kind ? (
-              <EditableCell applicationId={row.id} columnId={col.id} text={formatCell(col, value)} label={label} kind={kind} href={kind === "link" ? safeHref(formatCell(col, value)) : null} />
+              <EditableCell
+                applicationId={row.id}
+                columnId={col.id}
+                text={formatCell(col, value)}
+                label={label}
+                kind={kind}
+                href={kind === "link" ? safeHref(formatCell(col, value)) : null}
+              />
             ) : null}
           </td>
         );
@@ -58,13 +86,25 @@ const Row = memo(function Row({ row, index, columns, measure }: { row: Applicati
 // sticky header and Title column behave as with every row. Sorting and filtering still run on all rows (the parent). Rows that hold
 // focus or an open editor stay mounted, keyed by application id, so scrolling never throws away what the user is doing.
 // `box` is the scroll area as state, not a ref object: a child's layout effect runs before its ancestor's ref is attached, so a ref would still be null when the virtualizer first looks for it.
-export function VirtualRows({ box, rows, columns }: { box: HTMLElement | null; rows: ApplicationRow[]; columns: ColumnItem[] }) {
+export function VirtualRows({
+  box,
+  rows,
+  columns,
+}: {
+  box: HTMLElement | null;
+  rows: ApplicationRow[];
+  columns: ColumnItem[];
+}) {
   const [focusId, setFocusId] = useState<number | null>(null);
   const [editIds, setEditIds] = useState<number[]>([]); // ids with an open editor (EditableCell registers through RowPinContext)
   const [want, setWant] = useState<{ index: number; last: boolean } | null>(null); // Tab target outside the window, focused once it mounts
   const pin = useCallback((id: number) => {
     setEditIds((p) => [...p, id]);
-    return () => setEditIds((p) => { const i = p.indexOf(id); return i < 0 ? p : p.filter((_, k) => k !== i); });
+    return () =>
+      setEditIds((p) => {
+        const i = p.indexOf(id);
+        return i < 0 ? p : p.filter((_, k) => k !== i);
+      });
   }, []);
   const indexById = useMemo(() => new Map(rows.map((r, i) => [r.id, i])), [rows]);
   const pinned = [focusId, ...editIds].flatMap((id) => (id !== null && indexById.has(id) ? [indexById.get(id)!] : []));
@@ -103,7 +143,8 @@ export function VirtualRows({ box, rows, columns }: { box: HTMLElement | null; r
     if ((e.shiftKey ? f[0] : f.at(-1)) !== e.target) return;
     const j = Number(tr.dataset.index) + (e.shiftKey ? -1 : 1);
     if (j < 0 || j >= rows.length) return; // the real first or last row: leave the table
-    if ((e.shiftKey ? tr.previousElementSibling : tr.nextElementSibling)?.getAttribute("data-index") === String(j)) return; // mounted: native Tab does it
+    if ((e.shiftKey ? tr.previousElementSibling : tr.nextElementSibling)?.getAttribute("data-index") === String(j))
+      return; // mounted: native Tab does it
     e.preventDefault();
     virt.scrollToIndex(j);
     setWant({ index: j, last: e.shiftKey });
@@ -113,7 +154,9 @@ export function VirtualRows({ box, rows, columns }: { box: HTMLElement | null; r
     <RowPinContext value={pin}>
       <tbody
         onFocus={(e) => setFocusId(Number(rowOf(e.target)?.dataset.id) || null)}
-        onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFocusId(null); }}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) setFocusId(null);
+        }}
         onKeyDown={onKeyDown}
       >
         {items.map((item, n) => (

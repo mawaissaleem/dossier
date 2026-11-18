@@ -3,7 +3,14 @@
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, ExternalLinkIcon, EyeIcon } from "lucide-react";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useReturnFocus } from "@/components/use-return-focus";
 import { positionLabel, stepIndex, type PreviewItem } from "@/lib/preview-nav";
 
@@ -32,9 +39,27 @@ export function PreviewGroup({ items, children }: { items: PreviewItem[]; childr
     if (to !== null) setCurrentId(items[to].id);
   };
   const goRef = useRef(go);
-  useEffect(() => { goRef.current = go; });
-  const arrow = (e: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; defaultPrevented: boolean; preventDefault(): void }) => {
-    if ((e.key !== "ArrowLeft" && e.key !== "ArrowRight") || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.defaultPrevented) return false;
+  useEffect(() => {
+    goRef.current = go;
+  });
+  const arrow = (e: {
+    key: string;
+    altKey: boolean;
+    ctrlKey: boolean;
+    metaKey: boolean;
+    shiftKey: boolean;
+    defaultPrevented: boolean;
+    preventDefault(): void;
+  }) => {
+    if (
+      (e.key !== "ArrowLeft" && e.key !== "ArrowRight") ||
+      e.altKey ||
+      e.ctrlKey ||
+      e.metaKey ||
+      e.shiftKey ||
+      e.defaultPrevented
+    )
+      return false;
     e.preventDefault();
     goRef.current(e.key === "ArrowLeft" ? -1 : 1);
     return true;
@@ -42,40 +67,81 @@ export function PreviewGroup({ items, children }: { items: PreviewItem[]; childr
   const src = item ? `/api/files/${item.id}` : "";
   const several = items.length > 1;
   return (
-    <Open.Provider value={(id) => { back.remember(); setCurrentId(id); setOpen(true); }}>
+    <Open.Provider
+      value={(id) => {
+        back.remember();
+        setCurrentId(id);
+        setOpen(true);
+      }}
+    >
       {children}
       <Dialog open={open && index >= 0} onOpenChange={setOpen}>
         {item && (
           <DialogContent
             showCloseButton={false}
-            onOpenAutoFocus={(e) => { e.preventDefault(); close.current?.focus(); }}
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+              close.current?.focus();
+            }}
             onCloseAutoFocus={back.onCloseAutoFocus}
-            onKeyDown={(e) => { if (several) arrow(e); }}
+            onKeyDown={(e) => {
+              if (several) arrow(e);
+            }}
             className="h-[calc(100dvh-2rem)] grid-rows-[auto_auto_1fr] sm:max-w-5xl max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0"
           >
             <DialogHeader className="min-w-0">
-              <DialogTitle title={item.name} className="truncate leading-normal">{item.name}</DialogTitle>
-              <DialogDescription title={item.storedName} className="truncate">{item.storedName}</DialogDescription>
+              <DialogTitle title={item.name} className="truncate leading-normal">
+                {item.name}
+              </DialogTitle>
+              <DialogDescription title={item.storedName} className="truncate">
+                {item.storedName}
+              </DialogDescription>
             </DialogHeader>
             <div className="flex flex-wrap gap-2">
-              {several && <>
-                {/* aria-disabled, not disabled: a disabled button would drop keyboard focus to <body> at the end of the list */}
-                <Button type="button" variant="outline" size="sm" aria-keyshortcuts="ArrowLeft" aria-disabled={index === 0} className="aria-disabled:opacity-50" onClick={() => go(-1)}>
-                  <ChevronLeftIcon aria-hidden /> Previous
-                </Button>
-                <span role="status" className="self-center text-sm text-muted-foreground tabular-nums">{positionLabel(index, items.length)}</span>
-                <Button type="button" variant="outline" size="sm" aria-keyshortcuts="ArrowRight" aria-disabled={index === items.length - 1} className="aria-disabled:opacity-50" onClick={() => go(1)}>
-                  Next <ChevronRightIcon aria-hidden />
-                </Button>
-              </>}
+              {several && (
+                <>
+                  {/* aria-disabled, not disabled: a disabled button would drop keyboard focus to <body> at the end of the list */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-keyshortcuts="ArrowLeft"
+                    aria-disabled={index === 0}
+                    className="aria-disabled:opacity-50"
+                    onClick={() => go(-1)}
+                  >
+                    <ChevronLeftIcon aria-hidden /> Previous
+                  </Button>
+                  <span role="status" className="self-center text-sm text-muted-foreground tabular-nums">
+                    {positionLabel(index, items.length)}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-keyshortcuts="ArrowRight"
+                    aria-disabled={index === items.length - 1}
+                    className="aria-disabled:opacity-50"
+                    onClick={() => go(1)}
+                  >
+                    Next <ChevronRightIcon aria-hidden />
+                  </Button>
+                </>
+              )}
               <Button asChild variant="outline" size="sm">
-                <a href={src} target="_blank" rel="noopener">Open in new tab <ExternalLinkIcon aria-hidden /></a>
+                <a href={src} target="_blank" rel="noopener">
+                  Open in new tab <ExternalLinkIcon aria-hidden />
+                </a>
               </Button>
               <Button asChild variant="outline" size="sm">
-                <a href={`${src}?download=1`} target="_blank" rel="noopener">Download <DownloadIcon aria-hidden /></a>
+                <a href={`${src}?download=1`} target="_blank" rel="noopener">
+                  Download <DownloadIcon aria-hidden />
+                </a>
               </Button>
               <DialogClose asChild>
-                <Button ref={close} type="button" variant="outline" size="sm" className="ml-auto">Close</Button>
+                <Button ref={close} type="button" variant="outline" size="sm" className="ml-auto">
+                  Close
+                </Button>
               </DialogClose>
             </div>
             {item.kind === "image" ? (
@@ -92,7 +158,9 @@ export function PreviewGroup({ items, children }: { items: PreviewItem[]; childr
                       if (k.key === "Escape" && !k.defaultPrevented) setOpen(false);
                       else if (several) arrow(k);
                     });
-                  } catch { /* not readable: Close still works */ }
+                  } catch {
+                    /* not readable: Close still works */
+                  }
                 }}
                 className="size-full min-h-0 rounded-md border border-border bg-card"
               />
@@ -109,7 +177,10 @@ function ImageView({ src, name }: { src: string; name: string }) {
   return (
     <div className="flex min-h-0 items-center justify-center overflow-auto rounded-md border border-border bg-card p-2">
       {failed ? (
-        <p role="alert" className="text-sm text-muted-foreground">This image cannot be shown. It may have changed since it was uploaded, or be missing. Open it in a new tab to see why.</p>
+        <p role="alert" className="text-sm text-muted-foreground">
+          This image cannot be shown. It may have changed since it was uploaded, or be missing. Open it in a new tab to
+          see why.
+        </p>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element -- a same-origin, hash-checked stored file: next/image would only re-encode it
         <img src={src} alt={name} onError={() => setFailed(true)} className="size-full object-contain" />
@@ -126,7 +197,10 @@ export function PreviewButton({ id, name }: { id: number; name: string }) {
       variant="outline"
       size="sm"
       aria-label={`Preview ${name}`}
-      onClick={(e) => { e.currentTarget.focus(); open?.(id); }} // focus first: Safari and Firefox on macOS do not focus a clicked button, and the dialog returns focus to it
+      onClick={(e) => {
+        e.currentTarget.focus();
+        open?.(id);
+      }} // focus first: Safari and Firefox on macOS do not focus a clicked button, and the dialog returns focus to it
     >
       Preview <EyeIcon aria-hidden />
     </Button>

@@ -9,13 +9,29 @@ let db: ReturnType<typeof useTestDb>;
 let trackId: number;
 let appId: number;
 let n = 0;
-const mkApp = (userId = "local", t = trackId) => db.insert(applications).values({ userId, trackId: t, title: "A" }).returning().get().id;
+const mkApp = (userId = "local", t = trackId) =>
+  db.insert(applications).values({ userId, trackId: t, title: "A" }).returning().get().id;
 const mkFile = (over: Partial<NewStoredFile> = {}) => {
   n++;
-  return db.insert(files).values({
-    userId: "local", applicationId: appId, label: "CV", originalName: `cv${n}.docx`, storedName: `CV_${n}.docx`, relativePath: `job/a/CV_${n}.docx`,
-    sha256: "a".repeat(64), sizeBytes: 10, uploadDate: "2026-11-0" + (n % 9 + 1), baseName: "CV", extension: "docx", seq: n, ...over,
-  }).returning().get().id;
+  return db
+    .insert(files)
+    .values({
+      userId: "local",
+      applicationId: appId,
+      label: "CV",
+      originalName: `cv${n}.docx`,
+      storedName: `CV_${n}.docx`,
+      relativePath: `job/a/CV_${n}.docx`,
+      sha256: "a".repeat(64),
+      sizeBytes: 10,
+      uploadDate: "2026-11-0" + ((n % 9) + 1),
+      baseName: "CV",
+      extension: "docx",
+      seq: n,
+      ...over,
+    })
+    .returning()
+    .get().id;
 };
 const counts = () => [db.select().from(submissions).all().length, db.select().from(submissionFiles).all().length];
 
@@ -33,13 +49,28 @@ describe("createSubmission", () => {
     expect(r.ok).toBe(true);
     const row = db.select().from(submissions).get()!;
     expect(row).toMatchObject({ applicationId: appId, userId: "local", date: "2026-11-09", note: "sent by post" });
-    expect(db.select().from(submissionFiles).all().map((l) => [l.userId, l.submissionId, l.fileId])).toEqual([["local", row.id, a], ["local", row.id, b]]);
+    expect(
+      db
+        .select()
+        .from(submissionFiles)
+        .all()
+        .map((l) => [l.userId, l.submissionId, l.fileId]),
+    ).toEqual([
+      ["local", row.id, a],
+      ["local", row.id, b],
+    ]);
   });
 
   it("allows zero files, blank or missing note becomes null, and de-duplicates file ids", async () => {
     expect((await createSubmission(appId, [], "2026-11-09", "   ")).ok).toBe(true);
     expect((await createSubmission(appId, [], "2026-11-09", undefined)).ok).toBe(true);
-    expect(db.select().from(submissions).all().map((s) => s.note)).toEqual([null, null]);
+    expect(
+      db
+        .select()
+        .from(submissions)
+        .all()
+        .map((s) => s.note),
+    ).toEqual([null, null]);
     const f = mkFile();
     expect((await createSubmission(appId, [f, f, f], "2026-11-09", null)).ok).toBe(true);
     expect(db.select().from(submissionFiles).all()).toHaveLength(1);
@@ -70,8 +101,14 @@ describe("createSubmission", () => {
 
   it("refuses an unknown or another user's application", async () => {
     const otherTrack = db.insert(tracks).values({ userId: "other", name: "X", position: 0 }).returning().get().id;
-    expect(await createSubmission(9999, [], "2026-11-09", null)).toEqual({ ok: false, error: "Application not found." });
-    expect(await createSubmission(mkApp("other", otherTrack), [], "2026-11-09", null)).toEqual({ ok: false, error: "Application not found." });
+    expect(await createSubmission(9999, [], "2026-11-09", null)).toEqual({
+      ok: false,
+      error: "Application not found.",
+    });
+    expect(await createSubmission(mkApp("other", otherTrack), [], "2026-11-09", null)).toEqual({
+      ok: false,
+      error: "Application not found.",
+    });
     expect(counts()).toEqual([0, 0]);
   });
 
@@ -105,7 +142,18 @@ describe("listSubmissions", () => {
     const list = await listSubmissions(appId);
     expect(list.map((s) => s.id)).toEqual([s2.id, s1.id, s3.id]);
     expect(list[0].files.map((f) => f.id)).toEqual([f1, f2]);
-    expect(list[0].files[1]).toEqual({ id: f2, originalName: expect.any(String), storedName: expect.any(String), label: "Cover letter", uploadDate: expect.any(String), sizeBytes: expect.any(Number), sha256: expect.any(String), integrity: "ok", checkedAt: null, deletedAt: null });
+    expect(list[0].files[1]).toEqual({
+      id: f2,
+      originalName: expect.any(String),
+      storedName: expect.any(String),
+      label: "Cover letter",
+      uploadDate: expect.any(String),
+      sizeBytes: expect.any(Number),
+      sha256: expect.any(String),
+      integrity: "ok",
+      checkedAt: null,
+      deletedAt: null,
+    });
     expect(list[1]).toMatchObject({ note: "first", date: "2026-11-09" });
     expect(list[2]).toMatchObject({ note: "older, added later", files: [] });
   });

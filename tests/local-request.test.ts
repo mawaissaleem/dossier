@@ -6,10 +6,12 @@ const h = (o: Record<string, string>) => new Headers(o);
 
 describe("isLocalHost", () => {
   it("accepts localhost, 127.0.0.1 and [::1] with or without a port, any case", () => {
-    for (const host of ["localhost", "LOCALHOST:3000", "127.0.0.1:4000", "[::1]:3000"]) expect(isLocalHost(h({ host }))).toBe(true);
+    for (const host of ["localhost", "LOCALHOST:3000", "127.0.0.1:4000", "[::1]:3000"])
+      expect(isLocalHost(h({ host }))).toBe(true);
   });
   it("refuses other hosts and a missing Host", () => {
-    for (const host of ["evil.example", "localhost.evil.example:3000", "127.0.0.1.evil.example"]) expect(isLocalHost(h({ host }))).toBe(false);
+    for (const host of ["evil.example", "localhost.evil.example:3000", "127.0.0.1.evil.example"])
+      expect(isLocalHost(h({ host }))).toBe(false);
     expect(isLocalHost(h({}))).toBe(false);
   });
 });
@@ -20,7 +22,14 @@ describe("isSameOrigin", () => {
     expect(isSameOrigin(h({ host, origin: "http://localhost:3000" }))).toBe(true);
   });
   it("refuses another origin, port, scheme-less or null Origin", () => {
-    for (const origin of ["http://evil.example", "http://localhost:3001", "http://127.0.0.1:3000", "null", "localhost:3000", "ftp://localhost:3000"])
+    for (const origin of [
+      "http://evil.example",
+      "http://localhost:3001",
+      "http://127.0.0.1:3000",
+      "null",
+      "localhost:3000",
+      "ftp://localhost:3000",
+    ])
       expect(isSameOrigin(h({ host, origin }))).toBe(false);
   });
   it("without Origin needs Sec-Fetch-Site: same-origin", () => {
@@ -38,19 +47,28 @@ describe("parseUploadFields", () => {
   it("defaults a missing or blank date to today and trims the label", () => {
     expect(parseUploadFields(" CV ", null, today)).toEqual({ ok: true, fields: { label: "CV", uploadDate: today } });
     expect(parseUploadFields("CV", "  ", today)).toEqual({ ok: true, fields: { label: "CV", uploadDate: today } });
-    expect(parseUploadFields("CV", "2026-02-28", today)).toEqual({ ok: true, fields: { label: "CV", uploadDate: "2026-02-28" } });
+    expect(parseUploadFields("CV", "2026-02-28", today)).toEqual({
+      ok: true,
+      fields: { label: "CV", uploadDate: "2026-02-28" },
+    });
   });
   it("rejects a missing, blank, long or multi-line label", () => {
-    for (const l of [null, "", "  ", "a".repeat(61), "a\nb", 5]) expect(parseUploadFields(l, null, today)).toMatchObject({ ok: false, errors: { label: expect.any(String) } });
+    for (const l of [null, "", "  ", "a".repeat(61), "a\nb", 5])
+      expect(parseUploadFields(l, null, today)).toMatchObject({ ok: false, errors: { label: expect.any(String) } });
   });
   it("rejects a bad date", () => {
-    for (const d of ["2026-02-30", "08/11/2026", "2026-1-1", " 2026-11-08", 20261108]) expect(parseUploadFields("CV", d, today)).toMatchObject({ ok: false, errors: { uploadDate: expect.any(String) } });
+    for (const d of ["2026-02-30", "08/11/2026", "2026-1-1", " 2026-11-08", 20261108])
+      expect(parseUploadFields("CV", d, today)).toMatchObject({
+        ok: false,
+        errors: { uploadDate: expect.any(String) },
+      });
   });
 });
 
 describe("isCrossSiteFetch", () => {
   it("refuses cross-site and same-site (another localhost port), any case", () => {
-    for (const v of ["cross-site", "same-site", "Cross-Site"]) expect(isCrossSiteFetch(h({ "sec-fetch-site": v }))).toBe(true);
+    for (const v of ["cross-site", "same-site", "Cross-Site"])
+      expect(isCrossSiteFetch(h({ "sec-fetch-site": v }))).toBe(true);
   });
   it("allows same-origin, none, a missing header and unknown values", () => {
     for (const v of ["same-origin", "none"]) expect(isCrossSiteFetch(h({ "sec-fetch-site": v }))).toBe(false);

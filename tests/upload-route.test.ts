@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,13 +22,19 @@ import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
 import { multipart } from "./helpers/multipart";
 
 // Hooks into the file calls of lib/files/store.ts; null = the real call.
-const fsHooks = vi.hoisted(() => ({ link: null as null | (() => Promise<void>), onChmod: null as null | ((path: string, mode: number) => void) }));
+const fsHooks = vi.hoisted(() => ({
+  link: null as null | (() => Promise<void>),
+  onChmod: null as null | ((path: string, mode: number) => void),
+}));
 vi.mock("node:fs/promises", async (importOriginal) => {
   const real = await importOriginal<typeof import("node:fs/promises")>();
   return {
     ...real,
     link: (a: string, b: string) => (fsHooks.link ? fsHooks.link() : real.link(a, b)),
-    chmod: (p: string, m: number) => { fsHooks.onChmod?.(p, m); return real.chmod(p, m); },
+    chmod: (p: string, m: number) => {
+      fsHooks.onChmod?.(p, m);
+      return real.chmod(p, m);
+    },
   };
 });
 
@@ -30,26 +45,44 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
 const readOnly = process.platform !== "win32"; // POSIX mode bits; Windows only has the read-only attribute
 
 async function mkApp(title = "T", track = "Job") {
-  const trackId = db.select().from(tracks).all().find((t) => t.name === track)!.id;
+  const trackId = db
+    .select()
+    .from(tracks)
+    .all()
+    .find((t) => t.name === track)!.id;
   const r = await createApplication({ title, trackId, values: [] });
   if (!r.ok) throw new Error(r.error);
   return r.id;
 }
 
 type Part = [name: string, content: Buffer | string];
-async function post(id: number | string, parts: Part[], fields: Record<string, string> = { label: "CV", uploadDate: DATE }, headers: Record<string, string> = {}) {
+async function post(
+  id: number | string,
+  parts: Part[],
+  fields: Record<string, string> = { label: "CV", uploadDate: DATE },
+  headers: Record<string, string> = {},
+) {
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.set(k, v);
-  for (const [name, content] of parts) form.append("files", new File([new Uint8Array(typeof content === "string" ? Buffer.from(content) : content)], name));
+  for (const [name, content] of parts)
+    form.append(
+      "files",
+      new File([new Uint8Array(typeof content === "string" ? Buffer.from(content) : content)], name),
+    );
   const { body, contentType } = await multipart(form);
   return POST(
-    new NextRequest(`http://localhost:3000/api/applications/${id}/files`, { method: "POST", body, headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": contentType, ...headers } }),
+    new NextRequest(`http://localhost:3000/api/applications/${id}/files`, {
+      method: "POST",
+      body,
+      headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": contentType, ...headers },
+    }),
     { params: Promise.resolve({ id: String(id) }) } as never,
   );
 }
 // Default content differs per call: identical bytes in one application are now a duplicate (5.9).
 let n = 0;
-const upload = (name: string, content: Buffer | string = `content ${++n}`, fields?: Record<string, string>) => post(appId, [[name, content]], fields);
+const upload = (name: string, content: Buffer | string = `content ${++n}`, fields?: Record<string, string>) =>
+  post(appId, [[name, content]], fields);
 const rows = () => db.select().from(files).all();
 const allEntries = () => readdirSync(root, { recursive: true }).map((e) => String(e).replaceAll("\\", "/")); // Windows lists with backslashes
 
@@ -78,8 +111,25 @@ describe("POST /api/applications/:id/files", () => {
     const { files: out } = await res.json();
     expect(out).toHaveLength(1);
     const row = rows()[0];
-    expect(out[0]).toEqual({ id: row.id, storedName: "01-20261108-My_CV.pdf", relativePath: "Acme_Robotics_2026-11/01-20261108-My_CV.pdf", sizeBytes: 8, sha256: sha(content) });
-    expect(row).toMatchObject({ originalName: "My CV.pdf", label: "CV", uploadDate: DATE, baseName: "My_CV", extension: "pdf", seq: 1, sizeBytes: 8, sha256: sha(content), relativePath: out[0].relativePath, userId: "local" });
+    expect(out[0]).toEqual({
+      id: row.id,
+      storedName: "01-20261108-My_CV.pdf",
+      relativePath: "Acme_Robotics_2026-11/01-20261108-My_CV.pdf",
+      sizeBytes: 8,
+      sha256: sha(content),
+    });
+    expect(row).toMatchObject({
+      originalName: "My CV.pdf",
+      label: "CV",
+      uploadDate: DATE,
+      baseName: "My_CV",
+      extension: "pdf",
+      seq: 1,
+      sizeBytes: 8,
+      sha256: sha(content),
+      relativePath: out[0].relativePath,
+      userId: "local",
+    });
     const disk = join(root, out[0].relativePath);
     expect(readFileSync(disk)).toEqual(content);
     if (readOnly) expect(statSync(disk).mode & 0o777).toBe(0o444);
@@ -88,9 +138,18 @@ describe("POST /api/applications/:id/files", () => {
 
   it("AT-5: CV.docx and CV.pdf are both 01, a changed CV.pdf the same day is 02", async () => {
     const names = async (r: Response) => (await r.json()).files.map((f: { storedName: string }) => f.storedName);
-    expect(await names(await post(appId, [["CV.docx", "a"], ["CV.pdf", "b"]]))).toEqual(["01-20261108-CV.docx", "01-20261108-CV.pdf"]);
+    expect(
+      await names(
+        await post(appId, [
+          ["CV.docx", "a"],
+          ["CV.pdf", "b"],
+        ]),
+      ),
+    ).toEqual(["01-20261108-CV.docx", "01-20261108-CV.pdf"]);
     expect(await names(await upload("CV.pdf", "changed"))).toEqual(["02-20261108-CV.pdf"]);
-    expect(await names(await upload("CV.pdf", "other day", { label: "CV", uploadDate: "2026-11-09" }))).toEqual(["01-20261109-CV.pdf"]);
+    expect(await names(await upload("CV.pdf", "other day", { label: "CV", uploadDate: "2026-11-09" }))).toEqual([
+      "01-20261109-CV.pdf",
+    ]);
     expect(new Set(rows().map((r) => r.relativePath.split("/")[0])).size).toBe(1); // one folder for the application
   });
 
@@ -118,7 +177,15 @@ describe("POST /api/applications/:id/files", () => {
       expect(r.status).toBe(201);
     }
     const stored = rows();
-    expect(stored.map((r) => r.storedName)).toEqual(expect.arrayContaining(["01-20261108-evil.pdf", "01-20261108-b.pdf", "01-20261108-x.pdf", "01-20261108-y.pdf", "01-20261108-passwd"]));
+    expect(stored.map((r) => r.storedName)).toEqual(
+      expect.arrayContaining([
+        "01-20261108-evil.pdf",
+        "01-20261108-b.pdf",
+        "01-20261108-x.pdf",
+        "01-20261108-y.pdf",
+        "01-20261108-passwd",
+      ]),
+    );
     for (const r of stored) expect(r.relativePath).toMatch(/^Acme_Robotics_2026-11\/[^/]+$/);
     expect(readdirSync(base)).toEqual(["root"]);
     expect(readdirSync(root)).toEqual(["Acme_Robotics_2026-11"]);
@@ -136,7 +203,11 @@ describe("POST /api/applications/:id/files", () => {
       expect((await post(appId, [["a.pdf", "x"]], undefined, { origin: "http://evil.example" })).status).toBe(403);
       expect((await post(appId, [["a.pdf", "x"]], undefined, { origin: "http://localhost:3001" })).status).toBe(403);
       const empty = await multipart(new FormData());
-      const noOrigin = new NextRequest("http://localhost:3000/api/applications/1/files", { method: "POST", body: empty.body, headers: { host: "localhost:3000", "content-type": empty.contentType } });
+      const noOrigin = new NextRequest("http://localhost:3000/api/applications/1/files", {
+        method: "POST",
+        body: empty.body,
+        headers: { host: "localhost:3000", "content-type": empty.contentType },
+      });
       expect((await POST(noOrigin, { params: Promise.resolve({ id: String(appId) }) } as never)).status).toBe(403);
       expect(rows()).toHaveLength(0);
       expect(allEntries()).toEqual([]);
@@ -146,7 +217,11 @@ describe("POST /api/applications/:id/files", () => {
       f.set("label", "CV");
       f.append("files", new File(["x"], "a.pdf"));
       const { body, contentType } = await multipart(f);
-      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, { method: "POST", body, headers: { host: "localhost:3000", "sec-fetch-site": "same-origin", "content-type": contentType } });
+      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, {
+        method: "POST",
+        body,
+        headers: { host: "localhost:3000", "sec-fetch-site": "same-origin", "content-type": contentType },
+      });
       expect((await POST(req, { params: Promise.resolve({ id: String(appId) }) } as never)).status).toBe(201);
     });
     it("413 over 50 MB (real body, no Content-Length) and writes nothing", async () => {
@@ -165,7 +240,11 @@ describe("POST /api/applications/:id/files", () => {
       expect(allEntries()).toEqual([]);
     });
     it("400 for a body that is not multipart", async () => {
-      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, { method: "POST", body: "{}", headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": "application/json" } });
+      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, {
+        method: "POST",
+        body: "{}",
+        headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": "application/json" },
+      });
       expect((await POST(req, { params: Promise.resolve({ id: String(appId) }) } as never)).status).toBe(400);
     });
   });
@@ -186,12 +265,26 @@ describe("POST /api/applications/:id/files", () => {
     it("the empty part a browser sends for a file input with nothing chosen is not a file: 400, no row, no folder", async () => {
       const b = "----dossierBoundary";
       const body = [
-        `--${b}`, 'Content-Disposition: form-data; name="label"', "", "CV",
-        `--${b}`, 'Content-Disposition: form-data; name="files"; filename=""', "Content-Type: application/octet-stream", "", "",
-        `--${b}--`, "",
+        `--${b}`,
+        'Content-Disposition: form-data; name="label"',
+        "",
+        "CV",
+        `--${b}`,
+        'Content-Disposition: form-data; name="files"; filename=""',
+        "Content-Type: application/octet-stream",
+        "",
+        "",
+        `--${b}--`,
+        "",
       ].join("\r\n"); // a raw body: new File([], "") built in Node is not sent this way
       const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, {
-        method: "POST", body, headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": `multipart/form-data; boundary=${b}` },
+        method: "POST",
+        body,
+        headers: {
+          host: "localhost:3000",
+          origin: "http://localhost:3000",
+          "content-type": `multipart/form-data; boundary=${b}`,
+        },
       });
       const r = await POST(req, { params: Promise.resolve({ id: String(appId) }) } as never);
       expect([r.status, (await r.json()).errors.files]).toEqual([400, expect.any(String)]);
@@ -203,7 +296,11 @@ describe("POST /api/applications/:id/files", () => {
       form.set("label", "CV");
       form.append("files", "not a file");
       const { body, contentType } = await multipart(form);
-      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, { method: "POST", body, headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": contentType } });
+      const req = new NextRequest(`http://localhost:3000/api/applications/${appId}/files`, {
+        method: "POST",
+        body,
+        headers: { host: "localhost:3000", origin: "http://localhost:3000", "content-type": contentType },
+      });
       expect((await POST(req, { params: Promise.resolve({ id: String(appId) }) } as never)).status).toBe(400);
     });
   });
@@ -249,7 +346,10 @@ describe("POST /api/applications/:id/files", () => {
     });
     it("a failing stream leaves nothing behind", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
-      const bad = { name: "a.pdf", stream: () => new ReadableStream({ start: (c) => c.error(new Error("read failed")) }) };
+      const bad = {
+        name: "a.pdf",
+        stream: () => new ReadableStream({ start: (c) => c.error(new Error("read failed")) }),
+      };
       const r = await storeUploadedFile({ applicationId: appId, file: bad, label: "CV", uploadDate: DATE });
       expect(r).toMatchObject({ ok: false, kind: "error" });
       expect(rows()).toHaveLength(0);
@@ -265,18 +365,27 @@ describe("duplicate detection (FR-5.7, AT-7)", () => {
     const first = await (await upload("CV.pdf", "same")).json();
     const res = await upload("CV.pdf", "same");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ files: [], duplicates: [{ originalName: "CV.pdf", id: first.files[0].id, storedName: "01-20261108-CV.pdf" }] });
+    expect(await res.json()).toEqual({
+      files: [],
+      duplicates: [{ originalName: "CV.pdf", id: first.files[0].id, storedName: "01-20261108-CV.pdf" }],
+    });
     expect(rows()).toHaveLength(1);
     expect(readdirSync(folder())).toEqual(["01-20261108-CV.pdf"]);
   });
   it("only the hash counts: another name, label or date is still a duplicate", async () => {
     await upload("CV.pdf", "same");
     const r = await upload("Resume final.docx", "same", { label: "Cover letter", uploadDate: "2026-12-01" });
-    expect([r.status, (await r.json()).duplicates]).toEqual([200, [expect.objectContaining({ originalName: "Resume final.docx", storedName: "01-20261108-CV.pdf" })]]);
+    expect([r.status, (await r.json()).duplicates]).toEqual([
+      200,
+      [expect.objectContaining({ originalName: "Resume final.docx", storedName: "01-20261108-CV.pdf" })],
+    ]);
     expect(rows()).toHaveLength(1);
   });
   it("two identical files in one request: the first is stored, the second is a duplicate of it (201)", async () => {
-    const res = await post(appId, [["a.pdf", "same"], ["b.pdf", "same"]]);
+    const res = await post(appId, [
+      ["a.pdf", "same"],
+      ["b.pdf", "same"],
+    ]);
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.files.map((f: { storedName: string }) => f.storedName)).toEqual(["01-20261108-a.pdf"]);
@@ -285,9 +394,16 @@ describe("duplicate detection (FR-5.7, AT-7)", () => {
   });
   it("a mixed request stores the new file and reports the duplicate", async () => {
     await upload("a.pdf", "old");
-    const res = await post(appId, [["a-again.pdf", "old"], ["new.pdf", "new"]]);
+    const res = await post(appId, [
+      ["a-again.pdf", "old"],
+      ["new.pdf", "new"],
+    ]);
     const body = await res.json();
-    expect([res.status, body.files.map((f: { storedName: string }) => f.storedName), body.duplicates.map((d: { originalName: string }) => d.originalName)]).toEqual([201, ["01-20261108-new.pdf"], ["a-again.pdf"]]);
+    expect([
+      res.status,
+      body.files.map((f: { storedName: string }) => f.storedName),
+      body.duplicates.map((d: { originalName: string }) => d.originalName),
+    ]).toEqual([201, ["01-20261108-new.pdf"], ["a-again.pdf"]]);
   });
   it("the same bytes in a different application are stored normally", async () => {
     await upload("CV.pdf", "same");
@@ -305,13 +421,22 @@ describe("duplicate detection (FR-5.7, AT-7)", () => {
   it("a duplicate that is the only result leaves no new folder behind (storeFileUnlocked on a first upload)", async () => {
     const mod = await import("@/lib/db/files");
     vi.spyOn(mod, "findFileByHash").mockResolvedValue({ id: 1, storedName: "01-20261108-x.pdf" });
-    const r = await storeUploadedFile({ applicationId: appId, file: new File(["x"], "x.pdf"), label: "CV", uploadDate: DATE });
+    const r = await storeUploadedFile({
+      applicationId: appId,
+      file: new File(["x"], "x.pdf"),
+      label: "CV",
+      uploadDate: DATE,
+    });
     expect(r).toEqual({ ok: true, duplicateOf: { id: 1, storedName: "01-20261108-x.pdf" } });
     expect(rows()).toHaveLength(0);
     expect(allEntries()).toEqual([]);
   });
   it("concurrent identical uploads store one copy (the per-application queue)", async () => {
-    const rs = await Promise.all([1, 2, 3].map(() => storeUploadedFile({ applicationId: appId, file: new File(["same"], "CV.pdf"), label: "CV", uploadDate: DATE })));
+    const rs = await Promise.all(
+      [1, 2, 3].map(() =>
+        storeUploadedFile({ applicationId: appId, file: new File(["same"], "CV.pdf"), label: "CV", uploadDate: DATE }),
+      ),
+    );
     expect(rs.filter((r) => r.ok && "file" in r)).toHaveLength(1);
     expect(rows()).toHaveLength(1);
     expect(readdirSync(folder())).toHaveLength(1);
@@ -321,7 +446,9 @@ describe("duplicate detection (FR-5.7, AT-7)", () => {
 describe("placing the file", () => {
   it("the temp name is gone before the file is made read-only (Windows would clear the attribute when removing it later)", async () => {
     const seen: string[][] = [];
-    fsHooks.onChmod = (p, m) => { if (m === 0o444) seen.push(readdirSync(join(p, ".."))); };
+    fsHooks.onChmod = (p, m) => {
+      if (m === 0o444) seen.push(readdirSync(join(p, "..")));
+    };
     expect((await upload("CV.pdf")).status).toBe(201);
     expect(seen).toEqual([["01-20261108-CV.pdf"]]);
   });
@@ -356,17 +483,37 @@ describe("placing the file", () => {
 
 describe("serialising and the counter race", () => {
   it("concurrent FIRST uploads for one application create exactly one folder", async () => {
-    const rs = await Promise.all([1, 2, 3, 4].map((i) => storeUploadedFile({ applicationId: appId, file: new File([`c${i}`], "CV.pdf"), label: "CV", uploadDate: DATE })));
+    const rs = await Promise.all(
+      [1, 2, 3, 4].map((i) =>
+        storeUploadedFile({ applicationId: appId, file: new File([`c${i}`], "CV.pdf"), label: "CV", uploadDate: DATE }),
+      ),
+    );
     expect(rs.every((r) => r.ok)).toBe(true);
     expect(readdirSync(root)).toEqual(["Acme_Robotics_2026-11"]);
-    expect(rows().map((r) => r.seq).sort()).toEqual([1, 2, 3, 4]);
+    expect(
+      rows()
+        .map((r) => r.seq)
+        .sort(),
+    ).toEqual([1, 2, 3, 4]);
   });
   it("concurrent uploads of the same base/date/ext never share a seq (no per-application queue: EEXIST and unique-index retry)", async () => {
     await upload("CV.pdf", "first"); // the folder exists, so only the counter is raced
-    const rs = await Promise.all(Array.from({ length: 8 }, (_, i) => storeFileUnlocked({ applicationId: appId, file: new File([`c${i}`], "CV.pdf"), label: "CV", uploadDate: DATE })));
+    const rs = await Promise.all(
+      Array.from({ length: 8 }, (_, i) =>
+        storeFileUnlocked({ applicationId: appId, file: new File([`c${i}`], "CV.pdf"), label: "CV", uploadDate: DATE }),
+      ),
+    );
     expect(rs.filter((r) => !r.ok)).toEqual([]); // lists the failures, if any
-    expect(rows().map((r) => r.seq).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(readdirSync(join(root, "Acme_Robotics_2026-11")).sort()).toEqual(rows().map((r) => r.storedName).sort());
+    expect(
+      rows()
+        .map((r) => r.seq)
+        .sort((a, b) => a - b),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(readdirSync(join(root, "Acme_Robotics_2026-11")).sort()).toEqual(
+      rows()
+        .map((r) => r.storedName)
+        .sort(),
+    );
     for (const r of rows()) expect(sha(readFileSync(join(root, r.relativePath)))).toBe(r.sha256);
   });
   it("a file already on disk without a row (manual drop or crash) is skipped, not overwritten", async () => {
@@ -384,10 +531,20 @@ describe("serialising and the counter race", () => {
     const mod = await import("@/lib/db/files");
     const real = mod.getCounterEntries;
     let first = true;
-    vi.spyOn(mod, "getCounterEntries").mockImplementation(async (id) => { if (first) { first = false; return []; } return real(id); }); // stale read
+    vi.spyOn(mod, "getCounterEntries").mockImplementation(async (id) => {
+      if (first) {
+        first = false;
+        return [];
+      }
+      return real(id);
+    }); // stale read
     const r = await upload("CV.pdf", "second");
     expect((await r.json()).files[0].storedName).toBe("02-20261108-CV.pdf");
-    expect(rows().map((x) => x.seq).sort()).toEqual([1, 2]);
+    expect(
+      rows()
+        .map((x) => x.seq)
+        .sort(),
+    ).toEqual([1, 2]);
     expect(readdirSync(join(root, "Acme_Robotics_2026-11"))).toEqual(["02-20261108-CV.pdf"]);
   });
 });

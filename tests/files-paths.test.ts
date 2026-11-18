@@ -11,12 +11,30 @@ describe("checkRelativePath (pure)", () => {
   });
 
   it.each([
-    ["empty", ""], ["not a string", 5], ["undefined", undefined],
-    ["parent first", "../x"], ["parent middle", "a/../../x"], ["parent last", "a/.."], ["bare parent", ".."], ["parent inside", "a/../b"],
-    ["absolute", "/etc/passwd"], ["dot", "."], ["dot segment", "./a"], ["dot middle", "a/./b"],
-    ["empty segment", "a//b"], ["trailing slash", "a/"],
-    ["drive", "C:\\x"], ["drive relative", "C:x"], ["drive slash", "C:/x"], ["UNC", "\\\\server\\share"], ["backslash traversal", "a\\..\\x"], ["backslash", "a\\b"],
-    ["NUL", "a\0b"], ["trailing dot (Windows reads ... as ..)", "a/.../x"], ["trailing space (Windows reads '.. ' as ..)", "a/.. /x"], ["trailing space name", "a /x"],
+    ["empty", ""],
+    ["not a string", 5],
+    ["undefined", undefined],
+    ["parent first", "../x"],
+    ["parent middle", "a/../../x"],
+    ["parent last", "a/.."],
+    ["bare parent", ".."],
+    ["parent inside", "a/../b"],
+    ["absolute", "/etc/passwd"],
+    ["dot", "."],
+    ["dot segment", "./a"],
+    ["dot middle", "a/./b"],
+    ["empty segment", "a//b"],
+    ["trailing slash", "a/"],
+    ["drive", "C:\\x"],
+    ["drive relative", "C:x"],
+    ["drive slash", "C:/x"],
+    ["UNC", "\\\\server\\share"],
+    ["backslash traversal", "a\\..\\x"],
+    ["backslash", "a\\b"],
+    ["NUL", "a\0b"],
+    ["trailing dot (Windows reads ... as ..)", "a/.../x"],
+    ["trailing space (Windows reads '.. ' as ..)", "a/.. /x"],
+    ["trailing space name", "a /x"],
     ["too long", "a".repeat(5000)],
   ])("rejects %s", (_n, p) => {
     expect(checkRelativePath(p).ok).toBe(false);
@@ -75,7 +93,17 @@ describe("resolveInRoot", () => {
     expect(await resolveInRoot(root, "new/deep/f.txt")).toEqual({ ok: true, path: join(root, "new", "deep", "f.txt") });
   });
 
-  it.each(["../outside/secret.txt", "a/../../outside/secret.txt", "a/..", "..", "/etc/passwd", "", "a\\..\\x", "C:\\x", "a\0b"])("fails safely on %j", async (p) => {
+  it.each([
+    "../outside/secret.txt",
+    "a/../../outside/secret.txt",
+    "a/..",
+    "..",
+    "/etc/passwd",
+    "",
+    "a\\..\\x",
+    "C:\\x",
+    "a\0b",
+  ])("fails safely on %j", async (p) => {
     const r = await resolveInRoot(root, p);
     expect(r.ok).toBe(false);
   });

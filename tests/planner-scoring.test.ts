@@ -1,12 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { daysLeft, lowestPriorityOption, rankApplications, scoreApplication, type BufferOption, type PlannerApp } from "@/lib/planner";
+import {
+  daysLeft,
+  lowestPriorityOption,
+  rankApplications,
+  scoreApplication,
+  type BufferOption,
+  type PlannerApp,
+} from "@/lib/planner";
 
-const PRIORITY = 1, GOOD = 2, HEAVY = 10, LIGHT = 11;
-const priorityOpts: BufferOption[] = [{ id: PRIORITY, position: 0, bufferDays: 3 }, { id: GOOD, position: 1, bufferDays: 0 }];
-const effortOpts: BufferOption[] = [{ id: HEAVY, position: 0, bufferDays: 2 }, { id: LIGHT, position: 1, bufferDays: 0 }];
+const PRIORITY = 1,
+  GOOD = 2,
+  HEAVY = 10,
+  LIGHT = 11;
+const priorityOpts: BufferOption[] = [
+  { id: PRIORITY, position: 0, bufferDays: 3 },
+  { id: GOOD, position: 1, bufferDays: 0 },
+];
+const effortOpts: BufferOption[] = [
+  { id: HEAVY, position: 0, bufferDays: 2 },
+  { id: LIGHT, position: 1, bufferDays: 0 },
+];
 const TODAY = "2026-11-12";
-const app = (id: number, deadline: unknown, priority: number | null, effort: number | null = null): PlannerApp => ({ id, deadline, priority, effort });
-const order = (apps: PlannerApp[], p = priorityOpts, e = effortOpts) => rankApplications(apps, TODAY, p, e).ranked.map((s) => s.app.id);
+const app = (id: number, deadline: unknown, priority: number | null, effort: number | null = null): PlannerApp => ({
+  id,
+  deadline,
+  priority,
+  effort,
+});
+const order = (apps: PlannerApp[], p = priorityOpts, e = effortOpts) =>
+  rankApplications(apps, TODAY, p, e).ranked.map((s) => s.app.id);
 
 describe("daysLeft", () => {
   it("counts calendar days", () => {
@@ -22,7 +44,8 @@ describe("daysLeft", () => {
     expect(daysLeft("2026-01-01", "2025-01-01")).toBe(365);
   });
   it("is null for blank or invalid values", () => {
-    for (const v of [null, undefined, "", "tomorrow", "2026-02-30", "2027-02-29", "2026-13-01", "2026-1-5", 20261114]) expect(daysLeft(v, TODAY)).toBeNull();
+    for (const v of [null, undefined, "", "tomorrow", "2026-02-30", "2027-02-29", "2026-13-01", "2026-1-5", 20261114])
+      expect(daysLeft(v, TODAY)).toBeNull();
     expect(daysLeft("2026-11-14", "nope")).toBeNull();
   });
 });
@@ -61,17 +84,32 @@ describe("AT-11", () => {
 describe("score parts", () => {
   it("subtracts the effort buffer and reports each part", () => {
     const s = scoreApplication(app(1, "2026-11-14", PRIORITY, HEAVY), TODAY, priorityOpts, effortOpts)!;
-    expect(s).toMatchObject({ score: -3, daysLeft: 2, priority: { optionId: PRIORITY, buffer: 3, fallback: false }, effort: { optionId: HEAVY, buffer: 2 } });
+    expect(s).toMatchObject({
+      score: -3,
+      daysLeft: 2,
+      priority: { optionId: PRIORITY, buffer: 3, fallback: false },
+      effort: { optionId: HEAVY, buffer: 2 },
+    });
   });
   it("effort buffer can change the order", () => {
     const apps = [app(1, "2026-11-15", GOOD, null), app(2, "2026-11-16", GOOD, HEAVY)]; // 3 vs 4-2=2
     expect(order(apps)).toEqual([2, 1]);
   });
   it("missing or unknown effort counts 0; NULL buffers count 0", () => {
-    expect(scoreApplication(app(1, "2026-11-14", GOOD, null), TODAY, priorityOpts, effortOpts)!.effort).toEqual({ optionId: null, buffer: 0 });
+    expect(scoreApplication(app(1, "2026-11-14", GOOD, null), TODAY, priorityOpts, effortOpts)!.effort).toEqual({
+      optionId: null,
+      buffer: 0,
+    });
     expect(scoreApplication(app(1, "2026-11-14", GOOD, 999), TODAY, priorityOpts, effortOpts)!.score).toBe(2);
-    expect(scoreApplication(app(1, "2026-11-14", GOOD, HEAVY), TODAY, priorityOpts, [{ id: HEAVY, position: 0, bufferDays: null }])!.score).toBe(2);
-    expect(scoreApplication(app(1, "2026-11-14", PRIORITY), TODAY, [{ id: PRIORITY, position: 0, bufferDays: null }], [])!.score).toBe(2);
+    expect(
+      scoreApplication(app(1, "2026-11-14", GOOD, HEAVY), TODAY, priorityOpts, [
+        { id: HEAVY, position: 0, bufferDays: null },
+      ])!.score,
+    ).toBe(2);
+    expect(
+      scoreApplication(app(1, "2026-11-14", PRIORITY), TODAY, [{ id: PRIORITY, position: 0, bufferDays: null }], [])!
+        .score,
+    ).toBe(2);
   });
   it("overdue applications score normally (negative days)", () => {
     const s = scoreApplication(app(1, "2026-11-10", GOOD), TODAY, priorityOpts, effortOpts)!;
@@ -89,7 +127,11 @@ describe("FR-8.7 no priority", () => {
     expect(scoreApplication(app(1, "2026-11-14", 999), TODAY, priorityOpts, effortOpts)!.priority.fallback).toBe(true);
   });
   it("ties on the smallest buffer go to the last by position, whatever the array order", () => {
-    const opts: BufferOption[] = [{ id: 5, position: 2, bufferDays: null }, { id: 6, position: 0, bufferDays: 0 }, { id: 7, position: 1, bufferDays: 4 }];
+    const opts: BufferOption[] = [
+      { id: 5, position: 2, bufferDays: null },
+      { id: 6, position: 0, bufferDays: 0 },
+      { id: 7, position: 1, bufferDays: 4 },
+    ];
     expect(lowestPriorityOption(opts)!.id).toBe(5);
     expect(lowestPriorityOption([...opts].reverse())!.id).toBe(5);
   });
@@ -103,12 +145,19 @@ describe("FR-8.7 no priority", () => {
 
 describe("rankApplications", () => {
   it("returns applications without a valid deadline separately, unranked, in input order", () => {
-    const r = rankApplications([app(3, null, PRIORITY), app(1, "2026-11-14", GOOD), app(2, "2026-02-30", GOOD), app(4, "", GOOD)], TODAY, priorityOpts, effortOpts);
+    const r = rankApplications(
+      [app(3, null, PRIORITY), app(1, "2026-11-14", GOOD), app(2, "2026-02-30", GOOD), app(4, "", GOOD)],
+      TODAY,
+      priorityOpts,
+      effortOpts,
+    );
     expect(r.ranked.map((s) => s.app.id)).toEqual([1]);
     expect(r.undated.map((a) => a.id)).toEqual([3, 2, 4]);
   });
   it("ranks overdue applications by their negative score", () => {
-    expect(order([app(1, "2026-11-13", GOOD), app(2, "2026-11-01", GOOD), app(3, "2026-11-12", GOOD)])).toEqual([2, 3, 1]);
+    expect(order([app(1, "2026-11-13", GOOD), app(2, "2026-11-01", GOOD), app(3, "2026-11-12", GOOD)])).toEqual([
+      2, 3, 1,
+    ]);
   });
   it("does not change its input", () => {
     const apps = [app(2, "2026-11-20", GOOD), app(1, "2026-11-13", GOOD)];

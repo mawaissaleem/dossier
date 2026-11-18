@@ -22,7 +22,12 @@ async function FilesSection() {
   return (
     <>
       <p className="text-sm">
-        Current files root: {root ? <code className="rounded bg-muted px-1.5 py-0.5 break-all">{root}</code> : <span className="text-muted-foreground">Not set yet</span>}
+        Current files root:{" "}
+        {root ? (
+          <code className="rounded bg-muted px-1.5 py-0.5 break-all">{root}</code>
+        ) : (
+          <span className="text-muted-foreground">Not set yet</span>
+        )}
       </p>
       <FilesRootForm current={root} liveFiles={live.length} />
     </>
@@ -34,7 +39,15 @@ async function BackupSection() {
   const [dest, last, days] = await Promise.all([getBackupDestination(), getLastBackupAt(), getReminderDays()]);
   return (
     <>
-      <p className="text-sm">{last ? <>Last backup: <time dateTime={last}>{new Date(last).toLocaleString()}</time></> : <span className="text-muted-foreground">Never backed up</span>}</p>
+      <p className="text-sm">
+        {last ? (
+          <>
+            Last backup: <time dateTime={last}>{new Date(last).toLocaleString()}</time>
+          </>
+        ) : (
+          <span className="text-muted-foreground">Never backed up</span>
+        )}
+      </p>
       <BackupForm current={dest} />
       <ReminderForm current={days} />
       <RestoreForm destination={dest} />
@@ -49,7 +62,14 @@ async function SubmissionsSection() {
   const forms = await Promise.all(tracks.map(async (t) => ({ t, choices: await getSubmittedChoices(t.id) })));
   return (
     <div className="flex flex-col gap-3">
-      {forms.map(({ t, choices }) => <SubmittedForm key={t.id} trackId={t.id} trackName={t.name} choices={choices.map(({ submitted, ...c }) => ({ ...c, on: submitted }))} />)}
+      {forms.map(({ t, choices }) => (
+        <SubmittedForm
+          key={t.id}
+          trackId={t.id}
+          trackName={t.name}
+          choices={choices.map(({ submitted, ...c }) => ({ ...c, on: submitted }))}
+        />
+      ))}
     </div>
   );
 }
@@ -61,7 +81,9 @@ async function WinsSection() {
   const forms = await Promise.all(tracks.map(async (t) => ({ t, choices: await getWinChoices(t.id) })));
   return (
     <div className="flex flex-col gap-3">
-      {forms.map(({ t, choices }) => <SubmittedForm key={t.id} kind="win" trackId={t.id} trackName={t.name} choices={choices} />)}
+      {forms.map(({ t, choices }) => (
+        <SubmittedForm key={t.id} kind="win" trackId={t.id} trackName={t.name} choices={choices} />
+      ))}
     </div>
   );
 }
@@ -72,7 +94,9 @@ async function ExpectedLabelsSection() {
   const forms = await Promise.all(tracks.map(async (t) => ({ t, labels: await getExpectedLabels(t.id) })));
   return (
     <div className="flex flex-col gap-3">
-      {forms.map(({ t, labels }) => <ExpectedLabelsForm key={t.id} trackId={t.id} trackName={t.name} initial={labels} suggestions={suggestions} />)}
+      {forms.map(({ t, labels }) => (
+        <ExpectedLabelsForm key={t.id} trackId={t.id} trackName={t.name} initial={labels} suggestions={suggestions} />
+      ))}
     </div>
   );
 }
@@ -81,44 +105,91 @@ export default function SettingsPage() {
   return (
     <Page narrow>
       <PageHeader title="Settings" />
-      <p className="mb-6 text-sm text-muted-foreground">Rules for the planner are in <Link href="/planner/settings" className="rounded-sm text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-ring">Planner settings</Link>.</p>
+      <p className="mb-6 text-sm text-muted-foreground">
+        Rules for the planner are in{" "}
+        <Link
+          href="/planner/settings"
+          className="rounded-sm text-accent underline outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Planner settings
+        </Link>
+        .
+      </p>
       <section aria-labelledby="files" className="mb-8">
-        <h2 id="files" className="mb-2 text-lg font-semibold">Files</h2>
+        <h2 id="files" className="mb-2 text-lg font-semibold">
+          Files
+        </h2>
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
           <FilesSection />
         </Suspense>
-        <p className="mt-2 text-sm text-muted-foreground">Uploaded files are stored in this folder. It must be an existing, writable folder outside the Dossier app folder. Once files are stored you can move them to a new empty folder from here, or re-point Dossier at a folder you already moved yourself; a plain save of a different folder is refused so no file is lost track of.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Uploaded files are stored in this folder. It must be an existing, writable folder outside the Dossier app
+          folder. Once files are stored you can move them to a new empty folder from here, or re-point Dossier at a
+          folder you already moved yourself; a plain save of a different folder is refused so no file is lost track of.
+        </p>
       </section>
       <section aria-labelledby="backup" className="mb-8">
-        <h2 id="backup" className="mb-2 text-lg font-semibold">Backup</h2>
+        <h2 id="backup" className="mb-2 text-lg font-semibold">
+          Backup
+        </h2>
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
           <BackupSection />
         </Suspense>
-        <p className="mt-2 text-sm text-muted-foreground">Back up now writes one zip with the database and every file in your files folder. Type the full path of an existing folder outside the Dossier app folder and your files folder: a browser cannot open a folder picker for a path on this computer. A backup never overwrites an earlier one. A banner on every page reminds you when the last backup is older than the number of days you set (or when you have applications and have never backed up). To restore, type the full path of a backup zip (it is not uploaded: a backup can be large and is already on this computer) and check it first: Dossier reads it, verifies every file and shows what it holds before anything changes. A restore replaces all current data, after a confirmation and a safety backup of the current data in the backup folder above.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Back up now writes one zip with the database and every file in your files folder. Type the full path of an
+          existing folder outside the Dossier app folder and your files folder: a browser cannot open a folder picker
+          for a path on this computer. A backup never overwrites an earlier one. A banner on every page reminds you when
+          the last backup is older than the number of days you set (or when you have applications and have never backed
+          up). To restore, type the full path of a backup zip (it is not uploaded: a backup can be large and is already
+          on this computer) and check it first: Dossier reads it, verifies every file and shows what it holds before
+          anything changes. A restore replaces all current data, after a confirmation and a safety backup of the current
+          data in the backup folder above.
+        </p>
       </section>
       <section aria-labelledby="submissions" className="mb-8">
-        <h2 id="submissions" className="mb-2 text-lg font-semibold">Submissions</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Tick the statuses that count as submitted. Leave all unticked and no status counts as submitted for that track.</p>
+        <h2 id="submissions" className="mb-2 text-lg font-semibold">
+          Submissions
+        </h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Tick the statuses that count as submitted. Leave all unticked and no status counts as submitted for that
+          track.
+        </p>
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
           <SubmissionsSection />
         </Suspense>
-        <h3 id="expected-labels" className="mb-1 mt-6 text-base font-semibold">Expected file labels</h3>
-        <p className="mb-3 text-sm text-muted-foreground">Before a submission is created, Dossier warns if the application has no file with one of these labels. Type your own or pick one of the labels used for uploads. Leave the list empty for no warning.</p>
+        <h3 id="expected-labels" className="mb-1 mt-6 text-base font-semibold">
+          Expected file labels
+        </h3>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Before a submission is created, Dossier warns if the application has no file with one of these labels. Type
+          your own or pick one of the labels used for uploads. Leave the list empty for no warning.
+        </p>
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
           <ExpectedLabelsSection />
         </Suspense>
       </section>
       <section aria-labelledby="wins" className="mb-8">
-        <h2 id="wins" className="mb-2 text-lg font-semibold">Wins</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Tick the statuses that show on the dashboard as good news (Interview and Offer to begin with). Applications currently in one of them are listed, archived ones too. Leave all unticked and that track adds nothing to Wins.</p>
+        <h2 id="wins" className="mb-2 text-lg font-semibold">
+          Wins
+        </h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Tick the statuses that show on the dashboard as good news (Interview and Offer to begin with). Applications
+          currently in one of them are listed, archived ones too. Leave all unticked and that track adds nothing to
+          Wins.
+        </p>
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
           <WinsSection />
         </Suspense>
       </section>
       <section aria-labelledby="appearance">
-        <h2 id="appearance" className="mb-2 text-lg font-semibold">Appearance</h2>
+        <h2 id="appearance" className="mb-2 text-lg font-semibold">
+          Appearance
+        </h2>
         <ThemeSwitcher />
-        <p className="mt-2 text-sm text-muted-foreground">Graphite is the default. Five more dark and two light themes to choose from. The choice is saved in this browser.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Graphite is the default. Five more dark and two light themes to choose from. The choice is saved in this
+          browser.
+        </p>
       </section>
     </Page>
   );

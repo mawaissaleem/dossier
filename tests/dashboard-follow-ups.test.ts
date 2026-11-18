@@ -18,15 +18,27 @@ describe("firstN (pure)", () => {
 describe("dashboard follow-ups card data", () => {
   const TODAY = "2026-11-12";
   let db: ReturnType<typeof useTestDb>;
-  beforeEach(() => { db = useTestDb(); });
+  beforeEach(() => {
+    db = useTestDb();
+  });
   afterEach(dropTestDb);
 
   it("shown rows are the head of getFollowUpsDue and the count is the whole list", async () => {
     const t = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-    const fu = db.insert(columns).values({ userId: "local", trackId: t, name: "Follow-up date", type: "date", position: 0 }).returning().get().id;
+    const fu = db
+      .insert(columns)
+      .values({ userId: "local", trackId: t, name: "Follow-up date", type: "date", position: 0 })
+      .returning()
+      .get().id;
     for (let i = 1; i <= 7; i++) {
-      const a = db.insert(applications).values({ userId: "local", trackId: t, title: `app-${i}` }).returning().get().id;
-      db.insert(cellValues).values({ userId: "local", applicationId: a, columnId: fu, valueDate: `2026-11-${String(i).padStart(2, "0")}` }).run();
+      const a = db
+        .insert(applications)
+        .values({ userId: "local", trackId: t, title: `app-${i}` })
+        .returning()
+        .get().id;
+      db.insert(cellValues)
+        .values({ userId: "local", applicationId: a, columnId: fu, valueDate: `2026-11-${String(i).padStart(2, "0")}` })
+        .run();
       db.insert(submissions).values({ userId: "local", applicationId: a, date: "2026-10-01" }).run();
     }
     const items = await getFollowUpsDue(TODAY);

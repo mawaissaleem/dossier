@@ -1,0 +1,18 @@
+# Generated or vendored
+.next/
+out/
+build/
+coverage/
+node_modules/
+next-env.d.ts
+package-lock.json
+drizzle/
+docs/architecture/
+
+# Local data and agent work files
+data/
+.claude/
+
+# Prose and exported pages are kept as written (docs/requirements.md is an exact copy of the spec)
+*.md
+*.html

@@ -1,7 +1,16 @@
 // Pure windowing helpers for the virtualised track table (task 4.5). No DB, React or TanStack imports.
 
 // Fixed pixel widths (the table uses table-layout: fixed, so a column never resizes while rows scroll in and out of the window).
-export const COLUMN_WIDTH = { title: 300, text: 208, number: 144, date: 152, link: 220, checkbox: 104, single_select: 160, add: 40 } as const;
+export const COLUMN_WIDTH = {
+  title: 300,
+  text: 208,
+  number: 144,
+  date: 152,
+  link: 220,
+  checkbox: 104,
+  single_select: 160,
+  add: 40,
+} as const;
 export const columnWidth = (type: keyof typeof COLUMN_WIDTH) => COLUMN_WIDTH[type];
 // The inline editor's minimum width and a body cell's horizontal padding (px-2 on both sides): every editable column fits the editor.
 // Hand-kept: 16 = 2 x 8 px = the body cell's `px-2` class in app/tracks/[id]/virtual-rows.tsx (const cell); change both together.

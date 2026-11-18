@@ -22,27 +22,54 @@ beforeEach(() => {
   vi.mocked(refresh).mockClear();
   db = useTestDb();
   trackId = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-  ids = { text: col("Notes", "text", 0), number: col("Salary", "number", 1), date: col("Deadline", "date", 2), link: col("Posting", "link", 3), checkbox: col("Referred", "checkbox", 4), single_select: col("Stage", "single_select", 5) };
-  optA = db.insert(columnOptions).values({ userId: "local", columnId: ids.single_select, label: "A", color: "blue", position: 0 }).returning().get().id;
-  optB = db.insert(columnOptions).values({ userId: "local", columnId: ids.single_select, label: "B", color: "red", position: 1 }).returning().get().id;
+  ids = {
+    text: col("Notes", "text", 0),
+    number: col("Salary", "number", 1),
+    date: col("Deadline", "date", 2),
+    link: col("Posting", "link", 3),
+    checkbox: col("Referred", "checkbox", 4),
+    single_select: col("Stage", "single_select", 5),
+  };
+  optA = db
+    .insert(columnOptions)
+    .values({ userId: "local", columnId: ids.single_select, label: "A", color: "blue", position: 0 })
+    .returning()
+    .get().id;
+  optB = db
+    .insert(columnOptions)
+    .values({ userId: "local", columnId: ids.single_select, label: "B", color: "red", position: 1 })
+    .returning()
+    .get().id;
 });
 afterEach(dropTestDb);
 
 describe("createApplication with values", () => {
   it("stores a value for each of the six types", async () => {
     const r = await createApplication("Acme", trackId, [
-      { columnId: ids.text, value: " hi " }, { columnId: ids.number, value: "52000.5" }, { columnId: ids.date, value: "2026-03-04" },
-      { columnId: ids.link, value: "example.com" }, { columnId: ids.checkbox, value: true }, { columnId: ids.single_select, value: optB },
+      { columnId: ids.text, value: " hi " },
+      { columnId: ids.number, value: "52000.5" },
+      { columnId: ids.date, value: "2026-03-04" },
+      { columnId: ids.link, value: "example.com" },
+      { columnId: ids.checkbox, value: true },
+      { columnId: ids.single_select, value: optB },
     ]);
     expect(r.ok).toBe(true);
     expect(await valuesOf(r.ok ? r.id : 0)).toEqual({
-      [ids.text]: "hi", [ids.number]: 52000.5, [ids.date]: "2026-03-04", [ids.link]: "https://example.com/", [ids.checkbox]: true, [ids.single_select]: optB,
+      [ids.text]: "hi",
+      [ids.number]: 52000.5,
+      [ids.date]: "2026-03-04",
+      [ids.link]: "https://example.com/",
+      [ids.checkbox]: true,
+      [ids.single_select]: optB,
     });
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("accepts a select option sent as a numeric string and an unchecked box", async () => {
-    const r = await createApplication("A", trackId, [{ columnId: ids.single_select, value: String(optA) }, { columnId: ids.checkbox, value: false }]);
+    const r = await createApplication("A", trackId, [
+      { columnId: ids.single_select, value: String(optA) },
+      { columnId: ids.checkbox, value: false },
+    ]);
     expect(r.ok).toBe(true);
     const v = await valuesOf(r.ok ? r.id : 0);
     expect(v[ids.single_select]).toBe(optA);
@@ -51,10 +78,20 @@ describe("createApplication with values", () => {
 
   it("applies a default only when the column is omitted, not when it is submitted blank", async () => {
     db.update(columns).set({ defaultValue: "Remote" }).where(eq(columns.id, ids.text)).run();
-    db.update(columns).set({ defaultValue: String(optA) }).where(eq(columns.id, ids.single_select)).run();
+    db.update(columns)
+      .set({ defaultValue: String(optA) })
+      .where(eq(columns.id, ids.single_select))
+      .run();
     const omitted = await createApplication("A", trackId, [{ columnId: ids.number, value: 1 }]);
-    expect(await valuesOf(omitted.ok ? omitted.id : 0)).toMatchObject({ [ids.text]: "Remote", [ids.single_select]: optA, [ids.number]: 1 });
-    const blank = await createApplication("B", trackId, [{ columnId: ids.text, value: null }, { columnId: ids.single_select, value: "" }]);
+    expect(await valuesOf(omitted.ok ? omitted.id : 0)).toMatchObject({
+      [ids.text]: "Remote",
+      [ids.single_select]: optA,
+      [ids.number]: 1,
+    });
+    const blank = await createApplication("B", trackId, [
+      { columnId: ids.text, value: null },
+      { columnId: ids.single_select, value: "" },
+    ]);
     expect(await valuesOf(blank.ok ? blank.id : 0)).toMatchObject({ [ids.text]: null, [ids.single_select]: null });
     const none = await createApplication("C", trackId); // title-only is the same path
     expect(await valuesOf(none.ok ? none.id : 0)).toMatchObject({ [ids.text]: "Remote", [ids.single_select]: optA });
@@ -77,9 +114,18 @@ describe("createApplication with values", () => {
 
   it("rejects an option that belongs to another column", async () => {
     const other = col("Other", "single_select", 6);
-    const foreign = db.insert(columnOptions).values({ userId: "local", columnId: other, label: "Z", color: "blue", position: 0 }).returning().get().id;
-    expect(await createApplication("A", trackId, [{ columnId: ids.single_select, value: foreign }])).toEqual({ ok: false, error: "Stage: Choose a valid option." });
-    expect(await createApplication("A", trackId, [{ columnId: ids.single_select, value: 99999 }])).toMatchObject({ ok: false });
+    const foreign = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: other, label: "Z", color: "blue", position: 0 })
+      .returning()
+      .get().id;
+    expect(await createApplication("A", trackId, [{ columnId: ids.single_select, value: foreign }])).toEqual({
+      ok: false,
+      error: "Stage: Choose a valid option.",
+    });
+    expect(await createApplication("A", trackId, [{ columnId: ids.single_select, value: 99999 }])).toMatchObject({
+      ok: false,
+    });
     expect(counts()).toEqual([0, 0]);
   });
 
@@ -95,7 +141,10 @@ describe("createApplication with values", () => {
   });
 
   it("rejects a column given twice", async () => {
-    const r = await createApplication("A", trackId, [{ columnId: ids.text, value: "a" }, { columnId: ids.text, value: "b" }]);
+    const r = await createApplication("A", trackId, [
+      { columnId: ids.text, value: "a" },
+      { columnId: ids.text, value: "b" },
+    ]);
     expect(r).toEqual({ ok: false, error: "Notes: given twice." });
     expect(counts()).toEqual([0, 0]);
   });

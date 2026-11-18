@@ -16,14 +16,26 @@ let n = 0;
 const fileRow = (over: Partial<NewStoredFile> = {}): NewStoredFile => {
   n++;
   return {
-    userId: "local", applicationId: appId, label: "CV", originalName: "cv.docx", storedName: `CV_${n}.docx`,
-    relativePath: `job/app/CV_${n}.docx`, sha256: HASH, sizeBytes: 10, uploadDate: "2026-11-08", baseName: "CV", extension: "docx", seq: n,
+    userId: "local",
+    applicationId: appId,
+    label: "CV",
+    originalName: "cv.docx",
+    storedName: `CV_${n}.docx`,
+    relativePath: `job/app/CV_${n}.docx`,
+    sha256: HASH,
+    sizeBytes: 10,
+    uploadDate: "2026-11-08",
+    baseName: "CV",
+    extension: "docx",
+    seq: n,
     ...over,
   };
 };
 const mkFile = (over: Partial<NewStoredFile> = {}) => db.insert(files).values(fileRow(over)).returning().get();
-const mkSub = (application = appId) => db.insert(submissions).values({ userId: "local", applicationId: application, date: "2026-11-09" }).returning().get();
-const link = (submissionId: number, fileId: number) => db.insert(submissionFiles).values({ userId: "local", submissionId, fileId }).run();
+const mkSub = (application = appId) =>
+  db.insert(submissions).values({ userId: "local", applicationId: application, date: "2026-11-09" }).returning().get();
+const link = (submissionId: number, fileId: number) =>
+  db.insert(submissionFiles).values({ userId: "local", submissionId, fileId }).run();
 
 beforeEach(() => {
   db = useTestDb();
@@ -34,8 +46,15 @@ afterEach(dropTestDb);
 
 describe("files, submissions, submission_files tables", () => {
   it("exist with their indexes", () => {
-    const names = (t: string) => db.all<{ name: string }>(sql`select name from pragma_index_list(${t})`).map((r) => r.name);
-    expect(names("files")).toEqual(expect.arrayContaining(["files_application_id_sha256_idx", "files_user_id_relative_path_uniq", "files_counter_uniq"]));
+    const names = (t: string) =>
+      db.all<{ name: string }>(sql`select name from pragma_index_list(${t})`).map((r) => r.name);
+    expect(names("files")).toEqual(
+      expect.arrayContaining([
+        "files_application_id_sha256_idx",
+        "files_user_id_relative_path_uniq",
+        "files_counter_uniq",
+      ]),
+    );
     expect(names("submissions")).toContain("submissions_application_id_date_idx");
     expect(names("submission_files")).toContain("submission_files_submission_id_file_id_uniq");
   });
@@ -54,7 +73,13 @@ describe("files, submissions, submission_files tables", () => {
   });
 
   it("reject bad hash, negative size and seq below 1", () => {
-    for (const bad of [{ sha256: "a".repeat(63) }, { sha256: "A".repeat(64) }, { sha256: "g".repeat(64) }, { sizeBytes: -1 }, { seq: 0 }]) {
+    for (const bad of [
+      { sha256: "a".repeat(63) },
+      { sha256: "A".repeat(64) },
+      { sha256: "g".repeat(64) },
+      { sizeBytes: -1 },
+      { seq: 0 },
+    ]) {
       expect(() => mkFile(bad)).toThrow();
     }
     expect(() => mkFile({ sizeBytes: 0 })).not.toThrow();
@@ -66,8 +91,17 @@ describe("files, submissions, submission_files tables", () => {
     expect(() => mkFile({ relativePath: "x/other.docx", seq: 1 })).toThrow(); // same app, date, base, extension, seq
     expect(() => mkFile({ relativePath: "x/CV_01.pdf", extension: "pdf", seq: 1 })).not.toThrow(); // FR-6.2
     const other = db.insert(tracks).values({ userId: "other", name: "T", position: 0 }).returning().get().id;
-    const otherApp = db.insert(applications).values({ userId: "other", trackId: other, title: "B" }).returning().get().id;
-    expect(() => db.insert(files).values(fileRow({ userId: "other", applicationId: otherApp, relativePath: "x/CV_01.docx", seq: 1 })).run()).not.toThrow();
+    const otherApp = db
+      .insert(applications)
+      .values({ userId: "other", trackId: other, title: "B" })
+      .returning()
+      .get().id;
+    expect(() =>
+      db
+        .insert(files)
+        .values(fileRow({ userId: "other", applicationId: otherApp, relativePath: "x/CV_01.docx", seq: 1 }))
+        .run(),
+    ).not.toThrow();
   });
 
   it("reject linking the same file to the same submission twice, allow one file in two submissions (FR-7.5)", () => {
@@ -129,9 +163,19 @@ describe("delete behaviour", () => {
     const otherApp = db.insert(applications).values({ userId: "local", trackId, title: "B" }).returning().get().id;
     mkFile({ applicationId: otherApp }); // not counted
     expect((await getDeleteImpact(appId))?.fileCount).toBe(2);
-    expect((await deleteApplication(appId, { cellCount: 0, fileCount: 0, submissionCount: 1, noteCount: 0 })).ok).toBe(false);
-    expect((await deleteApplication(appId, { cellCount: 0, fileCount: 2, submissionCount: 1, noteCount: 0 })).ok).toBe(true);
-    expect(db.select().from(files).all().map((x) => x.applicationId)).toEqual([otherApp]);
+    expect((await deleteApplication(appId, { cellCount: 0, fileCount: 0, submissionCount: 1, noteCount: 0 })).ok).toBe(
+      false,
+    );
+    expect((await deleteApplication(appId, { cellCount: 0, fileCount: 2, submissionCount: 1, noteCount: 0 })).ok).toBe(
+      true,
+    );
+    expect(
+      db
+        .select()
+        .from(files)
+        .all()
+        .map((x) => x.applicationId),
+    ).toEqual([otherApp]);
   });
 });
 
@@ -149,13 +193,27 @@ describe("migration 0001 on a database with data", () => {
       process.env.DATABASE_PATH = join(dir, "t.db");
       migrate(getDb(), { migrationsFolder: join(dir, "old") });
       // Raw SQL: the app schema has columns that this old database does not have yet.
-      const t = Number(getDb().$client.prepare("INSERT INTO tracks (user_id, name, position, created_at, updated_at) VALUES ('local', 'Keep', 0, 0, 0)").run().lastInsertRowid);
+      const t = Number(
+        getDb()
+          .$client.prepare(
+            "INSERT INTO tracks (user_id, name, position, created_at, updated_at) VALUES ('local', 'Keep', 0, 0, 0)",
+          )
+          .run().lastInsertRowid,
+      );
       getDb().insert(applications).values({ userId: "local", trackId: t, title: "Keep me" }).run();
       expect(getDb().all(sql`select name from sqlite_master where name = 'files'`)).toEqual([]);
 
       migrate(getDb(), { migrationsFolder: "./drizzle" });
-      expect(getDb().select().from(applications).all().map((a) => a.title)).toEqual(["Keep me"]);
-      expect(getDb().all(sql`select name from sqlite_master where name in ('files','submissions','submission_files')`)).toHaveLength(3);
+      expect(
+        getDb()
+          .select()
+          .from(applications)
+          .all()
+          .map((a) => a.title),
+      ).toEqual(["Keep me"]);
+      expect(
+        getDb().all(sql`select name from sqlite_master where name in ('files','submissions','submission_files')`),
+      ).toHaveLength(3);
     } finally {
       closeDb();
       rmSync(dir, { recursive: true, force: true });

@@ -78,13 +78,21 @@ export function capOriginalName(name: string, max = 255): string {
 }
 
 export function safeExtension(ext: string): string {
-  return ext.normalize("NFC").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, MAX_EXT);
+  return ext
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, MAX_EXT);
 }
 
-const counterKey = (base: string, date: string, ext: string) => `${date}\0${(ext ? `${base}.${ext}` : base).normalize("NFC").toLowerCase()}`;
+const counterKey = (base: string, date: string, ext: string) =>
+  `${date}\0${(ext ? `${base}.${ext}` : base).normalize("NFC").toLowerCase()}`;
 
 // entries: the application's existing files. Returns 1 when none match, otherwise the highest matching seq + 1.
-export function nextSeq(entries: Iterable<CounterEntry>, target: { baseName: string; uploadDate: string; extension: string }): number {
+export function nextSeq(
+  entries: Iterable<CounterEntry>,
+  target: { baseName: string; uploadDate: string; extension: string },
+): number {
   const want = counterKey(target.baseName, target.uploadDate, target.extension);
   let max = 0;
   for (const e of entries) if (e.seq > max && counterKey(e.baseName, e.uploadDate, e.extension) === want) max = e.seq;
@@ -103,5 +111,12 @@ export function buildStoredName(originalName: string, date: string, existing: It
   const budget = MAX_NAME_BYTES - RESERVED_PREFIX - (extension ? extension.length + 1 : 0);
   const baseName = sanitiseAndStrip(split.base, budget);
   const seq = nextSeq(existing, { baseName, uploadDate: date, extension });
-  return { originalName, baseName, extension, uploadDate: date, seq, storedName: formatStoredName(seq, date, baseName, extension) };
+  return {
+    originalName,
+    baseName,
+    extension,
+    uploadDate: date,
+    seq,
+    storedName: formatStoredName(seq, date, baseName, extension),
+  };
 }

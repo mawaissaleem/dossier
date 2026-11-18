@@ -34,15 +34,30 @@ export async function planApplicationZip(applicationId: number): Promise<ZipPlan
   const problems: ZipProblem[] = [];
   let includable = 0;
   for (const f of list) {
-    if (!plainName(f.storedName)) { problems.push({ storedName: f.storedName, kind: "unreadable" }); continue; }
+    if (!plainName(f.storedName)) {
+      problems.push({ storedName: f.storedName, kind: "unreadable" });
+      continue;
+    }
     const r = await verifyStoredFile(f.id);
     if (!r.ok && r.kind === "setup") return { ok: false, kind: "setup", error: r.error };
-    if (!r.ok) { if (r.kind !== "deleted") problems.push({ storedName: f.storedName, kind: r.kind === "missing" ? "missing" : "unreadable" }); continue; }
-    if (!r.bytes) { problems.push({ storedName: f.storedName, kind: "too-large" }); continue; }
+    if (!r.ok) {
+      if (r.kind !== "deleted")
+        problems.push({ storedName: f.storedName, kind: r.kind === "missing" ? "missing" : "unreadable" });
+      continue;
+    }
+    if (!r.bytes) {
+      problems.push({ storedName: f.storedName, kind: "too-large" });
+      continue;
+    }
     includable++;
     if (r.integrity === "mismatch") problems.push({ storedName: f.storedName, kind: "changed" });
   }
-  return { ok: true, names: list.filter((f) => plainName(f.storedName)).map((f) => ({ id: f.id, storedName: f.storedName })), problems, includable };
+  return {
+    ok: true,
+    names: list.filter((f) => plainName(f.storedName)).map((f) => ({ id: f.id, storedName: f.storedName })),
+    problems,
+    includable,
+  };
 }
 
 export function applicationZipStream(names: { id: number; storedName: string }[]): ReadableStream<Uint8Array> {

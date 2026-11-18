@@ -20,7 +20,8 @@ describe("capacity rules", () => {
   });
   it("parse: digits become a number, the rest stays text so the check refuses it", () => {
     expect(parseCapacityInput(" 12 ")).toBe(12);
-    for (const raw of ["", "  ", "4x", "-1", "1.5", "1e1"]) expect(checkCapacity(parseCapacityInput(raw))).toHaveProperty("error");
+    for (const raw of ["", "  ", "4x", "-1", "1.5", "1e1"])
+      expect(checkCapacity(parseCapacityInput(raw))).toHaveProperty("error");
     expect(checkCapacity(parseCapacityInput("0"))).toHaveProperty("error");
     expect(checkCapacity(parseCapacityInput("51"))).toHaveProperty("error");
   });
@@ -46,7 +47,10 @@ describe("weeksPlan", () => {
 
 describe("capacity through the database", () => {
   let db: ReturnType<typeof useTestDb>;
-  beforeEach(() => { vi.mocked(refresh).mockClear(); db = useTestDb(); });
+  beforeEach(() => {
+    vi.mocked(refresh).mockClear();
+    db = useTestDb();
+  });
   afterEach(dropTestDb);
 
   it("never saved = 4; set saves; refusals save nothing", async () => {
@@ -74,15 +78,25 @@ describe("capacity through the database", () => {
 
   it("getWeeksPlan: the top N of the ranking (undated after dated), the rest after, and a changed capacity changes the cut", async () => {
     const tr = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-    const col = (name: string, type: "single_select" | "date", position: number, isStatus = false) => db.insert(columns).values({ userId: "local", trackId: tr, name, type, position, isStatus }).returning().get().id;
-    const status = col("Status", "single_select", 0, true), dl = col("Deadline", "date", 1);
-    const todo = db.insert(columnOptions).values({ userId: "local", columnId: status, label: "To apply", color: "blue", position: 0 }).returning().get().id;
+    const col = (name: string, type: "single_select" | "date", position: number, isStatus = false) =>
+      db.insert(columns).values({ userId: "local", trackId: tr, name, type, position, isStatus }).returning().get().id;
+    const status = col("Status", "single_select", 0, true),
+      dl = col("Deadline", "date", 1);
+    const todo = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: status, label: "To apply", color: "blue", position: 0 })
+      .returning()
+      .get().id;
     const add = (title: string, deadline: string | null) => {
       const a = db.insert(applications).values({ userId: "local", trackId: tr, title }).returning().get().id;
       db.insert(cellValues).values({ userId: "local", applicationId: a, columnId: status, valueOptionId: todo }).run();
-      if (deadline) db.insert(cellValues).values({ userId: "local", applicationId: a, columnId: dl, valueDate: deadline }).run();
+      if (deadline)
+        db.insert(cellValues).values({ userId: "local", applicationId: a, columnId: dl, valueDate: deadline }).run();
     };
-    add("d3", "2026-11-20"); add("none", null); add("d1", "2026-11-14"); add("d2", "2026-11-16");
+    add("d3", "2026-11-20");
+    add("none", null);
+    add("d1", "2026-11-14");
+    add("d2", "2026-11-16");
     const names = (xs: { title: string }[]) => xs.map((x) => x.title);
     let r = await getWeeksPlan("2026-11-12");
     expect(r.capacity).toBe(4);

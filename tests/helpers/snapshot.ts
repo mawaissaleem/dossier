@@ -9,22 +9,46 @@ export function trackSnapshot() {
   const opts = db.select().from(columnOptions).orderBy(asc(columnOptions.position)).all();
   const label = (id: number) => opts.find((o) => o.id === id)?.label;
   const sets = db.select().from(settings).all();
-  return db.select().from(tracks).orderBy(asc(tracks.position)).all().map((t) => {
-    const setting = (name: string) => { const r = sets.find((s) => s.key === `track.${t.id}.${name}`); return r ? JSON.parse(r.value) : undefined; };
-    const ids = (name: string) => (setting(name) as number[] | undefined)?.map(label);
-    return {
-      name: t.name,
-      position: t.position,
-      settingKeys: sets.map((r) => r.key).filter((k) => k.startsWith(`track.${t.id}.`)).map((k) => k.slice(`track.${t.id}.`.length)).sort(),
-      expectedLabels: setting("expected_labels"),
-      submitted: ids("submitted_statuses"),
-      wins: ids("win_statuses"),
-      stillToDo: ids("still_to_do"),
-      columns: db.select().from(columns).orderBy(asc(columns.position)).all().filter((c) => c.trackId === t.id).map((c) => ({
-        name: c.name, type: c.type, position: c.position, isStatus: c.isStatus, hidden: c.hidden,
-        default: c.defaultValue === null ? null : label(Number(c.defaultValue)),
-        options: opts.filter((o) => o.columnId === c.id).map((o) => ({ label: o.label, color: o.color, position: o.position, bufferDays: o.bufferDays })),
-      })),
-    };
-  });
+  return db
+    .select()
+    .from(tracks)
+    .orderBy(asc(tracks.position))
+    .all()
+    .map((t) => {
+      const setting = (name: string) => {
+        const r = sets.find((s) => s.key === `track.${t.id}.${name}`);
+        return r ? JSON.parse(r.value) : undefined;
+      };
+      const ids = (name: string) => (setting(name) as number[] | undefined)?.map(label);
+      return {
+        name: t.name,
+        position: t.position,
+        settingKeys: sets
+          .map((r) => r.key)
+          .filter((k) => k.startsWith(`track.${t.id}.`))
+          .map((k) => k.slice(`track.${t.id}.`.length))
+          .sort(),
+        expectedLabels: setting("expected_labels"),
+        submitted: ids("submitted_statuses"),
+        wins: ids("win_statuses"),
+        stillToDo: ids("still_to_do"),
+        columns: db
+          .select()
+          .from(columns)
+          .orderBy(asc(columns.position))
+          .all()
+          .filter((c) => c.trackId === t.id)
+          .map((c) => ({
+            name: c.name,
+            type: c.type,
+            position: c.position,
+            isStatus: c.isStatus,
+            hidden: c.hidden,
+            default: c.defaultValue === null ? null : label(Number(c.defaultValue)),
+            options: opts
+              .filter((o) => o.columnId === c.id)
+              .map((o) => ({ label: o.label, color: o.color, position: o.position, bufferDays: o.bufferDays })),
+          })),
+      };
+    });
 }

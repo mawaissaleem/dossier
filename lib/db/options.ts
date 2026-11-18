@@ -20,10 +20,18 @@ const STALE_COUNT = { ok: false, error: "The number of applications using this o
 function selectOptions(columnId: number) {
   const db = getDb();
   const userId = getUserId();
-  const col = db.select({ type: columns.type }).from(columns).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).get();
+  const col = db
+    .select({ type: columns.type })
+    .from(columns)
+    .where(and(eq(columns.id, columnId), eq(columns.userId, userId)))
+    .get();
   if (!col) return NO_COLUMN;
   if (col.type !== "single_select") return { ok: false, error: "Only single-select columns have options." } as const;
-  return db.select().from(columnOptions).where(and(eq(columnOptions.columnId, columnId), eq(columnOptions.userId, userId))).all();
+  return db
+    .select()
+    .from(columnOptions)
+    .where(and(eq(columnOptions.columnId, columnId), eq(columnOptions.userId, userId)))
+    .all();
 }
 
 // Appends at the end with the next unused palette colour. The unique index is case-sensitive, so the case-insensitive check is here;
@@ -38,7 +46,13 @@ export async function addOption(columnId: number, label: string): Promise<AddOpt
   try {
     const id = getDb()
       .insert(columnOptions)
-      .values({ userId: getUserId(), columnId, label: checked.label, color: nextColor(existing.map((o) => o.color)), position })
+      .values({
+        userId: getUserId(),
+        columnId,
+        label: checked.label,
+        color: nextColor(existing.map((o) => o.color)),
+        position,
+      })
       .returning({ id: columnOptions.id })
       .get().id;
     return { ok: true, id };
@@ -50,7 +64,11 @@ export async function addOption(columnId: number, label: string): Promise<AddOpt
 
 // Changes only this option row (label and/or colour). Cell values hold the option id, so every row follows (FR-3.3);
 // bufferDays and position are untouched.
-export async function updateOption(columnId: number, optionId: number, patch: { label?: string; color?: string }): Promise<OptionResult> {
+export async function updateOption(
+  columnId: number,
+  optionId: number,
+  patch: { label?: string; color?: string },
+): Promise<OptionResult> {
   if (typeof patch !== "object" || patch === null) return { ok: false, error: "Nothing to change." };
   const set: { label?: string; color?: string; updatedAt: Date } = { updatedAt: new Date() };
   if (patch.label !== undefined) {
@@ -68,7 +86,17 @@ export async function updateOption(columnId: number, optionId: number, patch: { 
   if (!existing.some((o) => o.id === optionId)) return NO_OPTION;
   if (set.label !== undefined && labelTaken(existing, set.label, optionId)) return DUP;
   try {
-    getDb().update(columnOptions).set(set).where(and(eq(columnOptions.id, optionId), eq(columnOptions.columnId, columnId), eq(columnOptions.userId, getUserId()))).run();
+    getDb()
+      .update(columnOptions)
+      .set(set)
+      .where(
+        and(
+          eq(columnOptions.id, optionId),
+          eq(columnOptions.columnId, columnId),
+          eq(columnOptions.userId, getUserId()),
+        ),
+      )
+      .run();
   } catch (e) {
     if (isUniqueViolation(e)) return DUP;
     throw e;
@@ -83,10 +111,20 @@ export async function reorderOptions(columnId: number, orderedIds: number[]): Pr
   return getDb().transaction((tx) => {
     const existing = selectOptions(columnId);
     if (!Array.isArray(existing)) return existing;
-    if (!isSameIdSet(existing.map((o) => o.id), orderedIds)) return { ok: false, error: "The options changed. The list now shows the current order; try again." } as const;
+    if (
+      !isSameIdSet(
+        existing.map((o) => o.id),
+        orderedIds,
+      )
+    )
+      return { ok: false, error: "The options changed. The list now shows the current order; try again." } as const;
     const updatedAt = new Date();
     orderedIds.forEach((id, position) =>
-      tx.update(columnOptions).set({ position, updatedAt }).where(and(eq(columnOptions.id, id), eq(columnOptions.columnId, columnId), eq(columnOptions.userId, userId))).run(),
+      tx
+        .update(columnOptions)
+        .set({ position, updatedAt })
+        .where(and(eq(columnOptions.id, id), eq(columnOptions.columnId, columnId), eq(columnOptions.userId, userId)))
+        .run(),
     );
     return { ok: true } as const;
   });
@@ -103,7 +141,11 @@ const holding = (columnId: number, optionId: number, userId: string) =>
 export async function getOptionDeleteImpact(optionId: number): Promise<OptionDeleteImpact | null> {
   const db = getDb();
   const userId = getUserId();
-  const opt = db.select({ label: columnOptions.label, columnId: columnOptions.columnId }).from(columnOptions).where(and(eq(columnOptions.id, optionId), eq(columnOptions.userId, userId))).get();
+  const opt = db
+    .select({ label: columnOptions.label, columnId: columnOptions.columnId })
+    .from(columnOptions)
+    .where(and(eq(columnOptions.id, optionId), eq(columnOptions.userId, userId)))
+    .get();
   if (!opt) return null;
   const rows = db
     .select({ archived: applications.archived, n: count() })
@@ -112,46 +154,104 @@ export async function getOptionDeleteImpact(optionId: number): Promise<OptionDel
     .where(holding(opt.columnId, optionId, userId))
     .groupBy(applications.archived)
     .all();
-  return { label: opt.label, useCount: rows.reduce((s, r) => s + r.n, 0), archivedCount: rows.find((r) => r.archived)?.n ?? 0 };
+  return {
+    label: opt.label,
+    useCount: rows.reduce((s, r) => s + r.n, 0),
+    archivedCount: rows.find((r) => r.archived)?.n ?? 0,
+  };
 }
 
 // One transaction: move this option's cell values to `reassignTo` (another option of the same column) or, for null, delete those
 // cell rows (blank = missing row); repoint or clear the column default if it was this option; delete the option; close the position gap.
 // The last option of the Status column is refused so the status default cannot dangle. Callers must have confirmed with the user,
 // and `expectedUseCount` is the count they were shown: if it no longer matches, nothing is written (values added meanwhile are never wiped).
-export async function deleteOption(optionId: number, reassignTo: number | null, expectedUseCount: number): Promise<OptionResult> {
+export async function deleteOption(
+  optionId: number,
+  reassignTo: number | null,
+  expectedUseCount: number,
+): Promise<OptionResult> {
   const userId = getUserId();
   try {
     return getDb().transaction((tx) => {
-      const opt = tx.select({ columnId: columnOptions.columnId }).from(columnOptions).where(and(eq(columnOptions.id, optionId), eq(columnOptions.userId, userId))).get();
+      const opt = tx
+        .select({ columnId: columnOptions.columnId })
+        .from(columnOptions)
+        .where(and(eq(columnOptions.id, optionId), eq(columnOptions.userId, userId)))
+        .get();
       if (!opt) return NO_OPTION;
-      const col = tx.select({ isStatus: columns.isStatus, defaultValue: columns.defaultValue }).from(columns).where(and(eq(columns.id, opt.columnId), eq(columns.userId, userId))).get();
+      const col = tx
+        .select({ isStatus: columns.isStatus, defaultValue: columns.defaultValue })
+        .from(columns)
+        .where(and(eq(columns.id, opt.columnId), eq(columns.userId, userId)))
+        .get();
       if (!col) return NO_COLUMN;
-      const siblings = tx.select({ id: columnOptions.id }).from(columnOptions).where(and(eq(columnOptions.columnId, opt.columnId), eq(columnOptions.userId, userId))).orderBy(asc(columnOptions.position), asc(columnOptions.id)).all().map((o) => o.id);
-      if (col.isStatus && siblings.length === 1) return { ok: false, error: "The Status column needs at least one option." } as const;
-      if (reassignTo !== null && (reassignTo === optionId || !siblings.includes(reassignTo))) return { ok: false, error: "Choose another option of this column to reassign to." } as const;
+      const siblings = tx
+        .select({ id: columnOptions.id })
+        .from(columnOptions)
+        .where(and(eq(columnOptions.columnId, opt.columnId), eq(columnOptions.userId, userId)))
+        .orderBy(asc(columnOptions.position), asc(columnOptions.id))
+        .all()
+        .map((o) => o.id);
+      if (col.isStatus && siblings.length === 1)
+        return { ok: false, error: "The Status column needs at least one option." } as const;
+      if (reassignTo !== null && (reassignTo === optionId || !siblings.includes(reassignTo)))
+        return { ok: false, error: "Choose another option of this column to reassign to." } as const;
       const held = holding(opt.columnId, optionId, userId);
       if (tx.select({ n: count() }).from(cellValues).where(held).get()!.n !== expectedUseCount) return STALE_COUNT;
       if (col.isStatus) {
         // One status_changed event per affected application, written before the cells move (labels are snapshots; the option row is deleted below).
-        const from = { id: optionId, label: tx.select({ label: columnOptions.label }).from(columnOptions).where(eq(columnOptions.id, optionId)).get()!.label };
-        const to = reassignTo === null ? null : { id: reassignTo, label: tx.select({ label: columnOptions.label }).from(columnOptions).where(eq(columnOptions.id, reassignTo)).get()!.label };
-        for (const { applicationId } of tx.select({ applicationId: cellValues.applicationId }).from(cellValues).where(held).all()) insertStatusEvent(tx, userId, applicationId, opt.columnId, from, to);
+        const from = {
+          id: optionId,
+          label: tx
+            .select({ label: columnOptions.label })
+            .from(columnOptions)
+            .where(eq(columnOptions.id, optionId))
+            .get()!.label,
+        };
+        const to =
+          reassignTo === null
+            ? null
+            : {
+                id: reassignTo,
+                label: tx
+                  .select({ label: columnOptions.label })
+                  .from(columnOptions)
+                  .where(eq(columnOptions.id, reassignTo))
+                  .get()!.label,
+              };
+        for (const { applicationId } of tx
+          .select({ applicationId: cellValues.applicationId })
+          .from(cellValues)
+          .where(held)
+          .all())
+          insertStatusEvent(tx, userId, applicationId, opt.columnId, from, to);
       }
       if (reassignTo === null) tx.delete(cellValues).where(held).run();
       else tx.update(cellValues).set({ valueOptionId: reassignTo, updatedAt: new Date() }).where(held).run();
       if (col.defaultValue === String(optionId)) {
-        tx.update(columns).set({ defaultValue: reassignTo === null ? null : String(reassignTo), updatedAt: new Date() }).where(and(eq(columns.id, opt.columnId), eq(columns.userId, userId))).run();
+        tx.update(columns)
+          .set({ defaultValue: reassignTo === null ? null : String(reassignTo), updatedAt: new Date() })
+          .where(and(eq(columns.id, opt.columnId), eq(columns.userId, userId)))
+          .run();
       }
-      tx.delete(columnOptions).where(and(eq(columnOptions.id, optionId), eq(columnOptions.userId, userId))).run();
-      siblings.filter((id) => id !== optionId).forEach((id, position) =>
-        tx.update(columnOptions).set({ position }).where(and(eq(columnOptions.id, id), eq(columnOptions.userId, userId))).run(),
-      );
+      tx.delete(columnOptions)
+        .where(and(eq(columnOptions.id, optionId), eq(columnOptions.userId, userId)))
+        .run();
+      siblings
+        .filter((id) => id !== optionId)
+        .forEach((id, position) =>
+          tx
+            .update(columnOptions)
+            .set({ position })
+            .where(and(eq(columnOptions.id, id), eq(columnOptions.userId, userId)))
+            .run(),
+        );
       return { ok: true } as const;
     });
   } catch (e) {
     // Counts and checks above should make this unreachable; the FK is the safety net if a cell row still points here.
-    if (isForeignKeyViolation(e)) return { ok: false, error: "Applications still use this option. Reassign them or leave them blank first." };
+    if (isForeignKeyViolation(e))
+      return { ok: false, error: "Applications still use this option. Reassign them or leave them blank first." };
     throw e;
   }
 }

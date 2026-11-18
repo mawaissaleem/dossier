@@ -7,7 +7,8 @@ import { useState } from "react";
 export function useSyncedState<T>(initial: T, key: string = JSON.stringify(initial)) {
   const [seen, setSeen] = useState(key);
   const [value, setValue] = useState(initial);
-  if (key !== seen) { // set during render: React re-renders at once with the new value (the documented "adjust state on prop change" pattern)
+  if (key !== seen) {
+    // set during render: React re-renders at once with the new value (the documented "adjust state on prop change" pattern)
     setSeen(key);
     setValue(initial);
   }

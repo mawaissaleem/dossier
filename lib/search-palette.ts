@@ -29,9 +29,15 @@ export const isMacPlatform = (platform: string) => /mac|iphone|ipad|ipod/i.test(
 export const chordLabel = (mac: boolean) => (mac ? "⌘K" : "Ctrl K");
 
 // Cmd+K on macOS, Ctrl+K elsewhere; no other modifier. (Ctrl+K on a Mac is kill-line in text fields, so it is left alone there.)
-export function isSearchChord(e: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean }, mac: boolean) {
-  return e.key.toLowerCase() === "k" && (mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey) && !e.altKey && !e.shiftKey;
+export function isSearchChord(
+  e: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean },
+  mac: boolean,
+) {
+  return (
+    e.key.toLowerCase() === "k" && (mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey) && !e.altKey && !e.shiftKey
+  );
 }
 
 // Moves the active result by `delta`, wrapping at both ends. 0 when the list is empty.
-export const wrapIndex = (current: number, delta: number, length: number) => (length <= 0 ? 0 : (((current + delta) % length) + length) % length);
+export const wrapIndex = (current: number, delta: number, length: number) =>
+  length <= 0 ? 0 : (((current + delta) % length) + length) % length;

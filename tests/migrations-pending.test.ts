@@ -13,7 +13,9 @@ import { dropTestDb, useTestDb } from "./helpers/db";
 const TOTAL = (JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as { entries: unknown[] }).entries.length;
 let extra: string | undefined;
 
-beforeEach(() => { useTestDb(); });
+beforeEach(() => {
+  useTestDb();
+});
 afterEach(() => {
   dropTestDb();
   if (extra) rmSync(extra, { recursive: true, force: true });
@@ -21,7 +23,10 @@ afterEach(() => {
 });
 
 // Forget the newest n migrations, as if the database file had been made by an older version of the app.
-const forget = (n: number) => getDb().run(sql`DELETE FROM __drizzle_migrations WHERE created_at IN (SELECT created_at FROM __drizzle_migrations ORDER BY created_at DESC LIMIT ${n})`);
+const forget = (n: number) =>
+  getDb().run(
+    sql`DELETE FROM __drizzle_migrations WHERE created_at IN (SELECT created_at FROM __drizzle_migrations ORDER BY created_at DESC LIMIT ${n})`,
+  );
 
 describe("pending migrations", () => {
   it("an up-to-date database has none and no message", () => {
@@ -88,12 +93,19 @@ describe("pending migrations", () => {
   });
   it("API routes answer 503 JSON with the message while behind, after the local-host check", async () => {
     forget(1);
-    const bad = await search(new NextRequest("http://localhost:3000/api/search?q=a", { headers: { host: "localhost:3000" } }));
+    const bad = await search(
+      new NextRequest("http://localhost:3000/api/search?q=a", { headers: { host: "localhost:3000" } }),
+    );
     expect(bad.status).toBe(503);
     expect((await bad.json()).error).toContain("npm run db:migrate");
-    const file = await openFile(new NextRequest("http://localhost:3000/api/files/1", { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: "1" }) } as never);
+    const file = await openFile(
+      new NextRequest("http://localhost:3000/api/files/1", { headers: { host: "localhost:3000" } }),
+      { params: Promise.resolve({ id: "1" }) } as never,
+    );
     expect(file.status).toBe(503);
-    const foreign = await search(new NextRequest("http://localhost:3000/api/search?q=a", { headers: { host: "evil.example" } }));
+    const foreign = await search(
+      new NextRequest("http://localhost:3000/api/search?q=a", { headers: { host: "evil.example" } }),
+    );
     expect(foreign.status).toBe(403);
   });
 });

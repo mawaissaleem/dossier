@@ -25,13 +25,15 @@ async function readForm(request: NextRequest): Promise<FormData | "too-large" | 
   const type = request.headers.get("content-type") ?? "";
   if (!type.toLowerCase().startsWith("multipart/form-data") || !request.body) return "bad";
   let received = 0;
-  const limited = request.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
-    transform(chunk, controller) {
-      received += chunk.byteLength;
-      if (received > MAX_BYTES) controller.error(new TooLarge());
-      else controller.enqueue(chunk);
-    },
-  }));
+  const limited = request.body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        received += chunk.byteLength;
+        if (received > MAX_BYTES) controller.error(new TooLarge());
+        else controller.enqueue(chunk);
+      },
+    }),
+  );
   try {
     return await new Response(limited, { headers: { "content-type": type } }).formData();
   } catch {
@@ -45,7 +47,8 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/applica
   if (behind) return behind;
   const { id: raw } = await ctx.params;
   const id = /^\d{1,15}$/.test(raw) ? Number(raw) : NaN;
-  if (!Number.isSafeInteger(id) || !(await applicationExists(id))) return json({ error: "Application not found." }, 404);
+  if (!Number.isSafeInteger(id) || !(await applicationExists(id)))
+    return json({ error: "Application not found." }, 404);
   const tooLarge = () => json({ error: "That upload is over the 50 MB limit. Nothing was saved." }, 413);
   if (Number(request.headers.get("content-length")) > MAX_BYTES) return tooLarge();
 

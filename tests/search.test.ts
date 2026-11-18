@@ -17,7 +17,9 @@ describe("parseSearchQuery", () => {
 
 describe("clampLimit", () => {
   it("defaults to 20, caps at 50, floors fractions", () => {
-    expect([clampLimit(undefined), clampLimit(NaN), clampLimit(0), clampLimit(-3), clampLimit("5")]).toEqual([20, 20, 20, 20, 20]);
+    expect([clampLimit(undefined), clampLimit(NaN), clampLimit(0), clampLimit(-3), clampLimit("5")]).toEqual([
+      20, 20, 20, 20, 20,
+    ]);
     expect([clampLimit(7), clampLimit(7.9), clampLimit(50), clampLimit(500)]).toEqual([7, 7, 50, 50]);
   });
 });
@@ -41,7 +43,13 @@ describe("tiers", () => {
     expect(m?.tier).toBe(TIER.cell);
   });
   it("sorts by tier, then newest (highest id) first", () => {
-    const hits = [{ id: 1, tier: 3 }, { id: 2, tier: 0 }, { id: 3, tier: 3 }, { id: 4, tier: 4 }, { id: 5, tier: 1 }];
+    const hits = [
+      { id: 1, tier: 3 },
+      { id: 2, tier: 0 },
+      { id: 3, tier: 3 },
+      { id: 4, tier: 4 },
+      { id: 5, tier: 1 },
+    ];
     expect(rankHits(hits).map((h) => h.id)).toEqual([2, 5, 3, 1, 4]);
   });
 });
@@ -64,14 +72,18 @@ describe("notes", () => {
     const m = matchApplication(["visa", "pending"], "Acme", [], ["visa only", "visa pending", "pending visa"])!;
     expect(m.matched.snippet).toBe("visa pending");
     expect(matchApplication(["visa"], "Acme", [], ["visa one", "visa two"])!.matched.snippet).toBe("visa one");
-    const long = matchApplication(["zurich"], "Acme", [], ["x".repeat(60) + " Zürich " + "y".repeat(60)])!.matched.snippet;
+    const long = matchApplication(["zurich"], "Acme", [], ["x".repeat(60) + " Zürich " + "y".repeat(60)])!.matched
+      .snippet;
     expect(long.startsWith("…") && long.endsWith("…") && long.includes("Zürich")).toBe(true);
   });
 });
 
 describe("matchApplication", () => {
   it("needs every word, across the title and different cells", () => {
-    const cells = [{ column: "City", text: "Berlin" }, { column: "Notes", text: "referral from Dana" }];
+    const cells = [
+      { column: "City", text: "Berlin" },
+      { column: "Notes", text: "referral from Dana" },
+    ];
     expect(matchApplication(["acme", "berlin", "dana"], "Acme", cells)).not.toBeNull();
     expect(matchApplication(["acme", "paris"], "Acme", cells)).toBeNull();
     expect(matchApplication([], "Acme", cells)).toBeNull();

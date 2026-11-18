@@ -16,7 +16,9 @@ export type IntegrityState = (typeof INTEGRITY_STATES)[number];
 const base = {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date())
@@ -55,7 +57,9 @@ export const columns = sqliteTable(
     index("columns_user_id_idx").on(t.userId),
     index("columns_track_id_position_idx").on(t.trackId, t.position),
     uniqueIndex("columns_track_id_name_uniq").on(t.trackId, t.name),
-    uniqueIndex("columns_one_status_per_track_uniq").on(t.trackId).where(sql`${t.isStatus} = 1`),
+    uniqueIndex("columns_one_status_per_track_uniq")
+      .on(t.trackId)
+      .where(sql`${t.isStatus} = 1`),
   ],
 );
 
@@ -231,7 +235,9 @@ export const activityEvents = sqliteTable(
       .notNull()
       .references(() => applications.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: ACTIVITY_KINDS }).notNull(),
-    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    occurredAt: integer("occurred_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
     details: text("details").notNull().default("{}"), // JSON; shape per kind is written and validated by 7.3
     fileId: integer("file_id").references(() => files.id, { onDelete: "set null" }),
     submissionId: integer("submission_id").references(() => submissions.id, { onDelete: "set null" }),
@@ -241,7 +247,13 @@ export const activityEvents = sqliteTable(
     index("activity_events_application_id_occurred_at_idx").on(t.applicationId, t.occurredAt),
     index("activity_events_file_id_idx").on(t.fileId),
     index("activity_events_submission_id_idx").on(t.submissionId),
-    check("activity_events_kind_check", sql`${t.kind} IN (${sql.join(ACTIVITY_KINDS.map((k) => sql.raw(`'${k}'`)), sql`, `)})`),
+    check(
+      "activity_events_kind_check",
+      sql`${t.kind} IN (${sql.join(
+        ACTIVITY_KINDS.map((k) => sql.raw(`'${k}'`)),
+        sql`, `,
+      )})`,
+    ),
   ],
 );
 

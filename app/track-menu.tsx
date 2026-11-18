@@ -8,8 +8,20 @@ import { ColorPicker } from "@/app/color-picker";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useReturnFocus } from "@/components/use-return-focus";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createLatest } from "@/lib/latest";
@@ -103,7 +115,16 @@ export function TrackMenu({ id, name, color }: { id: number; name: string; color
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button ref={trigger} type="button" variant="ghost" size="icon-sm" aria-label={`Track options: ${name}`} className="text-muted-foreground"><EllipsisVerticalIcon aria-hidden /></Button>
+          <Button
+            ref={trigger}
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Track options: ${name}`}
+            className="text-muted-foreground"
+          >
+            <EllipsisVerticalIcon aria-hidden />
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
@@ -117,11 +138,31 @@ export function TrackMenu({ id, name, color }: { id: number; name: string; color
             fn();
           }}
         >
-          <DropdownMenuItem onSelect={() => { next.current = openEdit; }}><PencilIcon aria-hidden />Rename / colour…</DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onSelect={() => { next.current = openDelete; }}><Trash2Icon aria-hidden />Delete track…</DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => {
+              next.current = openEdit;
+            }}
+          >
+            <PencilIcon aria-hidden />
+            Rename / colour…
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => {
+              next.current = openDelete;
+            }}
+          >
+            <Trash2Icon aria-hidden />
+            Delete track…
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <Dialog open={editOpen} onOpenChange={(o) => { if (o || !pending) setEditOpen(o); }}>
+      <Dialog
+        open={editOpen}
+        onOpenChange={(o) => {
+          if (o || !pending) setEditOpen(o);
+        }}
+      >
         <DialogContent showCloseButton={false} className="sm:max-w-md" onCloseAutoFocus={back.onCloseAutoFocus}>
           <form onSubmit={save} className="grid gap-4">
             <DialogHeader>
@@ -130,16 +171,31 @@ export function TrackMenu({ id, name, color }: { id: number; name: string; color
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={`${uid}-name`}>Name</Label>
-              <Input id={`${uid}-name`} required maxLength={MAX_TRACK_NAME} value={draftName} onChange={(e) => setDraftName(e.target.value)} aria-invalid={error ? true : undefined} />
+              <Input
+                id={`${uid}-name`}
+                required
+                maxLength={MAX_TRACK_NAME}
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                aria-invalid={error ? true : undefined}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">Colour</span>
               <ColorPicker value={draftColor} onChange={setDraftColor} label="Colour of the track" />
             </div>
-            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
             <DialogFooter>
-              <Button type="button" variant="outline" disabled={pending} onClick={() => setEditOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
+              <Button type="button" variant="outline" disabled={pending} onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Saving…" : "Save"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -154,11 +210,16 @@ export function TrackMenu({ id, name, color }: { id: number; name: string; color
             "Counting…"
           ) : impact.ok ? (
             <>
-              This permanently deletes the track <strong className="break-words">{impact.name}</strong> with its {plural(impact.applications, "application")} (archived included), {plural(impact.columns, "column")}, {plural(impact.submissions, "submission")}, {plural(impact.notes, "note")} and {plural(impact.files, "file record")}.
-              The files themselves stay on disk; only Dossier forgets them. This cannot be undone.
+              This permanently deletes the track <strong className="break-words">{impact.name}</strong> with its{" "}
+              {plural(impact.applications, "application")} (archived included), {plural(impact.columns, "column")},{" "}
+              {plural(impact.submissions, "submission")}, {plural(impact.notes, "note")} and{" "}
+              {plural(impact.files, "file record")}. The files themselves stay on disk; only Dossier forgets them. This
+              cannot be undone.
             </>
           ) : (
-            <span role="alert" className="text-destructive">{impact.error}</span>
+            <span role="alert" className="text-destructive">
+              {impact.error}
+            </span>
           )
         }
         error={delError}

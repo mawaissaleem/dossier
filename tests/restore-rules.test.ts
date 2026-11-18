@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { checkListing, entryKind, parseExpected, schemaIsNewer, type Limits, type ZipEntryInfo } from "@/lib/restore";
 
-const e = (name: string, over: Partial<ZipEntryInfo> = {}): ZipEntryInfo => ({ name, flags: 0x800, method: 8, compressedSize: 5, uncompressedSize: 10, versionMadeBy: 3 << 8 | 20, externalAttributes: (0o100644 << 16) >>> 0, ...over });
+const e = (name: string, over: Partial<ZipEntryInfo> = {}): ZipEntryInfo => ({
+  name,
+  flags: 0x800,
+  method: 8,
+  compressedSize: 5,
+  uncompressedSize: 10,
+  versionMadeBy: (3 << 8) | 20,
+  externalAttributes: (0o100644 << 16) >>> 0,
+  ...over,
+});
 const good = [e("manifest.json"), e("database/dossier.db"), e("files/Acme/cv.pdf"), e("files/top.txt")];
 const err = (entries: ZipEntryInfo[], limits?: Limits) => {
   const r = checkListing(entries, limits);
@@ -29,9 +38,12 @@ describe("checkListing", () => {
   });
 
   it("allows empty folder entries under files/ and database/", () => {
-    const dir = (n: string) => e(n, { uncompressedSize: 0, compressedSize: 0, externalAttributes: (0o040755 << 16) >>> 0 });
+    const dir = (n: string) =>
+      e(n, { uncompressedSize: 0, compressedSize: 0, externalAttributes: (0o040755 << 16) >>> 0 });
     expect(err([...good, dir("files/"), dir("database/"), dir("files/Acme/")])).toBeNull();
-    expect(err([...good, e("files/Acme/", { externalAttributes: (0o040755 << 16) >>> 0 })])).toMatch(/folder entry with data/);
+    expect(err([...good, e("files/Acme/", { externalAttributes: (0o040755 << 16) >>> 0 })])).toMatch(
+      /folder entry with data/,
+    );
   });
 
   it.each([
@@ -69,13 +81,27 @@ describe("checkListing", () => {
   });
 
   it("applies the zip-bomb limits: entries, total size, ratio, manifest size", () => {
-    const small: Limits = { maxEntries: 3, maxTotalBytes: 1000, maxRatio: 10, ratioFloorBytes: 100, maxManifestBytes: 50 };
+    const small: Limits = {
+      maxEntries: 3,
+      maxTotalBytes: 1000,
+      maxRatio: 10,
+      ratioFloorBytes: 100,
+      maxManifestBytes: 50,
+    };
     expect(err(good, small)).toMatch(/too many entries/);
     const base = [e("manifest.json", { uncompressedSize: 10 }), e("database/dossier.db", { uncompressedSize: 10 })];
-    expect(err([...base, e("files/big", { uncompressedSize: 5000, compressedSize: 5000 })], { ...small, maxEntries: 10 })).toMatch(/unpack to more than/);
-    expect(err([...base, e("files/bomb", { uncompressedSize: 500, compressedSize: 2 })], { ...small, maxEntries: 10 })).toMatch(/zip bomb/);
-    expect(err([...base, e("files/tiny", { uncompressedSize: 90, compressedSize: 1 })], { ...small, maxEntries: 10 })).toBeNull(); // under the floor
-    expect(err([e("manifest.json", { uncompressedSize: 60 }), base[1]], { ...small, maxEntries: 10 })).toMatch(/manifest is too large/);
+    expect(
+      err([...base, e("files/big", { uncompressedSize: 5000, compressedSize: 5000 })], { ...small, maxEntries: 10 }),
+    ).toMatch(/unpack to more than/);
+    expect(
+      err([...base, e("files/bomb", { uncompressedSize: 500, compressedSize: 2 })], { ...small, maxEntries: 10 }),
+    ).toMatch(/zip bomb/);
+    expect(
+      err([...base, e("files/tiny", { uncompressedSize: 90, compressedSize: 1 })], { ...small, maxEntries: 10 }),
+    ).toBeNull(); // under the floor
+    expect(err([e("manifest.json", { uncompressedSize: 60 }), base[1]], { ...small, maxEntries: 10 })).toMatch(
+      /manifest is too large/,
+    );
   });
 });
 
@@ -91,7 +117,15 @@ describe("small helpers", () => {
   it("parseExpected takes only a date and five counts", () => {
     const counts = { applications: 1, columns: 2, files: 3, submissions: 4, notes: 5 };
     expect(parseExpected({ createdAt: "x", counts })).toEqual({ createdAt: "x", counts });
-    for (const bad of [null, "x", {}, { createdAt: 1, counts }, { createdAt: "x", counts: { ...counts, notes: -1 } }, { createdAt: "x", counts: { ...counts, files: "3" } }, { createdAt: "x" }]) {
+    for (const bad of [
+      null,
+      "x",
+      {},
+      { createdAt: 1, counts },
+      { createdAt: "x", counts: { ...counts, notes: -1 } },
+      { createdAt: "x", counts: { ...counts, files: "3" } },
+      { createdAt: "x" },
+    ]) {
       expect(parseExpected(bad)).toBeNull();
     }
   });

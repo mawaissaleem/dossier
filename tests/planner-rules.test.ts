@@ -3,23 +3,61 @@ import { refresh } from "next/cache";
 import { saveRankingRules } from "@/app/actions/settings";
 import { getPlannerRanking, getRankingRules, setRankingRules } from "@/lib/db/planner";
 import { setSetting } from "@/lib/db/settings";
-import { activityEvents, applications, cellValues, columnOptions, columns, notes, tracks, type ColumnType } from "@/lib/db/schema";
-import { orderRanking, rankApplications, resolveNoDeadline, resolveOverdue, undatedScore, type BufferOption, type NoDeadlinePolicy, type OverduePolicy, type PlannerApp } from "@/lib/planner";
+import {
+  activityEvents,
+  applications,
+  cellValues,
+  columnOptions,
+  columns,
+  notes,
+  tracks,
+  type ColumnType,
+} from "@/lib/db/schema";
+import {
+  orderRanking,
+  rankApplications,
+  resolveNoDeadline,
+  resolveOverdue,
+  undatedScore,
+  type BufferOption,
+  type NoDeadlinePolicy,
+  type OverduePolicy,
+  type PlannerApp,
+} from "@/lib/planner";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
 const TODAY = "2026-11-12";
-const BIG = 1, NONE = 2, HEAVY = 10;
-const prio: BufferOption[] = [{ id: BIG, position: 0, bufferDays: 3 }, { id: NONE, position: 1, bufferDays: 0 }];
+const BIG = 1,
+  NONE = 2,
+  HEAVY = 10;
+const prio: BufferOption[] = [
+  { id: BIG, position: 0, bufferDays: 3 },
+  { id: NONE, position: 1, bufferDays: 0 },
+];
 const eff: BufferOption[] = [{ id: HEAVY, position: 0, bufferDays: 2 }];
-const app = (id: number, deadline: unknown, priority: number | null = null, effort: number | null = null): PlannerApp => ({ id, deadline, priority, effort });
+const app = (
+  id: number,
+  deadline: unknown,
+  priority: number | null = null,
+  effort: number | null = null,
+): PlannerApp => ({ id, deadline, priority, effort });
 
-function order(apps: PlannerApp[], overdue: OverduePolicy, noDeadline: NoDeadlinePolicy, touched: Record<number, string> = {}) {
+function order(
+  apps: PlannerApp[],
+  overdue: OverduePolicy,
+  noDeadline: NoDeadlinePolicy,
+  touched: Record<number, string> = {},
+) {
   const r = rankApplications(apps, TODAY, prio, eff);
   const und = r.undated.map((a) => undatedScore(a, touched[a.id] ?? TODAY, TODAY, prio, eff));
   const o = orderRanking(r.ranked, und, overdue, noDeadline);
-  return { ranked: o.ranked.map((s) => s.app.id), flags: o.ranked.map((s) => s.overdue), undated: o.undated.map((u) => u.id) };
+  return {
+    ranked: o.ranked.map((s) => s.app.id),
+    flags: o.ranked.map((s) => s.overdue),
+    undated: o.undated.map((u) => u.id),
+  };
 }
 
 describe("resolve", () => {
@@ -44,13 +82,21 @@ describe("overdue policies", () => {
     expect(order(apps, "hide", "last")).toMatchObject({ ranked: [2, 3], flags: [false, false] });
   });
   it("pinned overdue ones keep score order among themselves", () => {
-    expect(order([app(1, "2026-11-11", NONE), app(2, "2026-11-01", NONE), app(3, "2026-11-05", BIG)], "pin", "last").ranked).toEqual([2, 3, 1]);
+    expect(
+      order([app(1, "2026-11-11", NONE), app(2, "2026-11-01", NONE), app(3, "2026-11-05", BIG)], "pin", "last").ranked,
+    ).toEqual([2, 3, 1]);
   });
 });
 
 describe("no-deadline policies", () => {
   // Undated: 5 has buffers 3+2 = 5, 6 has 3, 7 has 0 (the lowest-priority fallback), 8 has 0.
-  const apps = [app(1, "2026-11-30", NONE), app(8, null, NONE), app(7, "soon", null), app(6, "", BIG), app(5, undefined, BIG, HEAVY)];
+  const apps = [
+    app(1, "2026-11-30", NONE),
+    app(8, null, NONE),
+    app(7, "soon", null),
+    app(6, "", BIG),
+    app(5, undefined, BIG, HEAVY),
+  ];
   it("last: after every dated one, bigger buffers first, then id", () => {
     expect(order(apps, "pin", "last").undated).toEqual([5, 6, 7, 8]);
     expect(order(apps, "pin", "last").ranked).toEqual([1]);
@@ -58,7 +104,11 @@ describe("no-deadline policies", () => {
   it("stale: longest untouched first, then id; days are carried", () => {
     const touched = { 5: "2026-11-10", 6: "2026-10-01", 7: "2026-11-12", 8: "2026-11-12" };
     expect(order(apps, "pin", "stale", touched).undated).toEqual([6, 5, 7, 8]);
-    expect(undatedScore(app(6, null), "2026-10-01", TODAY, prio, eff)).toMatchObject({ id: 6, daysUntouched: 42, buffer: 0 });
+    expect(undatedScore(app(6, null), "2026-10-01", TODAY, prio, eff)).toMatchObject({
+      id: 6,
+      daysUntouched: 42,
+      buffer: 0,
+    });
   });
   it("ignore: left out", () => {
     expect(order(apps, "pin", "ignore")).toMatchObject({ ranked: [1], undated: [] });
@@ -71,27 +121,57 @@ describe("no-deadline policies", () => {
 
 describe("ranking rules through the database", () => {
   let db: ReturnType<typeof useTestDb>;
-  beforeEach(() => { vi.mocked(refresh).mockClear(); db = useTestDb(); });
+  beforeEach(() => {
+    vi.mocked(refresh).mockClear();
+    db = useTestDb();
+  });
   afterEach(dropTestDb);
 
   const day = (back: number) => new Date(2026, 10, 12 - back, 12); // local noon, so the zone cannot change the day
   function setup() {
     const tr = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-    const col = (name: string, type: ColumnType, position: number, isStatus = false) => db.insert(columns).values({ userId: "local", trackId: tr, name, type, position, isStatus }).returning().get().id;
-    const status = col("Status", "single_select", 0, true), pr = col("Priority", "single_select", 1), dl = col("Deadline", "date", 2);
-    const todo = db.insert(columnOptions).values({ userId: "local", columnId: status, label: "To apply", color: "blue", position: 0 }).returning().get().id;
-    const high = db.insert(columnOptions).values({ userId: "local", columnId: pr, label: "High", color: "blue", position: 0, bufferDays: 3 }).returning().get().id;
-    const low = db.insert(columnOptions).values({ userId: "local", columnId: pr, label: "Low", color: "blue", position: 1, bufferDays: 0 }).returning().get().id;
+    const col = (name: string, type: ColumnType, position: number, isStatus = false) =>
+      db.insert(columns).values({ userId: "local", trackId: tr, name, type, position, isStatus }).returning().get().id;
+    const status = col("Status", "single_select", 0, true),
+      pr = col("Priority", "single_select", 1),
+      dl = col("Deadline", "date", 2);
+    const todo = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: status, label: "To apply", color: "blue", position: 0 })
+      .returning()
+      .get().id;
+    const high = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: pr, label: "High", color: "blue", position: 0, bufferDays: 3 })
+      .returning()
+      .get().id;
+    const low = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: pr, label: "Low", color: "blue", position: 1, bufferDays: 0 })
+      .returning()
+      .get().id;
     const add = (title: string, deadline: string | null, priority = low, touchedDaysAgo = 0) => {
-      const a = db.insert(applications).values({ userId: "local", trackId: tr, title, createdAt: day(60), updatedAt: day(touchedDaysAgo) }).returning().get().id;
+      const a = db
+        .insert(applications)
+        .values({ userId: "local", trackId: tr, title, createdAt: day(60), updatedAt: day(touchedDaysAgo) })
+        .returning()
+        .get().id;
       db.insert(cellValues).values({ userId: "local", applicationId: a, columnId: status, valueOptionId: todo }).run();
       db.insert(cellValues).values({ userId: "local", applicationId: a, columnId: pr, valueOptionId: priority }).run();
-      if (deadline) db.insert(cellValues).values({ userId: "local", applicationId: a, columnId: dl, valueDate: deadline }).run();
+      if (deadline)
+        db.insert(cellValues).values({ userId: "local", applicationId: a, columnId: dl, valueDate: deadline }).run();
       return a;
     };
     return { add, high, low };
   }
-  const titles = async () => { const r = await getPlannerRanking(TODAY); return { ranked: r.ranked.map((x) => x.title), undated: r.undated.map((x) => x.title), flags: r.ranked.map((x) => x.overdue) }; };
+  const titles = async () => {
+    const r = await getPlannerRanking(TODAY);
+    return {
+      ranked: r.ranked.map((x) => x.title),
+      undated: r.undated.map((x) => x.title),
+      flags: r.ranked.map((x) => x.overdue),
+    };
+  };
 
   it("never saved = pin and last", async () => {
     expect(await getRankingRules()).toEqual({ overdue: "pin", noDeadline: "last" });
@@ -101,7 +181,11 @@ describe("ranking rules through the database", () => {
     add("plain", "2026-11-20");
     add("u-low", null);
     add("u-high", null, high);
-    expect(await titles()).toEqual({ ranked: ["late", "big", "plain"], undated: ["u-high", "u-low"], flags: [true, false, false] });
+    expect(await titles()).toEqual({
+      ranked: ["late", "big", "plain"],
+      undated: ["u-high", "u-low"],
+      flags: [true, false, false],
+    });
   });
 
   it("each overdue option, through the settings", async () => {
@@ -135,16 +219,40 @@ describe("ranking rules through the database", () => {
     const withNote = add("noted", null, undefined, 40);
     const withEvent = add("evented", null, undefined, 50);
     add("oldest", null, undefined, 20);
-    db.insert(notes).values({ userId: "local", applicationId: withNote, body: "x", createdAt: day(25) }).run();
-    db.insert(notes).values({ userId: "local", applicationId: withNote, body: "y", createdAt: day(2) }).run();
-    db.insert(activityEvents).values({ userId: "local", applicationId: withEvent, kind: "status_changed", createdAt: day(5), occurredAt: day(300) }).run();
+    db.insert(notes)
+      .values({ userId: "local", applicationId: withNote, body: "x", createdAt: day(25) })
+      .run();
+    db.insert(notes)
+      .values({ userId: "local", applicationId: withNote, body: "y", createdAt: day(2) })
+      .run();
+    db.insert(activityEvents)
+      .values({
+        userId: "local",
+        applicationId: withEvent,
+        kind: "status_changed",
+        createdAt: day(5),
+        occurredAt: day(300),
+      })
+      .run();
     await setRankingRules("pin", "stale");
     const r = (await getPlannerRanking(TODAY)).undated;
-    expect(r.map((x) => [x.title, x.daysUntouched])).toEqual([["oldest", 20], ["plain", 10], ["evented", 5], ["noted", 2]]);
+    expect(r.map((x) => [x.title, x.daysUntouched])).toEqual([
+      ["oldest", 20],
+      ["plain", 10],
+      ["evented", 5],
+      ["noted", 2],
+    ]);
   });
 
   it("set refuses unknown values and writes nothing", async () => {
-    for (const [o, n] of [["bogus", "last"], ["pin", "bogus"], [undefined, "last"], ["pin", null], ["last", "pin"]]) expect(await setRankingRules(o, n)).toMatchObject({ ok: false });
+    for (const [o, n] of [
+      ["bogus", "last"],
+      ["pin", "bogus"],
+      [undefined, "last"],
+      ["pin", null],
+      ["last", "pin"],
+    ])
+      expect(await setRankingRules(o, n)).toMatchObject({ ok: false });
     expect(await getRankingRules()).toEqual({ overdue: "pin", noDeadline: "last" });
     await setRankingRules("hide", "ignore");
     await setRankingRules("hide", "nope");

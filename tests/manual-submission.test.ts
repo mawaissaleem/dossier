@@ -3,7 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { refresh } from "next/cache";
 import { updateCell } from "@/app/actions/cells";
 import { addSubmission } from "@/app/actions/submissions";
-import { applications, cellValues, columnOptions, columns, files, submissionFiles, submissions, tracks, type NewStoredFile } from "@/lib/db/schema";
+import {
+  applications,
+  cellValues,
+  columnOptions,
+  columns,
+  files,
+  submissionFiles,
+  submissions,
+  tracks,
+  type NewStoredFile,
+} from "@/lib/db/schema";
 import { createManualSubmission, createSubmission, listSubmissions } from "@/lib/db/submissions";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
@@ -14,27 +24,62 @@ let trackId: number, statusCol: number, otherCol: number;
 let toApply: number, applied: number, interview: number, foreignOpt: number;
 let appId: number;
 let n = 0;
-const opt = (columnId: number, label: string, position: number) => db.insert(columnOptions).values({ userId: "local", columnId, label, color: "blue", position }).returning().get().id;
+const opt = (columnId: number, label: string, position: number) =>
+  db.insert(columnOptions).values({ userId: "local", columnId, label, color: "blue", position }).returning().get().id;
 const mkFile = (over: Partial<NewStoredFile> = {}) => {
   n++;
-  return db.insert(files).values({
-    userId: "local", applicationId: appId, label: "CV", originalName: `cv${n}.docx`, storedName: `CV_${String(n).padStart(2, "0")}.docx`, relativePath: `job/a/CV_${n}.docx`,
-    sha256: String(n).padStart(64, "0"), sizeBytes: 10, uploadDate: "2026-11-05", baseName: "CV", extension: "docx", seq: n, ...over,
-  }).returning().get().id;
+  return db
+    .insert(files)
+    .values({
+      userId: "local",
+      applicationId: appId,
+      label: "CV",
+      originalName: `cv${n}.docx`,
+      storedName: `CV_${String(n).padStart(2, "0")}.docx`,
+      relativePath: `job/a/CV_${n}.docx`,
+      sha256: String(n).padStart(64, "0"),
+      sizeBytes: 10,
+      uploadDate: "2026-11-05",
+      baseName: "CV",
+      extension: "docx",
+      seq: n,
+      ...over,
+    })
+    .returning()
+    .get().id;
 };
-const statusOf = () => db.select().from(cellValues).where(and(eq(cellValues.applicationId, appId), eq(cellValues.columnId, statusCol))).get()?.valueOptionId ?? null;
+const statusOf = () =>
+  db
+    .select()
+    .from(cellValues)
+    .where(and(eq(cellValues.applicationId, appId), eq(cellValues.columnId, statusCol)))
+    .get()?.valueOptionId ?? null;
 const counts = () => [db.select().from(submissions).all().length, db.select().from(submissionFiles).all().length];
 
 beforeEach(() => {
   vi.mocked(refresh).mockClear();
   db = useTestDb();
   trackId = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-  statusCol = db.insert(columns).values({ userId: "local", trackId, name: "Status", type: "single_select", position: 0, isStatus: true }).returning().get().id;
-  otherCol = db.insert(columns).values({ userId: "local", trackId, name: "Stage", type: "single_select", position: 1 }).returning().get().id;
-  [toApply, applied, interview] = [opt(statusCol, "To apply", 0), opt(statusCol, "Applied", 1), opt(statusCol, "Interview", 2)];
+  statusCol = db
+    .insert(columns)
+    .values({ userId: "local", trackId, name: "Status", type: "single_select", position: 0, isStatus: true })
+    .returning()
+    .get().id;
+  otherCol = db
+    .insert(columns)
+    .values({ userId: "local", trackId, name: "Stage", type: "single_select", position: 1 })
+    .returning()
+    .get().id;
+  [toApply, applied, interview] = [
+    opt(statusCol, "To apply", 0),
+    opt(statusCol, "Applied", 1),
+    opt(statusCol, "Interview", 2),
+  ];
   foreignOpt = opt(otherCol, "X", 0);
   appId = db.insert(applications).values({ userId: "local", trackId, title: "A" }).returning().get().id;
-  db.insert(cellValues).values({ userId: "local", applicationId: appId, columnId: statusCol, valueOptionId: toApply }).run();
+  db.insert(cellValues)
+    .values({ userId: "local", applicationId: appId, columnId: statusCol, valueOptionId: toApply })
+    .run();
 });
 afterEach(dropTestDb);
 
@@ -42,7 +87,11 @@ describe("addSubmission", () => {
   it("creates the application's first submission without a status change, and later status moves do not ask for a review", async () => {
     const f = mkFile();
     expect(await addSubmission(appId, [f], "2026-11-09", " Extra transcript ", null)).toEqual({ ok: true });
-    expect(db.select().from(submissions).get()).toMatchObject({ applicationId: appId, date: "2026-11-09", note: "Extra transcript" });
+    expect(db.select().from(submissions).get()).toMatchObject({
+      applicationId: appId,
+      date: "2026-11-09",
+      note: "Extra transcript",
+    });
     expect(statusOf()).toBe(toApply);
     expect(refresh).toHaveBeenCalledTimes(1);
     expect((await updateCell(appId, statusCol, applied)).ok).toBe(true); // a submission exists, so the 6.4 review is not triggered
@@ -58,15 +107,23 @@ describe("addSubmission", () => {
   });
 
   it("saves the status change with the submission, even to a submitted status on an application with none", async () => {
-    expect(await addSubmission(appId, [mkFile()], "2026-11-09", null, { columnId: statusCol, optionId: applied })).toEqual({ ok: true });
+    expect(
+      await addSubmission(appId, [mkFile()], "2026-11-09", null, { columnId: statusCol, optionId: applied }),
+    ).toEqual({ ok: true });
     expect(statusOf()).toBe(applied);
     expect(counts()).toEqual([1, 1]);
   });
 
   it("refuses zero files, a bad date and a long note, saving nothing and not refreshing", async () => {
     const f = mkFile();
-    for (const [ids, date, note] of [[[], "2026-11-09", null], [[f], "2026-02-30", null], [[f], "2026-11-09", "x".repeat(2001)]] as const) {
-      expect((await addSubmission(appId, [...ids], date, note, { columnId: statusCol, optionId: applied })).ok).toBe(false);
+    for (const [ids, date, note] of [
+      [[], "2026-11-09", null],
+      [[f], "2026-02-30", null],
+      [[f], "2026-11-09", "x".repeat(2001)],
+    ] as const) {
+      expect((await addSubmission(appId, [...ids], date, note, { columnId: statusCol, optionId: applied })).ok).toBe(
+        false,
+      );
     }
     expect(counts()).toEqual([0, 0]);
     expect(statusOf()).toBe(toApply);
@@ -83,7 +140,8 @@ describe("addSubmission", () => {
       [[mine], { columnId: statusCol, optionId: 9999 }],
       [[mine, theirs], { columnId: statusCol, optionId: interview }], // file of another application
     ];
-    for (const [ids, status] of cases) expect((await addSubmission(appId, ids, "2026-11-09", null, status)).ok, JSON.stringify(status)).toBe(false);
+    for (const [ids, status] of cases)
+      expect((await addSubmission(appId, ids, "2026-11-09", null, status)).ok, JSON.stringify(status)).toBe(false);
     expect(counts()).toEqual([0, 0]);
     expect(statusOf()).toBe(toApply);
   });
@@ -108,7 +166,14 @@ describe("addSubmission", () => {
 describe("createManualSubmission", () => {
   it("writes a status for an application that had no status cell yet", async () => {
     db.delete(cellValues).run();
-    expect((await createManualSubmission(appId, [mkFile()], "2026-11-09", null, { columnId: statusCol, optionId: interview })).ok).toBe(true);
+    expect(
+      (
+        await createManualSubmission(appId, [mkFile()], "2026-11-09", null, {
+          columnId: statusCol,
+          optionId: interview,
+        })
+      ).ok,
+    ).toBe(true);
     expect(statusOf()).toBe(interview);
   });
 });

@@ -14,7 +14,11 @@ export async function getSetting(key: string): Promise<unknown> {
 
 // Same, synchronous: for code that must not await between its checks and its write (better-sqlite3 is sync).
 export function readSetting(key: string): unknown {
-  const row = getDb().select({ value: settings.value }).from(settings).where(and(eq(settings.userId, getUserId()), eq(settings.key, key))).get();
+  const row = getDb()
+    .select({ value: settings.value })
+    .from(settings)
+    .where(and(eq(settings.userId, getUserId()), eq(settings.key, key)))
+    .get();
   if (!row) return undefined;
   try {
     return JSON.parse(row.value);
@@ -27,8 +31,11 @@ export async function setSetting(key: string, value: unknown): Promise<void> {
   const json = JSON.stringify(value);
   if (json === undefined) throw new Error("Setting value is not JSON-serialisable.");
   // updatedAt is set by hand: $onUpdate does not run for onConflictDoUpdate.
-  getDb().insert(settings).values({ userId: getUserId(), key, value: json })
-    .onConflictDoUpdate({ target: [settings.userId, settings.key], set: { value: json, updatedAt: new Date() } }).run();
+  getDb()
+    .insert(settings)
+    .values({ userId: getUserId(), key, value: json })
+    .onConflictDoUpdate({ target: [settings.userId, settings.key], set: { value: json, updatedAt: new Date() } })
+    .run();
 }
 
 export async function getFilesRoot(): Promise<string | null> {
@@ -41,6 +48,8 @@ export const setFilesRoot = (path: string) => setSetting(FILES_ROOT_KEY, path);
 // The label choices (FR-5.3): the `file_labels` setting, or the default list when it is unset or not a list of short strings.
 export async function getFileLabels(): Promise<string[]> {
   const v = await getSetting("file_labels");
-  const list = Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "" && x.length <= MAX_LABEL) : [];
+  const list = Array.isArray(v)
+    ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "" && x.length <= MAX_LABEL)
+    : [];
   return list.length ? list : DEFAULT_FILE_LABELS;
 }

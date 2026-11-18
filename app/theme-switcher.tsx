@@ -2,7 +2,13 @@
 
 import { useId, useLayoutEffect, useSyncExternalStore } from "react";
 import { CheckIcon, PaletteIcon } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { DEFAULT_THEME, THEMES, type Theme, THEME_LABELS, THEME_STORAGE_KEY, parseTheme } from "@/lib/theme";
 import { RAIL_ITEM, RailLabel, RailTip } from "./rail";
@@ -22,7 +28,11 @@ const readStored = () => {
 };
 
 function useTheme() {
-  const theme = useSyncExternalStore(subscribe, () => parseTheme(document.documentElement.dataset.theme), () => DEFAULT_THEME);
+  const theme = useSyncExternalStore(
+    subscribe,
+    () => parseTheme(document.documentElement.dataset.theme),
+    () => DEFAULT_THEME,
+  );
   // React's dev-mode remount can clear attributes set by the inline script; re-apply the stored choice (no-op in production).
   useLayoutEffect(() => {
     document.documentElement.setAttribute("data-theme", readStored());
@@ -41,7 +51,11 @@ function useTheme() {
 
 // A small preview of one theme: data-theme on the element makes it resolve that theme's tokens (every token is a scoped custom property), so no colour is written here.
 const ThemeDot = ({ theme }: { theme: Theme }) => (
-  <span data-theme={theme} aria-hidden className="grid size-4 shrink-0 place-items-center rounded-full border border-input bg-background">
+  <span
+    data-theme={theme}
+    aria-hidden
+    className="grid size-4 shrink-0 place-items-center rounded-full border border-input bg-background"
+  >
     <span className="size-2 rounded-full bg-accent" />
   </span>
 );
@@ -56,7 +70,14 @@ export function ThemeSwitcher({ className }: { className?: string }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {THEMES.map((t) => (
           <label key={t} className="relative block cursor-pointer">
-            <input type="radio" name={name} value={t} checked={theme === t} onChange={() => setTheme(t)} className="peer sr-only" />
+            <input
+              type="radio"
+              name={name}
+              value={t}
+              checked={theme === t}
+              onChange={() => setTheme(t)}
+              className="peer sr-only"
+            />
             <span className="block rounded-lg border-2 border-input p-1 transition-colors peer-checked:border-accent peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background">
               <span data-theme={t} aria-hidden className="grid gap-1.5 rounded-md bg-background p-2">
                 <span className="h-5 rounded-sm border border-border bg-card" />
@@ -88,7 +109,12 @@ export function ThemeMenu({ className }: { className?: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="end" sideOffset={20} className="w-auto min-w-36">
         <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-          {THEMES.map((t) => <DropdownMenuRadioItem key={t} value={t}><ThemeDot theme={t} />{THEME_LABELS[t]}</DropdownMenuRadioItem>)}
+          {THEMES.map((t) => (
+            <DropdownMenuRadioItem key={t} value={t}>
+              <ThemeDot theme={t} />
+              {THEME_LABELS[t]}
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>

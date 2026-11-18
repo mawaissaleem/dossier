@@ -15,13 +15,18 @@ function Rows({ items }: { items: OverdueAlert[] }) {
       {items.map((d) => (
         <li key={d.id} className="border-t border-border py-3 first:border-t-0 first:pt-0 last:pb-0">
           <div className="flex flex-wrap items-baseline gap-x-2">
-            <Link href={`/applications/${d.id}`} className={`break-words font-medium text-destructive ${LINK}`}>{d.title}</Link>
+            <Link href={`/applications/${d.id}`} className={`break-words font-medium text-destructive ${LINK}`}>
+              {d.title}
+            </Link>
             <span className="text-xs text-muted-foreground">{d.trackName}</span>
           </div>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm font-medium text-destructive">
             <CircleAlertIcon aria-hidden className="size-3.5 shrink-0" />
             <span>{d.text}</span>
-            <span className="font-normal tabular-nums">· <span className="sr-only">due </span>{d.date}</span>
+            <span className="font-normal tabular-nums">
+              · <span className="sr-only">due </span>
+              {d.date}
+            </span>
           </p>
         </li>
       ))}
@@ -41,7 +46,9 @@ export async function OverdueCard({ className }: { className?: string }) {
       {more > 0 && (
         <details className="mt-3 border-t border-border pt-3 text-sm">
           <summary className={`w-fit cursor-pointer ${ACCENT_LINK}`}>{more} more</summary>
-          <div className="mt-3"><Rows items={items.slice(SHOWN)} /></div>
+          <div className="mt-3">
+            <Rows items={items.slice(SHOWN)} />
+          </div>
         </details>
       )}
     </DashboardCard>

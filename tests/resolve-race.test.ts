@@ -16,7 +16,8 @@ vi.mock("node:fs/promises", async (importOriginal) => {
   const err = (code: string) => Object.assign(new Error(code), { code });
   return {
     ...real,
-    realpath: (p: string) => (hooks.realpathFails?.path === p ? Promise.reject(err(hooks.realpathFails.code)) : real.realpath(p)),
+    realpath: (p: string) =>
+      hooks.realpathFails?.path === p ? Promise.reject(err(hooks.realpathFails.code)) : real.realpath(p),
     lstat: async (p: string) => {
       const h = hooks.lstat?.path === p ? hooks.lstat.result : null;
       if (h && h !== "symlink") throw err(h.code);

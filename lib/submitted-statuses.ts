@@ -15,7 +15,9 @@ export function resolveSubmittedStatuses(stored: unknown, options: Opt[]): numbe
 
 // The ids to save, or an error. Every id must be an option of the track's status column.
 export function checkSubmittedIds(ids: unknown, options: Opt[]): { ids: number[] } | { error: string } {
-  if (!Array.isArray(ids) || !ids.every((id) => Number.isInteger(id))) return { error: "Choose statuses from the list." };
-  if (!ids.every((id) => options.some((o) => o.id === id))) return { error: "A chosen status is not a status of this track." };
+  if (!Array.isArray(ids) || !ids.every((id) => Number.isInteger(id)))
+    return { error: "Choose statuses from the list." };
+  if (!ids.every((id) => options.some((o) => o.id === id)))
+    return { error: "A chosen status is not a status of this track." };
   return { ids: options.filter((o) => ids.includes(o.id)).map((o) => o.id) };
 }

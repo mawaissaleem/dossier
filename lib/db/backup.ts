@@ -18,7 +18,9 @@ export async function copyDatabaseTo(file: string): Promise<void> {
 
 // Drizzle keeps one row per applied migration in __drizzle_migrations (created_at = the migration's journal timestamp).
 export function getSchemaVersion(): { migrations: number; latest: number | null } {
-  const row = getDb().$client.prepare("SELECT count(*) AS n, max(created_at) AS latest FROM __drizzle_migrations").get() as { n: number; latest: number | null };
+  const row = getDb()
+    .$client.prepare("SELECT count(*) AS n, max(created_at) AS latest FROM __drizzle_migrations")
+    .get() as { n: number; latest: number | null };
   return { migrations: row.n, latest: row.latest };
 }
 
@@ -42,7 +44,9 @@ export async function getReminderDays(): Promise<number> {
 }
 
 // Validates (the action passes unknown input); nothing is saved on error.
-export async function setReminderDays(input: unknown): Promise<{ ok: true; days: number } | { ok: false; error: string }> {
+export async function setReminderDays(
+  input: unknown,
+): Promise<{ ok: true; days: number } | { ok: false; error: string }> {
   const r = parseReminderDays(input);
   if (r.ok) await setSetting(REMINDER_DAYS_KEY, r.days);
   return r;

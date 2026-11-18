@@ -7,7 +7,13 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const hook = vi.hoisted(() => ({ n: 0, failOn: 0 }));
 vi.mock("node:fs/promises", async (orig) => {
   const m = await orig<typeof import("node:fs/promises")>();
-  return { ...m, rename: async (a: string, b: string) => { if (++hook.n === hook.failOn) throw new Error("rename failed"); return m.rename(a, b); } };
+  return {
+    ...m,
+    rename: async (a: string, b: string) => {
+      if (++hook.n === hook.failOn) throw new Error("rename failed");
+      return m.rename(a, b);
+    },
+  };
 });
 
 import { swapFiles } from "@/lib/files/restore";

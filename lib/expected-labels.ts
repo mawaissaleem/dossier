@@ -34,14 +34,16 @@ export function resolveExpectedLabels(stored: unknown): string[] {
 
 // The labels to save (trimmed, order kept), or the first error. An empty list is allowed.
 export function checkExpectedLabels(input: unknown): { labels: string[] } | { error: string } {
-  if (!Array.isArray(input) || !input.every((x) => typeof x === "string")) return { error: "Expected labels must be a list of text." };
+  if (!Array.isArray(input) || !input.every((x) => typeof x === "string"))
+    return { error: "Expected labels must be a list of text." };
   if (input.length > MAX_EXPECTED_LABELS) return { error: `At most ${MAX_EXPECTED_LABELS} expected labels.` };
   const seen = new Set<string>();
   const labels: string[] = [];
   for (const raw of input as string[]) {
     const l = raw.trim();
     if (l === "") return { error: "A label cannot be blank." };
-    if (l.length > MAX_LABEL || /[\u0000-\u001f\u007f-\u009f]/.test(l)) return { error: `A label must be one line of at most ${MAX_LABEL} characters.` };
+    if (l.length > MAX_LABEL || /[\u0000-\u001f\u007f-\u009f]/.test(l))
+      return { error: `A label must be one line of at most ${MAX_LABEL} characters.` };
     if (seen.has(labelKey(l))) return { error: `"${l}" is already in the list.` };
     seen.add(labelKey(l));
     labels.push(l);

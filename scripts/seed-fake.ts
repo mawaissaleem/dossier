@@ -13,21 +13,37 @@ loadEnvConfig(process.cwd());
 const CHUNK = 200; // rows per INSERT: 200 rows (or 200 cell values) stays far below SQLite's bound-variable limit
 
 async function main() {
-  const { values } = parseArgs({ options: { count: { type: "string", default: "500" }, mix: { type: "string", default: "Job=80,PhD=20" }, seed: { type: "string", default: "1" }, base: { type: "string", default: "2026-11-07" }, force: { type: "boolean", default: false } } });
+  const { values } = parseArgs({
+    options: {
+      count: { type: "string", default: "500" },
+      mix: { type: "string", default: "Job=80,PhD=20" },
+      seed: { type: "string", default: "1" },
+      base: { type: "string", default: "2026-11-07" },
+      force: { type: "boolean", default: false },
+    },
+  });
   const count = Number(values.count);
   const seed = Number(values.seed);
-  if (!Number.isInteger(count) || count < 1 || count > 100_000) throw new Error("--count must be a whole number from 1 to 100000.");
+  if (!Number.isInteger(count) || count < 1 || count > 100_000)
+    throw new Error("--count must be a whole number from 1 to 100000.");
   if (!Number.isInteger(seed)) throw new Error("--seed must be a whole number.");
   const parsedBase = parseCell("date", values.base);
-  if (!parsedBase.ok || typeof parsedBase.value !== "string") throw new Error("--base must be a real date as YYYY-MM-DD.");
+  if (!parsedBase.ok || typeof parsedBase.value !== "string")
+    throw new Error("--base must be a real date as YYYY-MM-DD.");
   const base = parsedBase.value;
-  const mix = values.mix!.split(",").map((p) => p.split("=")).map(([name, w]) => ({ name: name?.trim(), weight: Number(w) }));
-  if (mix.some((m) => !m.name || !(m.weight > 0))) throw new Error('--mix must look like "Job=80,PhD=20" (track name = positive weight).');
+  const mix = values
+    .mix!.split(",")
+    .map((p) => p.split("="))
+    .map(([name, w]) => ({ name: name?.trim(), weight: Number(w) }));
+  if (mix.some((m) => !m.name || !(m.weight > 0)))
+    throw new Error('--mix must look like "Job=80,PhD=20" (track name = positive weight).');
 
   const target = resolve(process.env.DATABASE_PATH ?? "");
   if (!process.env.DATABASE_PATH) throw new Error("DATABASE_PATH is not set.");
   if (target === resolve("./data/dossier.db") && !values.force) {
-    console.error(`Refusing to write fake data into ${target} (your real database). Point DATABASE_PATH at a scratch file, or pass --force.`);
+    console.error(
+      `Refusing to write fake data into ${target} (your real database). Point DATABASE_PATH at a scratch file, or pass --force.`,
+    );
     process.exit(1);
   }
 
@@ -49,7 +65,10 @@ async function main() {
     throw new Error(`${target} has no tables yet. Run "npm run db:migrate" and "npm run db:seed" first.`);
   }
   const missing = mix.filter((m) => !existing.some((t) => t.name === m.name)).map((m) => m.name);
-  if (missing.length) throw new Error(`No track named ${missing.join(", ")} in ${target}. Run "npm run db:seed" first, or change --mix (tracks here: ${existing.map((t) => t.name).join(", ") || "none"}).`);
+  if (missing.length)
+    throw new Error(
+      `No track named ${missing.join(", ")} in ${target}. Run "npm run db:seed" first, or change --mix (tracks here: ${existing.map((t) => t.name).join(", ") || "none"}).`,
+    );
 
   // Largest-share split by weight; the rounding remainder goes to the first track.
   const total = mix.reduce((s, m) => s + m.weight, 0);
@@ -58,29 +77,48 @@ async function main() {
 
   const rng = mulberry32(seed);
   const started = performance.now();
-  let blanks = 0, cells = 0;
+  let blanks = 0,
+    cells = 0;
   const added = await (async () => {
-    const plan: { name: string; trackId: number; types: Map<number, import("../lib/db/schema").ColumnType>; rows: ReturnType<typeof generateApplications> }[] = [];
+    const plan: {
+      name: string;
+      trackId: number;
+      types: Map<number, import("../lib/db/schema").ColumnType>;
+      rows: ReturnType<typeof generateApplications>;
+    }[] = [];
     for (const [i, m] of mix.entries()) {
       const track = existing.find((t) => t.name === m.name)!;
       const cols = await listColumns(track.id);
-      plan.push({ name: m.name, trackId: track.id, types: new Map(cols.map((c) => [c.id, c.type])), rows: generateApplications(cols, counts[i], rng, base) });
+      plan.push({
+        name: m.name,
+        trackId: track.id,
+        types: new Map(cols.map((c) => [c.id, c.type])),
+        rows: generateApplications(cols, counts[i], rng, base),
+      });
     }
     return db.transaction((tx) => {
       for (const p of plan) {
         for (let at = 0; at < p.rows.length; at += CHUNK) {
           const chunk = p.rows.slice(at, at + CHUNK);
-          const ids = tx.insert(applications).values(chunk.map((r) => ({ userId, trackId: p.trackId, title: r.title, archived: r.archived }))).returning({ id: applications.id, title: applications.title }).all();
+          const ids = tx
+            .insert(applications)
+            .values(chunk.map((r) => ({ userId, trackId: p.trackId, title: r.title, archived: r.archived })))
+            .returning({ id: applications.id, title: applications.title })
+            .all();
           const cellRows = chunk.flatMap((r, k) => {
             if (ids[k]?.title !== r.title) throw new Error("Insert order mismatch."); // RETURNING order is relied on to pair ids with rows
             return Object.entries(r.cells).map(([cid, raw]) => {
               const type = p.types.get(Number(cid))!;
               const parsed = parseCell(type, raw); // the app's own validation: a value it would refuse is a bug in the generator
-              if (!parsed.ok || parsed.value === null) throw new Error(`Generated an invalid ${type} value ${JSON.stringify(raw)}.`);
+              if (!parsed.ok || parsed.value === null)
+                throw new Error(`Generated an invalid ${type} value ${JSON.stringify(raw)}.`);
               return { userId, applicationId: ids[k].id, columnId: Number(cid), [CELL_FIELD[type]]: parsed.value };
             });
           });
-          for (let c = 0; c < cellRows.length; c += CHUNK) tx.insert(cellValues).values(cellRows.slice(c, c + CHUNK)).run();
+          for (let c = 0; c < cellRows.length; c += CHUNK)
+            tx.insert(cellValues)
+              .values(cellRows.slice(c, c + CHUNK))
+              .run();
           cells += cellRows.length;
           blanks += chunk.length * p.types.size - cellRows.length;
         }
@@ -89,7 +127,9 @@ async function main() {
     });
   })();
   const ms = Math.round(performance.now() - started);
-  console.log(`Added ${count} fake applications (${added.join(", ")}) with ${cells} values and ${blanks} blank cells to ${target} in ${ms} ms. Run again and it adds another batch.`);
+  console.log(
+    `Added ${count} fake applications (${added.join(", ")}) with ${cells} values and ${blanks} blank cells to ${target} in ${ms} ms. Run again and it adds another batch.`,
+  );
 }
 
 main().catch((e) => {

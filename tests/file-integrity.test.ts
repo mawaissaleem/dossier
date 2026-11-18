@@ -28,7 +28,12 @@ async function mkApp(title: string) {
   return r.id;
 }
 async function store(name: string, content: string, app = appId) {
-  const r = await storeUploadedFile({ applicationId: app, file: new File([content], name), label: "CV", uploadDate: "2026-11-08" });
+  const r = await storeUploadedFile({
+    applicationId: app,
+    file: new File([content], name),
+    label: "CV",
+    uploadDate: "2026-11-08",
+  });
   if (!r.ok || !("file" in r)) throw new Error("store failed");
   return r.file;
 }
@@ -92,7 +97,11 @@ describe("Check files", () => {
     edit(b.relativePath, "TWO!");
     remove(c.relativePath);
     const r = await checkApplicationFiles(appId);
-    expect(r).toMatchObject({ ok: true, counts: { ok: 1, mismatch: 1, missing: 1, failed: 0 }, summary: "1 file changed, 1 missing" });
+    expect(r).toMatchObject({
+      ok: true,
+      counts: { ok: 1, mismatch: 1, missing: 1, failed: 0 },
+      summary: "1 file changed, 1 missing",
+    });
     expect((await state(a.id)).integrity).toBe("ok");
     expect((await state(b.id)).integrity).toBe("mismatch");
     expect((await state(c.id)).integrity).toBe("missing");
@@ -108,7 +117,11 @@ describe("Check files", () => {
     chmodSync(join(root, a.relativePath), 0o644);
     truncateSync(join(root, a.relativePath), MAX_UPLOAD_BYTES + 1); // sparse
     db.update(files).set({ relativePath: "../outside" }).where(eq(files.id, b.id)).run(); // refused by resolveInRoot
-    expect(await checkApplicationFiles(appId)).toMatchObject({ ok: true, counts: { ok: 0, mismatch: 1, missing: 0, failed: 1 }, summary: "1 file changed, 1 could not be read" });
+    expect(await checkApplicationFiles(appId)).toMatchObject({
+      ok: true,
+      counts: { ok: 0, mismatch: 1, missing: 0, failed: 1 },
+      summary: "1 file changed, 1 could not be read",
+    });
     expect((await state(a.id)).integrity).toBe("mismatch");
     expect((await state(b.id)).integrity).toBe("ok"); // not a verdict, state untouched
   });
@@ -130,12 +143,16 @@ describe("Check files", () => {
   it("a files folder that no longer exists stops with the Re-point message", async () => {
     await store("a.pdf", "one");
     rmSync(root, { recursive: true, force: true });
-    expect(await checkApplicationFiles(appId)).toEqual({ ok: false, error: expect.stringMatching(/Re-point in Settings/) });
+    expect(await checkApplicationFiles(appId)).toEqual({
+      ok: false,
+      error: expect.stringMatching(/Re-point in Settings/),
+    });
   });
   it("the server action checks its argument and returns the result", async () => {
     const a = await store("a.pdf", "one");
     edit(a.relativePath, "changed");
-    for (const bad of [0, -1, 1.5, "1", null, NaN]) expect(await checkFiles(bad as never)).toEqual({ ok: false, error: "Application not found." });
+    for (const bad of [0, -1, 1.5, "1", null, NaN])
+      expect(await checkFiles(bad as never)).toEqual({ ok: false, error: "Application not found." });
     expect(await checkFiles(appId)).toMatchObject({ ok: true, summary: "1 file changed" });
     expect((await state(a.id)).integrity).toBe("mismatch");
   });
@@ -147,7 +164,10 @@ describe("Open when the missing state cannot be recorded (8.6 review)", () => {
     remove(f.relativePath);
     db.run(sql`CREATE TRIGGER no_update BEFORE UPDATE ON files BEGIN SELECT RAISE(ABORT, 'database is locked'); END`);
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = await GET(new NextRequest(`http://localhost:3000/api/files/${f.id}`, { headers: { host: "localhost:3000" } }), { params: Promise.resolve({ id: String(f.id) }) } as never);
+    const res = await GET(
+      new NextRequest(`http://localhost:3000/api/files/${f.id}`, { headers: { host: "localhost:3000" } }),
+      { params: Promise.resolve({ id: String(f.id) }) } as never,
+    );
     expect(res.status).toBe(404);
     expect(await res.text()).toContain("is missing");
     spy.mockRestore();

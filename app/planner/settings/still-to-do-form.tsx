@@ -9,7 +9,15 @@ import { saveStillToDo } from "@/app/actions/settings";
 
 type Choice = { id: number; label: string; color: string; stillToDo: boolean };
 
-export function StillToDoForm({ trackId, trackName, choices }: { trackId: number; trackName: string; choices: Choice[] }) {
+export function StillToDoForm({
+  trackId,
+  trackName,
+  choices,
+}: {
+  trackId: number;
+  trackName: string;
+  choices: Choice[];
+}) {
   const savedIds = choices.filter((c) => c.stillToDo).map((c) => c.id);
   const [on, setOn] = useSyncedState(new Set(savedIds), savedIds.join()); // a Set is not JSON, so the key is the id list
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +25,12 @@ export function StillToDoForm({ trackId, trackName, choices }: { trackId: number
   const [pending, startTransition] = useTransition();
 
   function toggle(id: number, checked: boolean) {
-    setOn((s) => { const n = new Set(s); if (checked) n.add(id); else n.delete(id); return n; });
+    setOn((s) => {
+      const n = new Set(s);
+      if (checked) n.add(id);
+      else n.delete(id);
+      return n;
+    });
     setSaved(false);
   }
 
@@ -57,10 +70,24 @@ export function StillToDoForm({ trackId, trackName, choices }: { trackId: number
       </fieldset>
       {choices.length > 0 && (
         <div className="mt-2 flex items-center gap-3">
-          <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
-          {on.size === 0 && <p className="text-sm text-muted-foreground">Nothing selected: no application of {trackName} will be ranked.</p>}
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          {saved && <p role="status" className="text-sm text-muted-foreground">Saved.</p>}
+          <Button type="submit" disabled={pending}>
+            {pending ? "Saving…" : "Save"}
+          </Button>
+          {on.size === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Nothing selected: no application of {trackName} will be ranked.
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          {saved && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Saved.
+            </p>
+          )}
         </div>
       )}
     </form>

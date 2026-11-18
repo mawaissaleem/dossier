@@ -24,7 +24,15 @@ import { isFullyAbsolute } from "./relative";
 import { appDirs, isInside } from "./root";
 
 export type BackupResult =
-  | { ok: true; path: string; sizeBytes: number; fileCount: number; filesBytes: number; filesRoot: string | null; createdAt: string }
+  | {
+      ok: true;
+      path: string;
+      sizeBytes: number;
+      fileCount: number;
+      filesBytes: number;
+      filesRoot: string | null;
+      createdAt: string;
+    }
   | { ok: false; error: string };
 
 const MAX_NAME_TRIES = 1000;
@@ -60,7 +68,8 @@ async function listFiles(root: string, skip: string[]): Promise<Found[]> {
     for (const e of await readdir(dir, { withFileTypes: true })) {
       const abs = join(dir, e.name);
       if (e.isDirectory()) {
-        if (!(prefix === "" && e.name.startsWith(STAGE_PREFIX)) && !skip.some((d) => isInside(abs, d))) await walk(abs, `${prefix}${e.name}/`);
+        if (!(prefix === "" && e.name.startsWith(STAGE_PREFIX)) && !skip.some((d) => isInside(abs, d)))
+          await walk(abs, `${prefix}${e.name}/`);
       } else if (e.isFile()) {
         out.push({ abs, name: prefix + e.name, size: (await lstat(abs)).size });
       }
@@ -82,15 +91,21 @@ async function claimZip(dir: string, now: Date) {
   throw new Error("Too many backups with the same name.");
 }
 
-type Checked = { ok: true; typed: string; dest: string; root: string | null; rootReal: string | null; skip: string[] } | { ok: false; error: string };
+type Checked =
+  | { ok: true; typed: string; dest: string; root: string | null; rootReal: string | null; skip: string[] }
+  | { ok: false; error: string };
 
 const no = (error: string): Checked => ({ ok: false, error });
 
 // The destination checks, shared by "save the destination" (8.2) and createBackup. Writability is only found out when the zip is claimed.
 async function checkDestination(destination: unknown): Promise<Checked> {
-  if (typeof destination !== "string" || destination.trim() === "") return no("Enter the full path of the folder for the backup.");
+  if (typeof destination !== "string" || destination.trim() === "")
+    return no("Enter the full path of the folder for the backup.");
   const typed = destination.trim();
-  if (typed.includes("\0") || !isFullyAbsolute(typed)) return no("Use the full path of an existing folder, such as /home/you/Backups. Relative paths and ~ are not accepted.");
+  if (typed.includes("\0") || !isFullyAbsolute(typed))
+    return no(
+      "Use the full path of an existing folder, such as /home/you/Backups. Relative paths and ~ are not accepted.",
+    );
 
   let dest: string;
   try {
@@ -108,17 +123,28 @@ async function checkDestination(destination: unknown): Promise<Checked> {
       rootReal = await realpath(root);
       if (!(await stat(/*turbopackIgnore: true*/ rootReal)).isDirectory()) throw new Error();
     } catch {
-      return no(`The files folder ${root} cannot be found, so its files cannot be backed up. Fix it in Settings first.`);
+      return no(
+        `The files folder ${root} cannot be found, so its files cannot be backed up. Fix it in Settings first.`,
+      );
     }
-    if (skip.some((d) => isInside(rootReal!, d))) return no("The files folder is inside the Dossier app folder, so it cannot be backed up. Choose another one in Settings.");
-    if (isInside(dest, rootReal)) return no("Choose a backup folder outside your files folder, or the backup would contain itself.");
+    if (skip.some((d) => isInside(rootReal!, d)))
+      return no(
+        "The files folder is inside the Dossier app folder, so it cannot be backed up. Choose another one in Settings.",
+      );
+    if (isInside(dest, rootReal))
+      return no("Choose a backup folder outside your files folder, or the backup would contain itself.");
   }
-  if (skip.some((d) => isInside(dest, d))) return no("Choose a folder outside the Dossier app folder and its data folder, so the backup survives if the app data is lost.");
+  if (skip.some((d) => isInside(dest, d)))
+    return no(
+      "Choose a folder outside the Dossier app folder and its data folder, so the backup survives if the app data is lost.",
+    );
   return { ok: true, typed, dest, root, rootReal, skip };
 }
 
 // Validate a destination for saving; returns the path to store (as typed, normalised).
-export async function validateBackupDestination(destination: unknown): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+export async function validateBackupDestination(
+  destination: unknown,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
   const c = await checkDestination(destination);
   return c.ok ? { ok: true, path: resolve(/*turbopackIgnore: true*/ c.typed) } : c;
 }
@@ -135,13 +161,23 @@ export async function createBackup(destination: unknown, now: Date = new Date())
     const dbCopy = join(tmp, "dossier.db");
     await copyDatabaseTo(dbCopy);
     const filesBytes = found.reduce((s, f) => s + f.size, 0);
-    const manifest = buildManifest({ createdAt: now.toISOString(), schema: getSchemaVersion(), filesRoot: root, fileCount: found.length, filesBytes });
+    const manifest = buildManifest({
+      createdAt: now.toISOString(),
+      schema: getSchemaVersion(),
+      filesRoot: root,
+      fileCount: found.length,
+      filesBytes,
+    });
 
     let claimed;
     try {
       claimed = await claimZip(dest, now);
     } catch (e) {
-      return fail(isPermission(e) ? "Dossier cannot write to that folder. Check its permissions." : `The backup failed: ${(e as Error).message}`);
+      return fail(
+        isPermission(e)
+          ? "Dossier cannot write to that folder. Check its permissions."
+          : `The backup failed: ${(e as Error).message}`,
+      );
     }
     const { path, handle } = claimed;
     zipPath = path;
@@ -154,7 +190,12 @@ export async function createBackup(destination: unknown, now: Date = new Date())
       archive.on("warning", reject); // a vanished file fails the backup rather than leaving a gap
       // archiver stores a symlink (or folder) found at a listed path as such; refuse it so files/ holds regular files only
       archive.on("entry", (d) => {
-        if (d.name.startsWith(FILES_PREFIX) && d.type !== "file") reject(new ShownError(`"${d.name.slice(FILES_PREFIX.length)}" in your files folder changed while it was being backed up. Back up again.`));
+        if (d.name.startsWith(FILES_PREFIX) && d.type !== "file")
+          reject(
+            new ShownError(
+              `"${d.name.slice(FILES_PREFIX.length)}" in your files folder changed while it was being backed up. Back up again.`,
+            ),
+          );
       });
     });
     archive.pipe(out);
@@ -172,7 +213,15 @@ export async function createBackup(destination: unknown, now: Date = new Date())
 
     const sizeBytes = (await stat(/*turbopackIgnore: true*/ path)).size;
     await recordBackup(now);
-    return { ok: true, path, sizeBytes, fileCount: found.length, filesBytes, filesRoot: root, createdAt: manifest.createdAt };
+    return {
+      ok: true,
+      path,
+      sizeBytes,
+      fileCount: found.length,
+      filesBytes,
+      filesRoot: root,
+      createdAt: manifest.createdAt,
+    };
   } catch (e) {
     if (zipPath) await rm(zipPath, { force: true }).catch(() => {});
     return fail(explain(e, rootReal));

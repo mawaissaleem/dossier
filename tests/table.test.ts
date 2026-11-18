@@ -5,7 +5,14 @@ import { parseCell } from "@/lib/cells";
 import { buildColumns, editorKind, formatCell, getRowId } from "@/lib/table";
 
 const col = (id: number, name: string, type: ColumnItem["type"], over: Partial<ColumnItem> = {}): ColumnItem => ({
-  id, name, type, hidden: false, isStatus: false, defaultValue: null, options: [], ...over,
+  id,
+  name,
+  type,
+  hidden: false,
+  isStatus: false,
+  defaultValue: null,
+  options: [],
+  ...over,
 });
 
 describe("formatCell", () => {
@@ -49,7 +56,8 @@ describe("buildColumns", () => {
 
   it("reads title and cell values, treating a missing key as blank", () => {
     const row: ApplicationRow = { id: 1, title: "T", values: { 9: 2 } };
-    const get = (i: number) => (defs[i] as unknown as { accessorFn: (r: ApplicationRow, n: number) => unknown }).accessorFn(row, 0);
+    const get = (i: number) =>
+      (defs[i] as unknown as { accessorFn: (r: ApplicationRow, n: number) => unknown }).accessorFn(row, 0);
     expect(get(0)).toBe("T");
     expect(get(1)).toBeNull();
     expect(get(2)).toBe(2);

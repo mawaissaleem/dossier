@@ -30,7 +30,11 @@ describe("updateCell", () => {
   it("saves trimmed text and a number, and refreshes", async () => {
     expect(await updateCell(appId, textCol, "  Acme  ")).toEqual({ ok: true, value: "Acme" });
     expect(await updateCell(appId, numCol, "4.5")).toEqual({ ok: true, value: 4.5 });
-    expect(stored().map((r) => r.valueText ?? r.valueNumber).sort()).toEqual([4.5, "Acme"]);
+    expect(
+      stored()
+        .map((r) => r.valueText ?? r.valueNumber)
+        .sort(),
+    ).toEqual([4.5, "Acme"]);
     expect(refresh).toHaveBeenCalledTimes(2);
   });
 
@@ -68,7 +72,11 @@ describe("updateCell", () => {
 
   it("rejects another user's application, and a column from another track", async () => {
     const otherTrack = db.insert(tracks).values({ userId: "local", name: "PhD", position: 1 }).returning().get().id;
-    const foreign = db.insert(applications).values({ userId: "someone-else", trackId, title: "X" }).returning().get().id;
+    const foreign = db
+      .insert(applications)
+      .values({ userId: "someone-else", trackId, title: "X" })
+      .returning()
+      .get().id;
     expect(await updateCell(foreign, textCol, "x")).toEqual({ ok: false, error: "Application not found." });
     expect(await updateCell(appId, mkCol("text", otherTrack), "x")).toEqual({ ok: false, error: "Column not found." });
     expect(await updateCell(9999, textCol, "x")).toEqual({ ok: false, error: "Application not found." });
@@ -106,7 +114,14 @@ describe("updateCell", () => {
     const l = mkCol("link");
     expect(await updateCell(appId, l, " example.com/jobs ")).toEqual({ ok: true, value: "https://example.com/jobs" });
     vi.mocked(refresh).mockClear();
-    for (const bad of ["javascript:alert(1)", "data:text/html,x", "ftp://example.com", "https://exa mple.com", "https://example.com/a\nb", 5]) {
+    for (const bad of [
+      "javascript:alert(1)",
+      "data:text/html,x",
+      "ftp://example.com",
+      "https://exa mple.com",
+      "https://example.com/a\nb",
+      5,
+    ]) {
       expect((await updateCell(appId, l, bad)).ok).toBe(false);
     }
     expect(stored().map((r) => r.valueText)).toEqual(["https://example.com/jobs"]);
@@ -119,7 +134,11 @@ describe("updateCell on a single-select column", () => {
     const mine = mkCol("single_select");
     const theirs = mkCol("single_select", trackId, "other");
     const opt = (columnId: number) =>
-      db.insert(columnOptions).values({ userId: "local", columnId, label: "x", color: "red", position: 0 }).returning().get().id;
+      db
+        .insert(columnOptions)
+        .values({ userId: "local", columnId, label: "x", color: "red", position: 0 })
+        .returning()
+        .get().id;
     const o = opt(mine);
     expect(await updateCell(appId, mine, o)).toEqual({ ok: true, value: o });
     expect(stored().map((r) => r.valueOptionId)).toEqual([o]);

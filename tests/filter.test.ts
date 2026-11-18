@@ -6,13 +6,24 @@ import { sortRows } from "@/lib/sort";
 
 const opt = (id: number, position: number) => ({ id, label: `o${id}`, color: "blue", position });
 const col = (id: number, type: ColumnItem["type"], over: Partial<ColumnItem> = {}): ColumnItem => ({
-  id, name: `c${id}`, type, hidden: false, isStatus: false, defaultValue: null, options: [], ...over,
+  id,
+  name: `c${id}`,
+  type,
+  hidden: false,
+  isStatus: false,
+  defaultValue: null,
+  options: [],
+  ...over,
 });
 // Priority (col 1: options 10 High, 11 Medium, 12 Low), Status (col 2: options 20, 21; hidden), Notes (col 3: text)
 const priority = col(1, "single_select", { options: [opt(10, 0), opt(11, 1), opt(12, 2)] });
 const status = col(2, "single_select", { hidden: true, options: [opt(20, 0), opt(21, 1)] });
 const cols = [priority, status, col(3, "text")];
-const row = (id: number, p: ApplicationRow["values"][number], s: ApplicationRow["values"][number] = null): ApplicationRow => ({ id, title: `t${id}`, values: { 1: p, 2: s } });
+const row = (
+  id: number,
+  p: ApplicationRow["values"][number],
+  s: ApplicationRow["values"][number] = null,
+): ApplicationRow => ({ id, title: `t${id}`, values: { 1: p, 2: s } });
 const rows = [row(1, 10, 20), row(2, 11, 21), row(3, 12, 20), row(4, null, 21), row(5, 99, 20), row(6, 10, 21)]; // 99 = deleted option
 const ids = (rs: ApplicationRow[]) => rs.map((r) => r.id);
 const f = (id: number, options: number[], blank = false): Filter => ({ id, options, blank });
@@ -59,7 +70,25 @@ describe("parseFilters", () => {
     expect(parseFilters(["77:10", "3:10", "1:10", "1:11"], cols)).toEqual([f(1, [10])]);
   });
   it("ignores malformed, oversized and prototype-like entries", () => {
-    const bad = ["", "1", "1:", ":10", "1:ten", "1:10..11", "1:10.", "a:10", "-1:10", "1:010", "1: 10", "__proto__", "__proto__:10", "constructor:blank", "1:blank.__proto__", "1:10".padEnd(2000, ".10"), "1:99999999999999999999"];
+    const bad = [
+      "",
+      "1",
+      "1:",
+      ":10",
+      "1:ten",
+      "1:10..11",
+      "1:10.",
+      "a:10",
+      "-1:10",
+      "1:010",
+      "1: 10",
+      "__proto__",
+      "__proto__:10",
+      "constructor:blank",
+      "1:blank.__proto__",
+      "1:10".padEnd(2000, ".10"),
+      "1:99999999999999999999",
+    ];
     expect(parseFilters(bad, cols)).toEqual([]);
     expect(parseFilters(bad.concat("2:20"), cols)).toEqual([f(2, [20])]);
   });

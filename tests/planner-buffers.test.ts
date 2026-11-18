@@ -10,7 +10,10 @@ import { dropTestDb, useTestDb } from "./helpers/db";
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
 let db: ReturnType<typeof useTestDb>;
-beforeEach(() => { vi.mocked(refresh).mockClear(); db = useTestDb(); });
+beforeEach(() => {
+  vi.mocked(refresh).mockClear();
+  db = useTestDb();
+});
 afterEach(dropTestDb);
 
 const EMPTY = { priority: null, deadline: null, effort: null, followUp: null };
@@ -19,7 +22,8 @@ describe("checkBuffer", () => {
   it("accepts whole days 0..365 and null; refuses everything else", () => {
     for (const ok of [0, 1, 365]) expect(checkBuffer(ok)).toEqual({ days: ok });
     expect(checkBuffer(null)).toEqual({ days: null });
-    for (const bad of [-1, 366, 1.5, NaN, Infinity, "3", "", undefined, {}, true]) expect(checkBuffer(bad)).toHaveProperty("error");
+    for (const bad of [-1, 366, 1.5, NaN, Infinity, "3", "", undefined, {}, true])
+      expect(checkBuffer(bad)).toHaveProperty("error");
   });
 });
 
@@ -38,19 +42,28 @@ describe("parseBufferInput", () => {
 });
 
 describe("option buffers data layer", () => {
-  const track = (name: string, position = 0) => db.insert(tracks).values({ userId: "local", name, position }).returning().get().id;
+  const track = (name: string, position = 0) =>
+    db.insert(tracks).values({ userId: "local", name, position }).returning().get().id;
   const col = (trackId: number, name: string, type: ColumnType, position = 0) =>
     db.insert(columns).values({ userId: "local", trackId, name, type, position }).returning().get().id;
   const opt = (columnId: number, label: string, position: number, bufferDays?: number, userId = "local") =>
-    db.insert(columnOptions).values({ userId, columnId, label, color: "blue", position, bufferDays }).returning().get().id;
+    db.insert(columnOptions).values({ userId, columnId, label, color: "blue", position, bufferDays }).returning().get()
+      .id;
   const days = (id: number) => db.select().from(columnOptions).where(eq(columnOptions.id, id)).get()!.bufferDays;
 
   it("lists the options of the Priority and Effort slot columns in order; empty slots are null", async () => {
     const t = track("Job");
     const p = col(t, "Priority", "single_select", 0);
-    const b = opt(p, "Low", 1), a = opt(p, "High", 0, 3);
+    const b = opt(p, "Low", 1),
+      a = opt(p, "High", 0, 3);
     expect(await getPlannerBuffers(t)).toEqual({
-      priority: { column: "Priority", options: [{ id: a, label: "High", color: "blue", bufferDays: 3 }, { id: b, label: "Low", color: "blue", bufferDays: null }] },
+      priority: {
+        column: "Priority",
+        options: [
+          { id: a, label: "High", color: "blue", bufferDays: 3 },
+          { id: b, label: "Low", color: "blue", bufferDays: null },
+        ],
+      },
       effort: null,
     });
   });
@@ -69,7 +82,8 @@ describe("option buffers data layer", () => {
   it("refuses non-integers and out-of-range values and changes nothing", async () => {
     const t = track("Job");
     const o = opt(col(t, "Priority", "single_select"), "High", 0, 3);
-    for (const bad of [1.5, -1, 366, "4", NaN, undefined]) expect(await setOptionBuffer(o, bad)).toMatchObject({ ok: false });
+    for (const bad of [1.5, -1, 366, "4", NaN, undefined])
+      expect(await setOptionBuffer(o, bad)).toMatchObject({ ok: false });
     expect(days(o)).toBe(3);
   });
 
@@ -87,9 +101,16 @@ describe("option buffers data layer", () => {
 
   it("refuses an option whose column is not the current Priority or Effort slot", async () => {
     const t = track("Job");
-    const p = col(t, "Priority", "single_select", 0), status = col(t, "Status", "single_select", 1), other = col(t, "Other", "single_select", 2);
-    const inStatus = opt(status, "To apply", 0), inOther = opt(other, "X", 0), inPriority = opt(p, "High", 0);
-    expect(await setOptionBuffer(inStatus, 1)).toMatchObject({ ok: false, error: expect.stringContaining("Priority or Effort") });
+    const p = col(t, "Priority", "single_select", 0),
+      status = col(t, "Status", "single_select", 1),
+      other = col(t, "Other", "single_select", 2);
+    const inStatus = opt(status, "To apply", 0),
+      inOther = opt(other, "X", 0),
+      inPriority = opt(p, "High", 0);
+    expect(await setOptionBuffer(inStatus, 1)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("Priority or Effort"),
+    });
     expect(await setOptionBuffer(inOther, 1)).toMatchObject({ ok: false });
     expect(days(inStatus)).toBeNull();
     // Re-map the Priority slot to Other: now Other's options accept a buffer and the old Priority column's do not.
@@ -100,7 +121,8 @@ describe("option buffers data layer", () => {
   });
 
   it("an option of another track's column is refused", async () => {
-    const t = track("Job"), o = track("PhD", 1);
+    const t = track("Job"),
+      o = track("PhD", 1);
     col(t, "Priority", "single_select");
     const x = opt(col(o, "Misc", "single_select"), "X", 0);
     expect(await setOptionBuffer(x, 1)).toMatchObject({ ok: false });

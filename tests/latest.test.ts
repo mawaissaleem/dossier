@@ -15,7 +15,9 @@ describe("createLatest", () => {
     const l = createLatest();
     let shown: string | null = null;
     const load = (token: number, count: string, ms: number) =>
-      new Promise<void>((r) => setTimeout(r, ms)).then(() => { if (l.current(token)) shown = count; });
+      new Promise<void>((r) => setTimeout(r, ms)).then(() => {
+        if (l.current(token)) shown = count;
+      });
     const slowA = load(l.start(), "A:5", 20); // opened for A, cancelled
     const fastB = load(l.start(), "B:12", 1); // opened for B
     await Promise.all([slowA, fastB]);

@@ -21,22 +21,50 @@ import { getUserId } from "./user";
 
 const MIGRATIONS = "./drizzle";
 // Tables the first migration creates: a copy without them is not a Dossier database. Later tables arrive with the migrations.
-const CORE_TABLES = ["__drizzle_migrations", "tracks", "columns", "column_options", "applications", "cell_values", "settings"];
-const TABLE_FOR: Record<keyof Counts, string> = { applications: "applications", columns: "columns", files: "files", submissions: "submissions", notes: "notes" };
+const CORE_TABLES = [
+  "__drizzle_migrations",
+  "tracks",
+  "columns",
+  "column_options",
+  "applications",
+  "cell_values",
+  "settings",
+];
+const TABLE_FOR: Record<keyof Counts, string> = {
+  applications: "applications",
+  columns: "columns",
+  files: "files",
+  submissions: "submissions",
+  notes: "notes",
+};
 
 const livePath = () => resolve(/*turbopackIgnore: true*/ process.env.DATABASE_PATH ?? "");
-export const stagedDatabasePath = () => join(dirname(livePath()), `${STAGE_PREFIX}${randomBytes(6).toString("hex")}.db`);
+export const stagedDatabasePath = () =>
+  join(dirname(livePath()), `${STAGE_PREFIX}${randomBytes(6).toString("hex")}.db`);
 
 // Files that still have bytes (8.8: a deleted file keeps only a row). A backup made before the deleted_at column has none of those.
 function liveFiles(sqlite: Database.Database): string {
-  return (sqlite.pragma("table_info(files)") as { name: string }[]).some((c) => c.name === "deleted_at") ? "files WHERE deleted_at IS NULL" : "files";
+  return (sqlite.pragma("table_info(files)") as { name: string }[]).some((c) => c.name === "deleted_at")
+    ? "files WHERE deleted_at IS NULL"
+    : "files";
 }
 
 // All rows: this is a single-user database and the question is "what would be replaced". Files counts live files only, so it matches the zip.
 function countsOf(sqlite: Database.Database): Counts {
-  const tables = new Set((sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((r) => r.name));
+  const tables = new Set(
+    (sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+      (r) => r.name,
+    ),
+  );
   const out = {} as Counts;
-  for (const k of COUNT_KEYS) out[k] = tables.has(TABLE_FOR[k]) ? (sqlite.prepare(`SELECT count(*) AS n FROM ${k === "files" ? liveFiles(sqlite) : TABLE_FOR[k]}`).get() as { n: number }).n : 0;
+  for (const k of COUNT_KEYS)
+    out[k] = tables.has(TABLE_FOR[k])
+      ? (
+          sqlite.prepare(`SELECT count(*) AS n FROM ${k === "files" ? liveFiles(sqlite) : TABLE_FOR[k]}`).get() as {
+            n: number;
+          }
+        ).n
+      : 0;
   return out;
 }
 
@@ -49,18 +77,26 @@ function appLatestMigration(): number | null {
   const sqlite = new Database(":memory:");
   try {
     migrate(drizzle(sqlite), { migrationsFolder: MIGRATIONS });
-    return (latestMemo = (sqlite.prepare("SELECT max(created_at) AS latest FROM __drizzle_migrations").get() as { latest: number | null }).latest);
+    return (latestMemo = (
+      sqlite.prepare("SELECT max(created_at) AS latest FROM __drizzle_migrations").get() as { latest: number | null }
+    ).latest);
   } finally {
     sqlite.close();
   }
 }
 
-export type BackupDbInfo = { counts: Counts; filePaths: { relativePath: string; sha256: string }[]; schemaOlder: boolean };
+export type BackupDbInfo = {
+  counts: Counts;
+  filePaths: { relativePath: string; sha256: string }[];
+  schemaOlder: boolean;
+};
 
 function integrityProblem(sqlite: Database.Database): string | null {
   const rows = sqlite.pragma("integrity_check") as { integrity_check: string }[];
-  if (rows.length !== 1 || rows[0].integrity_check !== "ok") return "The database inside the backup is damaged (SQLite's integrity check failed).";
-  if ((sqlite.pragma("foreign_key_check") as unknown[]).length > 0) return "The database inside the backup has broken links between its records.";
+  if (rows.length !== 1 || rows[0].integrity_check !== "ok")
+    return "The database inside the backup is damaged (SQLite's integrity check failed).";
+  if ((sqlite.pragma("foreign_key_check") as unknown[]).length > 0)
+    return "The database inside the backup has broken links between its records.";
   return null;
 }
 
@@ -70,17 +106,44 @@ export function inspectBackupDb(file: string): { ok: true; info: BackupDbInfo } 
     sqlite = new Database(file, { readonly: true, fileMustExist: true });
     const problem = integrityProblem(sqlite);
     if (problem) return { ok: false, error: problem };
-    const tables = new Set((sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((r) => r.name));
-    if (!CORE_TABLES.every((t) => tables.has(t))) return { ok: false, error: "The database inside the backup is not a Dossier database (tables are missing)." };
-    const latest = (sqlite.prepare("SELECT max(created_at) AS latest FROM __drizzle_migrations").get() as { latest: number | null }).latest;
+    const tables = new Set(
+      (sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+        (r) => r.name,
+      ),
+    );
+    if (!CORE_TABLES.every((t) => tables.has(t)))
+      return { ok: false, error: "The database inside the backup is not a Dossier database (tables are missing)." };
+    const latest = (
+      sqlite.prepare("SELECT max(created_at) AS latest FROM __drizzle_migrations").get() as { latest: number | null }
+    ).latest;
     const appLatest = appLatestMigration();
-    if (schemaIsNewer(latest, appLatest)) return { ok: false, error: "This backup was made by a newer version of Dossier than this one. Update Dossier, then restore it." };
-    const rows = tables.has("files") ? (sqlite.prepare(`SELECT relative_path, sha256 FROM ${liveFiles(sqlite)}`).all() as { relative_path: string; sha256: string }[]) : [];
+    if (schemaIsNewer(latest, appLatest))
+      return {
+        ok: false,
+        error: "This backup was made by a newer version of Dossier than this one. Update Dossier, then restore it.",
+      };
+    const rows = tables.has("files")
+      ? (sqlite.prepare(`SELECT relative_path, sha256 FROM ${liveFiles(sqlite)}`).all() as {
+          relative_path: string;
+          sha256: string;
+        }[])
+      : [];
     for (const r of rows) {
       const c = checkRelativePath(r.relative_path);
-      if (!c.ok) return { ok: false, error: `The backup's database has a file with an unsafe path (${JSON.stringify(r.relative_path.slice(0, 80))}): ${c.error}` };
+      if (!c.ok)
+        return {
+          ok: false,
+          error: `The backup's database has a file with an unsafe path (${JSON.stringify(r.relative_path.slice(0, 80))}): ${c.error}`,
+        };
     }
-    return { ok: true, info: { counts: countsOf(sqlite), filePaths: rows.map((r) => ({ relativePath: r.relative_path, sha256: r.sha256 })), schemaOlder: latest !== appLatest } };
+    return {
+      ok: true,
+      info: {
+        counts: countsOf(sqlite),
+        filePaths: rows.map((r) => ({ relativePath: r.relative_path, sha256: r.sha256 })),
+        schemaOlder: latest !== appLatest,
+      },
+    };
   } catch {
     return { ok: false, error: "The database inside the backup cannot be opened. The backup is damaged." };
   } finally {
@@ -89,7 +152,12 @@ export function inspectBackupDb(file: string): { ok: true; info: BackupDbInfo } 
 }
 
 // Reads this computer's own settings from the live database (call it after the safety backup, which updates last_backup_at).
-const keptRows = () => getDb().select().from(settings).where(and(eq(settings.userId, getUserId()), inArray(settings.key, [...KEPT_SETTING_KEYS]))).all();
+const keptRows = () =>
+  getDb()
+    .select()
+    .from(settings)
+    .where(and(eq(settings.userId, getUserId()), inArray(settings.key, [...KEPT_SETTING_KEYS])))
+    .all();
 
 // Relative paths of the backup's live files, by what the reader found in the zip.
 export type FileFlags = { ok: string[]; changed: string[]; missing: string[] };
@@ -103,13 +171,30 @@ export function finalizeStagedDb(file: string, flags: FileFlags): void {
     sqlite.pragma("foreign_keys = ON");
     const db = drizzle(sqlite);
     migrate(db, { migrationsFolder: MIGRATIONS });
-    db.delete(settings).where(and(eq(settings.userId, getUserId()), inArray(settings.key, [...KEPT_SETTING_KEYS]))).run();
+    db.delete(settings)
+      .where(and(eq(settings.userId, getUserId()), inArray(settings.key, [...KEPT_SETTING_KEYS])))
+      .run();
     const kept = keptRows();
-    if (kept.length) db.insert(settings).values(kept.map((r) => ({ userId: r.userId, key: r.key, value: r.value, createdAt: r.createdAt, updatedAt: r.updatedAt }))).run();
+    if (kept.length)
+      db.insert(settings)
+        .values(
+          kept.map((r) => ({
+            userId: r.userId,
+            key: r.key,
+            value: r.value,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          })),
+        )
+        .run();
     const now = new Date();
     db.transaction((tx) => {
       for (const k of Object.keys(FLAG_STATE) as (keyof FileFlags)[]) {
-        for (const p of flags[k]) tx.update(files).set({ integrity: FLAG_STATE[k], checkedAt: now }).where(and(eq(files.relativePath, p), isNull(files.deletedAt), ne(files.integrity, FLAG_STATE[k]))).run();
+        for (const p of flags[k])
+          tx.update(files)
+            .set({ integrity: FLAG_STATE[k], checkedAt: now })
+            .where(and(eq(files.relativePath, p), isNull(files.deletedAt), ne(files.integrity, FLAG_STATE[k])))
+            .run();
       }
     });
     const problem = integrityProblem(sqlite);
@@ -145,7 +230,12 @@ export function swapDatabase(staged: string): DbSwap {
     undo();
     throw e;
   }
-  return { undo, discard: () => { for (const s of moved) rmSync(aside + s, { force: true }); } };
+  return {
+    undo,
+    discard: () => {
+      for (const s of moved) rmSync(aside + s, { force: true });
+    },
+  };
 }
 
 export const removeStaged = (file: string) => rmSync(file, { force: true });

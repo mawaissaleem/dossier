@@ -13,15 +13,25 @@ import { ROOT_MISSING, resolveInRoot } from "./resolve";
 type Failure = "not-found" | "deleted" | "setup" | "refused" | "missing" | "error";
 // ok/mismatch: the file exists; bytes are null only when it is too large to read (never for ok). found is null in that case too.
 export type VerifyResult =
-  | { ok: true; integrity: "ok" | "mismatch"; applicationId: number; storedName: string; expected: string; found: string | null; bytes: Buffer | null }
+  | {
+      ok: true;
+      integrity: "ok" | "mismatch";
+      applicationId: number;
+      storedName: string;
+      expected: string;
+      found: string | null;
+      bytes: Buffer | null;
+    }
   | { ok: false; kind: Failure; error: string; applicationId?: number }; // applicationId: set for "setup", "missing" and "error", so the route's problem page can link back
 
-const fail = (kind: Failure, error: string, applicationId?: number) => ({ ok: false, kind, error, applicationId }) as const;
+const fail = (kind: Failure, error: string, applicationId?: number) =>
+  ({ ok: false, kind, error, applicationId }) as const;
 
 export async function verifyStoredFile(id: number): Promise<VerifyResult> {
   const row = await getFileForOpen(id);
   if (!row) return fail("not-found", "File not found.");
-  if (row.deleted) return fail("deleted", "This file was deleted. Only its record is kept in the submissions that listed it.");
+  if (row.deleted)
+    return fail("deleted", "This file was deleted. Only its record is kept in the submissions that listed it.");
   const root = await getFilesRoot();
   if (!root) return fail("setup", "Choose the files folder in Settings before opening files.", row.applicationId);
   const target = await resolveInRoot(root, row.relativePath);
@@ -37,13 +47,25 @@ export async function verifyStoredFile(id: number): Promise<VerifyResult> {
     const found = bytes && createHash("sha256").update(bytes).digest("hex");
     const integrity = found === row.sha256 ? "ok" : "mismatch";
     await recordIntegrity(id, integrity);
-    return { ok: true, integrity, applicationId: row.applicationId, storedName: row.storedName, expected: row.sha256, found, bytes };
+    return {
+      ok: true,
+      integrity,
+      applicationId: row.applicationId,
+      storedName: row.storedName,
+      expected: row.sha256,
+      found,
+      bytes,
+    };
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code;
     if (code === "ENOENT" || code === "ENOTDIR") {
       // The answer is true whether or not it could be recorded (e.g. database locked): never turn it into an unhandled 500.
       await recordIntegrity(id, "missing").catch((err) => console.error("Could not record missing state", err));
-      return fail("missing", `The file ${row.storedName} is missing from the files folder. It may have been moved or deleted outside Dossier.`, row.applicationId);
+      return fail(
+        "missing",
+        `The file ${row.storedName} is missing from the files folder. It may have been moved or deleted outside Dossier.`,
+        row.applicationId,
+      );
     }
     console.error("Open failed", e);
     return fail("error", "Could not read the file.", row.applicationId);

@@ -12,6 +12,14 @@ export async function AddApplication() {
   await connection();
   const tracks = await getTrackOverviews(localToday());
   if (tracks.length === 0) return null;
-  if (tracks.length > 1) return <AddApplicationMenu tracks={tracks.map(({ id, name, color }) => ({ id, name, color }))} />;
-  return <Button asChild><Link href={`/tracks/${tracks[0].id}#add-application`}><PlusIcon aria-hidden />Add application</Link></Button>;
+  if (tracks.length > 1)
+    return <AddApplicationMenu tracks={tracks.map(({ id, name, color }) => ({ id, name, color }))} />;
+  return (
+    <Button asChild>
+      <Link href={`/tracks/${tracks[0].id}#add-application`}>
+        <PlusIcon aria-hidden />
+        Add application
+      </Link>
+    </Button>
+  );
 }

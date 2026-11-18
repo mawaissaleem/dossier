@@ -14,7 +14,12 @@ export async function FollowUpsCard({ className }: { className?: string }) {
   const items = await getFollowUpsDue(localToday());
   const { shown, more } = firstN(items, SHOWN);
   return (
-    <DashboardCard title="Follow-ups due" count={items.length || undefined} link={{ href: "/planner#follow-ups", label: more > 0 ? `All ${items.length} in Planner` : "Open Planner" }} className={className}>
+    <DashboardCard
+      title="Follow-ups due"
+      count={items.length || undefined}
+      link={{ href: "/planner#follow-ups", label: more > 0 ? `All ${items.length} in Planner` : "Open Planner" }}
+      className={className}
+    >
       <FollowUpsList items={shown} compact />
     </DashboardCard>
   );

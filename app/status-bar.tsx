@@ -8,20 +8,41 @@ const swatch = (color: string | null) => (color === null ? "bg-muted" : chipClas
 // tests/theme-contrast.test.ts) and the bar's 1px gaps show `bg-input`, so the pale Paper chips and the "No status" segment (`bg-muted`) stay visible and separate from each other and from the card.
 // The bar is one image with the counts as its label (`label`, which lists every count) and is not focusable. `legend` adds a plain "Label N" list under it (not links: on the all-tracks bar a status belongs to several tracks).
 // `thin` = 8px (the /tracks tiles) instead of 12px (the dashboard). An empty pipeline is one muted bar.
-export function StatusBar({ segments, label, legend, thin }: { segments: readonly CountedStatus[]; label: string; legend?: boolean; thin?: boolean }) {
+export function StatusBar({
+  segments,
+  label,
+  legend,
+  thin,
+}: {
+  segments: readonly CountedStatus[];
+  label: string;
+  legend?: boolean;
+  thin?: boolean;
+}) {
   const shown = segments.filter((s) => s.count > 0);
   return (
     <div>
-      <div role="img" aria-label={label} className={cn("flex gap-px overflow-hidden rounded-full border border-input bg-input", thin ? "h-2" : "h-3")}>
+      <div
+        role="img"
+        aria-label={label}
+        className={cn("flex gap-px overflow-hidden rounded-full border border-input bg-input", thin ? "h-2" : "h-3")}
+      >
         {shown.length === 0 && <div className="h-full flex-1 bg-muted" />}
         {shown.map((s, i) => (
-          <div key={`${s.label}-${i}`} style={{ flexGrow: s.count, flexBasis: 0 }} className={cn("h-full", swatch(s.color))} />
+          <div
+            key={`${s.label}-${i}`}
+            style={{ flexGrow: s.count, flexBasis: 0 }}
+            className={cn("h-full", swatch(s.color))}
+          />
         ))}
       </div>
       {legend && (
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {segments.map((s, i) => (
-            <li key={`${s.label}-${i}`} className={cn("inline-flex items-center gap-1.5 tabular-nums", s.count === 0 && "text-muted-foreground")}>
+            <li
+              key={`${s.label}-${i}`}
+              className={cn("inline-flex items-center gap-1.5 tabular-nums", s.count === 0 && "text-muted-foreground")}
+            >
               <span aria-hidden className={cn("size-2.5 shrink-0 rounded-full border border-input", swatch(s.color))} />
               {s.label} {s.count}
             </li>

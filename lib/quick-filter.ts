@@ -14,9 +14,18 @@ export function quickColumns<T extends Pick<ColumnItem, "name" | "type" | "isSta
 
 // Row count per option id of `col`. Counts ignore the column's own filter but respect every other one, so a chip predicts what clicking it
 // gives (an unpicked sibling chip would add its rows). Rows with no value or a deleted option are not counted (there is no chip for them).
-export function optionCounts(rows: ApplicationRow[], columns: Pick<ColumnItem, "id" | "type" | "options">[], filters: Filter[], col: Pick<ColumnItem, "id" | "options">): Map<number, number> {
+export function optionCounts(
+  rows: ApplicationRow[],
+  columns: Pick<ColumnItem, "id" | "type" | "options">[],
+  filters: Filter[],
+  col: Pick<ColumnItem, "id" | "options">,
+): Map<number, number> {
   const counts = new Map(col.options.map((o) => [o.id, 0]));
-  for (const r of filterRows(rows, columns, filters.filter((f) => f.id !== col.id))) {
+  for (const r of filterRows(
+    rows,
+    columns,
+    filters.filter((f) => f.id !== col.id),
+  )) {
     const v = r.values[col.id];
     if (typeof v === "number" && counts.has(v)) counts.set(v, counts.get(v)! + 1);
   }

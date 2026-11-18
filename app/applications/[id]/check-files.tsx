@@ -27,8 +27,14 @@ export function CheckFiles({ applicationId }: { applicationId: number }) {
       <Button type="button" variant="outline" size="sm" onClick={run} aria-disabled={pending}>
         <ShieldCheckIcon aria-hidden /> {pending ? "Checking…" : "Check files"}
       </Button>
-      <p role="status" className="text-sm text-muted-foreground">{result?.ok ? result.text : ""}</p>
-      {result && !result.ok && <p role="alert" className="text-sm text-destructive">{result.text}</p>}
+      <p role="status" className="text-sm text-muted-foreground">
+        {result?.ok ? result.text : ""}
+      </p>
+      {result && !result.ok && (
+        <p role="alert" className="text-sm text-destructive">
+          {result.text}
+        </p>
+      )}
     </div>
   );
 }

@@ -26,10 +26,29 @@ beforeEach(async () => {
   vi.mocked(refresh).mockClear();
   db = useTestDb();
   trackId = db.insert(tracks).values({ userId: "local", name: "Job", position: 0 }).returning().get().id;
-  ids = { text: col("Notes", "text", 0), number: col("Salary", "number", 1), date: col("Deadline", "date", 2), link: col("Posting", "link", 3), checkbox: col("Referred", "checkbox", 4), single_select: col("Stage", "single_select", 5) };
-  optA = db.insert(columnOptions).values({ userId: "local", columnId: ids.single_select, label: "A", color: "blue", position: 0 }).returning().get().id;
-  optB = db.insert(columnOptions).values({ userId: "local", columnId: ids.single_select, label: "B", color: "red", position: 1 }).returning().get().id;
-  const r = await createApplication("Acme", trackId, [{ columnId: ids.text, value: "old" }, { columnId: ids.number, value: 1 }, { columnId: ids.single_select, value: optA }]);
+  ids = {
+    text: col("Notes", "text", 0),
+    number: col("Salary", "number", 1),
+    date: col("Deadline", "date", 2),
+    link: col("Posting", "link", 3),
+    checkbox: col("Referred", "checkbox", 4),
+    single_select: col("Stage", "single_select", 5),
+  };
+  optA = db
+    .insert(columnOptions)
+    .values({ userId: "local", columnId: ids.single_select, label: "A", color: "blue", position: 0 })
+    .returning()
+    .get().id;
+  optB = db
+    .insert(columnOptions)
+    .values({ userId: "local", columnId: ids.single_select, label: "B", color: "red", position: 1 })
+    .returning()
+    .get().id;
+  const r = await createApplication("Acme", trackId, [
+    { columnId: ids.text, value: "old" },
+    { columnId: ids.number, value: 1 },
+    { columnId: ids.single_select, value: optA },
+  ]);
   appId = r.ok ? r.id : 0;
   vi.mocked(refresh).mockClear();
 });
@@ -38,11 +57,22 @@ afterEach(dropTestDb);
 describe("updateApplication", () => {
   it("updates each of the six types and refreshes", async () => {
     const r = await updateApplication(appId, "Acme 2", [
-      { columnId: ids.text, value: " new " }, { columnId: ids.number, value: "52000.5" }, { columnId: ids.date, value: "2026-03-04" },
-      { columnId: ids.link, value: "example.com" }, { columnId: ids.checkbox, value: true }, { columnId: ids.single_select, value: String(optB) },
+      { columnId: ids.text, value: " new " },
+      { columnId: ids.number, value: "52000.5" },
+      { columnId: ids.date, value: "2026-03-04" },
+      { columnId: ids.link, value: "example.com" },
+      { columnId: ids.checkbox, value: true },
+      { columnId: ids.single_select, value: String(optB) },
     ]);
     expect(r).toEqual({ ok: true });
-    expect(await valuesOf()).toEqual({ [ids.text]: "new", [ids.number]: 52000.5, [ids.date]: "2026-03-04", [ids.link]: "https://example.com/", [ids.checkbox]: true, [ids.single_select]: optB });
+    expect(await valuesOf()).toEqual({
+      [ids.text]: "new",
+      [ids.number]: 52000.5,
+      [ids.date]: "2026-03-04",
+      [ids.link]: "https://example.com/",
+      [ids.checkbox]: true,
+      [ids.single_select]: optB,
+    });
     expect((await getApplicationDetail(appId))!.title).toBe("Acme 2");
     expect(refresh).toHaveBeenCalledTimes(1);
   });
@@ -51,9 +81,18 @@ describe("updateApplication", () => {
     await updateApplication(appId, "Acme", [{ columnId: ids.checkbox, value: false }]);
     expect((await valuesOf())[ids.checkbox]).toBe(false);
     const before = cellCount();
-    const r = await updateApplication(appId, "Acme", [{ columnId: ids.text, value: "  " }, { columnId: ids.number, value: null }, { columnId: ids.single_select, value: "" }]);
+    const r = await updateApplication(appId, "Acme", [
+      { columnId: ids.text, value: "  " },
+      { columnId: ids.number, value: null },
+      { columnId: ids.single_select, value: "" },
+    ]);
     expect(r).toEqual({ ok: true });
-    expect(await valuesOf()).toMatchObject({ [ids.text]: null, [ids.number]: null, [ids.single_select]: null, [ids.checkbox]: false });
+    expect(await valuesOf()).toMatchObject({
+      [ids.text]: null,
+      [ids.number]: null,
+      [ids.single_select]: null,
+      [ids.checkbox]: false,
+    });
     expect(cellCount()).toBe(before - 3);
   });
 
@@ -75,7 +114,10 @@ describe("updateApplication", () => {
     expect((await getApplicationDetail(appId))!.title).toBe("New");
     expect(await updateApplication(appId, "   ", [])).toEqual({ ok: false, error: "Title is required." });
     expect(await updateApplication(appId, 5 as never, [])).toEqual({ ok: false, error: "Title is required." });
-    expect(await updateApplication(appId, "x".repeat(301), [])).toEqual({ ok: false, error: "Title must be at most 300 characters." });
+    expect(await updateApplication(appId, "x".repeat(301), [])).toEqual({
+      ok: false,
+      error: "Title must be at most 300 characters.",
+    });
     expect(await updateApplication(appId, "x".repeat(300), [])).toEqual({ ok: true });
   });
 
@@ -88,30 +130,46 @@ describe("updateApplication", () => {
     ["text", 5, "Notes: Text must be a string."],
     ["text", "x".repeat(10_001), "Notes: Text must be at most 10,000 characters."],
     ["link", `a.com/${"x".repeat(10_000)}`, "Posting: Link must be at most 10,000 characters."],
-  ] as const)("rejects an invalid %s value, naming the column, and changes nothing (title and other values included)", async (type, value, error) => {
-    const before = await valuesOf();
-    const good = type === "text" ? { columnId: ids.number, value: "7" } : { columnId: ids.text, value: "valid" }; // a valid entry before it: must not be kept
-    const r = await updateApplication(appId, "Changed", [good, { columnId: ids[type], value } as never]);
-    expect(r).toEqual({ ok: false, error });
-    expect(await valuesOf()).toEqual(before);
-    expect((await getApplicationDetail(appId))!.title).toBe("Acme");
-    expect(refresh).not.toHaveBeenCalled();
-  });
+  ] as const)(
+    "rejects an invalid %s value, naming the column, and changes nothing (title and other values included)",
+    async (type, value, error) => {
+      const before = await valuesOf();
+      const good = type === "text" ? { columnId: ids.number, value: "7" } : { columnId: ids.text, value: "valid" }; // a valid entry before it: must not be kept
+      const r = await updateApplication(appId, "Changed", [good, { columnId: ids[type], value } as never]);
+      expect(r).toEqual({ ok: false, error });
+      expect(await valuesOf()).toEqual(before);
+      expect((await getApplicationDetail(appId))!.title).toBe("Acme");
+      expect(refresh).not.toHaveBeenCalled();
+    },
+  );
 
   it("edit form: a bad-input date is refused with a named error and the stored date is kept", async () => {
     await updateApplication(appId, "Acme", [{ columnId: ids.date, value: "2026-12-01" }]);
     const cols = await listColumns(trackId);
     const init = initialState(cols, await valuesOf());
-    const r = await updateApplication(appId, "Acme", buildValues(cols, changedState(cols, { ...init, [ids.date]: BAD_DATE }, init)));
+    const r = await updateApplication(
+      appId,
+      "Acme",
+      buildValues(cols, changedState(cols, { ...init, [ids.date]: BAD_DATE }, init)),
+    );
     expect(r).toEqual({ ok: false, error: "Deadline: Enter a valid date as YYYY-MM-DD." });
     expect((await valuesOf())[ids.date]).toBe("2026-12-01");
   });
 
   it("rejects an option of another column and a missing option", async () => {
     const other = col("Other", "single_select", 6);
-    const foreign = db.insert(columnOptions).values({ userId: "local", columnId: other, label: "Z", color: "blue", position: 0 }).returning().get().id;
-    expect(await updateApplication(appId, "Acme", [{ columnId: ids.single_select, value: foreign }])).toEqual({ ok: false, error: "Stage: Choose a valid option." });
-    expect(await updateApplication(appId, "Acme", [{ columnId: ids.single_select, value: 99999 }])).toMatchObject({ ok: false });
+    const foreign = db
+      .insert(columnOptions)
+      .values({ userId: "local", columnId: other, label: "Z", color: "blue", position: 0 })
+      .returning()
+      .get().id;
+    expect(await updateApplication(appId, "Acme", [{ columnId: ids.single_select, value: foreign }])).toEqual({
+      ok: false,
+      error: "Stage: Choose a valid option.",
+    });
+    expect(await updateApplication(appId, "Acme", [{ columnId: ids.single_select, value: 99999 }])).toMatchObject({
+      ok: false,
+    });
     expect((await valuesOf())[ids.single_select]).toBe(optA);
   });
 
@@ -122,15 +180,27 @@ describe("updateApplication", () => {
     const gone = col("Gone", "text", 9);
     db.delete(columns).where(eq(columns.id, gone)).run();
     for (const columnId of [otherTrack, otherUser, gone]) {
-      expect(await updateApplication(appId, "Acme", [{ columnId, value: "v" }])).toMatchObject({ ok: false, error: expect.stringContaining("Reload") });
+      expect(await updateApplication(appId, "Acme", [{ columnId, value: "v" }])).toMatchObject({
+        ok: false,
+        error: expect.stringContaining("Reload"),
+      });
     }
-    expect(await updateApplication(appId, "Acme", [{ columnId: ids.text, value: "a" }, { columnId: ids.text, value: "b" }])).toEqual({ ok: false, error: "Notes: given twice." });
+    expect(
+      await updateApplication(appId, "Acme", [
+        { columnId: ids.text, value: "a" },
+        { columnId: ids.text, value: "b" },
+      ]),
+    ).toEqual({ ok: false, error: "Notes: given twice." });
     expect((await valuesOf())[ids.text]).toBe("old");
   });
 
   it("rejects another user's application and a missing one, changing nothing", async () => {
     const t = db.insert(tracks).values({ userId: "someone-else", name: "Theirs", position: 0 }).returning().get().id;
-    const theirs = db.insert(applications).values({ userId: "someone-else", trackId: t, title: "Theirs" }).returning().get().id;
+    const theirs = db
+      .insert(applications)
+      .values({ userId: "someone-else", trackId: t, title: "Theirs" })
+      .returning()
+      .get().id;
     expect(await updateApplication(theirs, "Mine now", [])).toEqual({ ok: false, error: "Application not found." });
     expect(db.select().from(applications).where(eq(applications.id, theirs)).get()!.title).toBe("Theirs");
     expect(await updateApplication(99999, "A", [])).toEqual({ ok: false, error: "Application not found." });
@@ -139,7 +209,9 @@ describe("updateApplication", () => {
 
   it("edits an archived application and leaves it archived", async () => {
     db.update(applications).set({ archived: true }).where(eq(applications.id, appId)).run();
-    expect(await updateApplication(appId, "Still archived", [{ columnId: ids.text, value: "z" }])).toEqual({ ok: true });
+    expect(await updateApplication(appId, "Still archived", [{ columnId: ids.text, value: "z" }])).toEqual({
+      ok: true,
+    });
     const d = (await getApplicationDetail(appId))!;
     expect(d).toMatchObject({ title: "Still archived", archived: true });
     expect(d.values[ids.text]).toBe("z");
@@ -148,7 +220,13 @@ describe("updateApplication", () => {
   it("keeps one row per cell when the same cell is updated twice", async () => {
     await updateApplication(appId, "Acme", [{ columnId: ids.text, value: "one" }]);
     await updateApplication(appId, "Acme", [{ columnId: ids.text, value: "two" }]);
-    expect(db.select().from(cellValues).where(and(eq(cellValues.applicationId, appId), eq(cellValues.columnId, ids.text))).all()).toHaveLength(1);
+    expect(
+      db
+        .select()
+        .from(cellValues)
+        .where(and(eq(cellValues.applicationId, appId), eq(cellValues.columnId, ids.text)))
+        .all(),
+    ).toHaveLength(1);
   });
 
   it.each([
@@ -161,7 +239,10 @@ describe("updateApplication", () => {
     ["too long text", [{ columnId: 1, value: "x".repeat(100_001) }]],
     ["too many entries", Array.from({ length: 201 }, () => ({ columnId: 1, value: null }))],
   ])("rejects a bad payload shape: %s", async (_n, payload) => {
-    expect(await updateApplication(appId, "Acme", payload as never)).toEqual({ ok: false, error: "Invalid form data." });
+    expect(await updateApplication(appId, "Acme", payload as never)).toEqual({
+      ok: false,
+      error: "Invalid form data.",
+    });
   });
 
   it.each([0, -1, 1.5, "1", null])("rejects a bad application id %j", async (id) => {

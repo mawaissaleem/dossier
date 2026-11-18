@@ -35,7 +35,10 @@ describe("checkNoteBody", () => {
   });
   it("accepts exactly the maximum and refuses one more (the limit counts the trimmed text)", () => {
     expect(checkNoteBody(`  ${"a".repeat(NOTE_BODY_MAX)}  `).ok).toBe(true);
-    expect(checkNoteBody("a".repeat(NOTE_BODY_MAX + 1))).toEqual({ ok: false, error: expect.stringContaining("5,000") });
+    expect(checkNoteBody("a".repeat(NOTE_BODY_MAX + 1))).toEqual({
+      ok: false,
+      error: expect.stringContaining("5,000"),
+    });
   });
 });
 
@@ -51,7 +54,11 @@ describe("addNote / listNotes", () => {
   it("lists newest first, ties by id, and only this application's notes", async () => {
     const other = db.insert(applications).values({ userId: "local", trackId: 1, title: "C" }).returning().get().id;
     const at = (t: number) => new Date(t);
-    const mk = (applicationId: number, body: string, t: number) => db.insert(notes).values({ userId: "local", applicationId, body, createdAt: at(t) }).run();
+    const mk = (applicationId: number, body: string, t: number) =>
+      db
+        .insert(notes)
+        .values({ userId: "local", applicationId, body, createdAt: at(t) })
+        .run();
     mk(appId, "old", 1000);
     mk(appId, "tie-first", 3000);
     mk(appId, "tie-second", 3000);
@@ -91,12 +98,15 @@ describe("createNote action", () => {
     expect(db.select().from(notes).all()).toHaveLength(1);
   });
 
-  it.each([0, -1, 1.5, NaN, "1", null, undefined])("refuses application id %j without touching the data or refreshing", async (id) => {
-    const r = await createNote(id as number, "hello");
-    expect(r).toMatchObject({ ok: false });
-    expect(refresh).not.toHaveBeenCalled();
-    expect(db.select().from(notes).all()).toHaveLength(0);
-  });
+  it.each([0, -1, 1.5, NaN, "1", null, undefined])(
+    "refuses application id %j without touching the data or refreshing",
+    async (id) => {
+      const r = await createNote(id as number, "hello");
+      expect(r).toMatchObject({ ok: false });
+      expect(refresh).not.toHaveBeenCalled();
+      expect(db.select().from(notes).all()).toHaveLength(0);
+    },
+  );
 
   it("refuses a non-string body and a blank one with a body field error, without refreshing", async () => {
     expect(await createNote(appId, 5 as unknown as string)).toMatchObject({ ok: false, field: "body" });

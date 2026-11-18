@@ -13,7 +13,8 @@ export function parseSearchQuery(raw: unknown): ParsedQuery {
   if (raw === null || raw === undefined) return { ok: true, query: "" };
   if (typeof raw !== "string") return { ok: false, error: "The search must be text." };
   const query = raw.trim();
-  if (query.length > SEARCH_MAX_QUERY) return { ok: false, error: `Search for at most ${SEARCH_MAX_QUERY} characters.` };
+  if (query.length > SEARCH_MAX_QUERY)
+    return { ok: false, error: `Search for at most ${SEARCH_MAX_QUERY} characters.` };
   return { ok: true, query };
 }
 
@@ -55,7 +56,8 @@ function titleTier(title: string, words: string[]): number {
   const phrase = words.join(" ");
   if (t === phrase) return TIER.exact;
   if (t.startsWith(phrase)) return TIER.prefix;
-  for (let i = t.indexOf(phrase); i >= 0; i = t.indexOf(phrase, i + 1)) if (i === 0 || !isWordChar(t[i - 1])) return TIER.wordStart;
+  for (let i = t.indexOf(phrase); i >= 0; i = t.indexOf(phrase, i + 1))
+    if (i === 0 || !isWordChar(t[i - 1])) return TIER.wordStart;
   if (t.includes(phrase) || words.every((w) => t.includes(w))) return TIER.contains;
   return TIER.cell;
 }
@@ -70,7 +72,12 @@ const SNIPPET_AFTER = 40;
 // the field holding the most words (earliest wins a tie: title, cells, then `notes` in the order given), with a short snippet around
 // the first word found in it. Tier: the title's if all words are in the title; else `cell` if title and cells together hold every
 // word; else `note` (a note was needed). So a note never outranks a title or cell match, and many notes still make one hit.
-export function matchApplication(words: string[], title: string, cells: { column: string; text: string }[], notes: string[] = []): Match | null {
+export function matchApplication(
+  words: string[],
+  title: string,
+  cells: { column: string; text: string }[],
+  notes: string[] = [],
+): Match | null {
   if (words.length === 0) return null;
   const fields = [
     { kind: "title" as "title" | "cell" | "note", column: null as string | null, text: title },
@@ -81,14 +88,19 @@ export function matchApplication(words: string[], title: string, cells: { column
   const foundOutsideNotes = new Set<string>();
   let best: { field: (typeof fields)[number]; hits: number; word: string } | null = null;
   for (const field of fields) {
-    let hits = 0, first = Infinity, word = "";
+    let hits = 0,
+      first = Infinity,
+      word = "";
     for (const w of words) {
       const i = field.folded.indexOf(w);
       if (i < 0) continue;
       hits++;
       found.add(w);
       if (field.kind !== "note") foundOutsideNotes.add(w);
-      if (i < first) { first = i; word = w; }
+      if (i < first) {
+        first = i;
+        word = w;
+      }
     }
     if (hits > (best?.hits ?? 0)) best = { field, hits, word };
   }
@@ -98,7 +110,8 @@ export function matchApplication(words: string[], title: string, cells: { column
   const start = Math.max(0, folded.indexOf(best.word)); // re-found in the mapped fold, so the offsets always agree with `at`
   const from = Math.max(0, at[start] - SNIPPET_BEFORE);
   const to = Math.min(text.length, at[start + best.word.length] + SNIPPET_AFTER);
-  const snippet = (from > 0 ? "…" : "") + text.slice(from, to).replace(/\s+/g, " ").trim() + (to < text.length ? "…" : "");
+  const snippet =
+    (from > 0 ? "…" : "") + text.slice(from, to).replace(/\s+/g, " ").trim() + (to < text.length ? "…" : "");
   const t = titleTier(fields[0].folded, words);
   const tier = t === TIER.cell && foundOutsideNotes.size !== words.length ? TIER.note : t;
   return { tier, matched: { kind: best.field.kind, column: best.field.column, snippet } };

@@ -15,6 +15,10 @@ export function checkSummary(c: CheckCounts): string {
   const total = c.ok + c.mismatch + c.missing + c.failed;
   if (total === 0) return "No files to check";
   if (c.ok === total) return `All ${files(total)} OK`;
-  const parts = [c.mismatch && `${files(c.mismatch)} changed`, c.missing && `${c.missing} missing`, c.failed && `${c.failed} could not be read`].filter(Boolean);
+  const parts = [
+    c.mismatch && `${files(c.mismatch)} changed`,
+    c.missing && `${c.missing} missing`,
+    c.failed && `${c.failed} could not be read`,
+  ].filter(Boolean);
   return parts.join(", ");
 }

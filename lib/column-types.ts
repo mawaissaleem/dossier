@@ -12,4 +12,7 @@ export const COLUMN_TYPE_LABELS: Record<ColumnType, string> = {
 };
 
 // Dropdown order follows the declaration above (string keys keep insertion order).
-export const columnTypeOptions = (Object.keys(COLUMN_TYPE_LABELS) as ColumnType[]).map((type) => ({ type, label: COLUMN_TYPE_LABELS[type] }));
+export const columnTypeOptions = (Object.keys(COLUMN_TYPE_LABELS) as ColumnType[]).map((type) => ({
+  type,
+  label: COLUMN_TYPE_LABELS[type],
+}));

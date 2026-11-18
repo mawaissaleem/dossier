@@ -18,7 +18,11 @@ export const getWins = cache(async (): Promise<{ labels: string[]; wins: Win[] }
   const labels: string[] = [];
   for (const t of await listTracks()) {
     const win = new Set(winStatusIds(t.id));
-    for (const o of statusOptions(t.id)) if (win.has(o.id)) { byOption.set(o.id, { label: o.label, color: o.color, trackId: t.id, trackName: t.name }); labels.push(o.label); }
+    for (const o of statusOptions(t.id))
+      if (win.has(o.id)) {
+        byOption.set(o.id, { label: o.label, color: o.color, trackId: t.id, trackName: t.name });
+        labels.push(o.label);
+      }
   }
   if (!byOption.size) return { labels, wins: [] };
   // json_valid first: json_extract throws on a garbled `details`, and one bad event must not take the dashboard down.
@@ -27,15 +31,45 @@ export const getWins = cache(async (): Promise<{ labels: string[]; wins: Win[] }
     and case when json_valid(${activityEvents.details}) then json_extract(${activityEvents.details}, '$.columnId') end = ${cellValues.columnId}
     and case when json_valid(${activityEvents.details}) then json_extract(${activityEvents.details}, '$.toOptionId') end = ${cellValues.valueOptionId}), ${applications.createdAt})`;
   const rows = db
-    .select({ id: applications.id, title: applications.title, trackId: applications.trackId, archived: applications.archived, optionId: cellValues.valueOptionId, since })
+    .select({
+      id: applications.id,
+      title: applications.title,
+      trackId: applications.trackId,
+      archived: applications.archived,
+      optionId: cellValues.valueOptionId,
+      since,
+    })
     .from(applications)
-    .innerJoin(columns, and(eq(columns.trackId, applications.trackId), eq(columns.isStatus, true), eq(columns.userId, userId)))
-    .innerJoin(cellValues, and(eq(cellValues.applicationId, applications.id), eq(cellValues.columnId, columns.id), eq(cellValues.userId, userId)))
+    .innerJoin(
+      columns,
+      and(eq(columns.trackId, applications.trackId), eq(columns.isStatus, true), eq(columns.userId, userId)),
+    )
+    .innerJoin(
+      cellValues,
+      and(
+        eq(cellValues.applicationId, applications.id),
+        eq(cellValues.columnId, columns.id),
+        eq(cellValues.userId, userId),
+      ),
+    )
     .where(and(eq(applications.userId, userId), inArray(cellValues.valueOptionId, [...byOption.keys()])))
     .all();
   const wins = rows.flatMap((r) => {
     const o = byOption.get(r.optionId!);
-    return o && o.trackId === r.trackId ? [{ id: r.id, title: r.title, trackId: o.trackId, trackName: o.trackName, label: o.label, color: o.color, archived: r.archived, since: Number(r.since) }] : [];
+    return o && o.trackId === r.trackId
+      ? [
+          {
+            id: r.id,
+            title: r.title,
+            trackId: o.trackId,
+            trackName: o.trackName,
+            label: o.label,
+            color: o.color,
+            archived: r.archived,
+            since: Number(r.since),
+          },
+        ]
+      : [];
   });
   return { labels, wins: orderWins(wins) };
 });

@@ -15,12 +15,25 @@ function Rows({ items, today }: { items: Win[]; today: string }) {
       {items.map((w) => {
         const age = winAge(w.since, today);
         return (
-          <li key={w.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border py-3 first:border-t-0 first:pt-0 last:pb-0">
-            <Link href={`/applications/${w.id}`} className={`break-words font-medium ${ROW_LINK}`}>{w.title}</Link>
+          <li
+            key={w.id}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border py-3 first:border-t-0 first:pt-0 last:pb-0"
+          >
+            <Link href={`/applications/${w.id}`} className={`break-words font-medium ${ROW_LINK}`}>
+              {w.title}
+            </Link>
             <span className="text-xs text-muted-foreground">{w.trackName}</span>
             <OptionChip option={w} />
-            {age && <time title={age.date} className="text-sm text-muted-foreground">{age.text}</time>}
-            {w.archived && <span className="inline-flex h-5 items-center rounded-sm border border-border bg-muted px-2 text-xs font-medium text-muted-foreground">Archived</span>}
+            {age && (
+              <time title={age.date} className="text-sm text-muted-foreground">
+                {age.text}
+              </time>
+            )}
+            {w.archived && (
+              <span className="inline-flex h-5 items-center rounded-sm border border-border bg-muted px-2 text-xs font-medium text-muted-foreground">
+                Archived
+              </span>
+            )}
           </li>
         );
       })}
@@ -46,7 +59,9 @@ export async function WinsCard({ className }: { className?: string }) {
           {more > 0 && (
             <details className="mt-3 border-t border-border pt-3 text-sm">
               <summary className={`w-fit cursor-pointer ${ACCENT_LINK}`}>{more} more</summary>
-              <div className="mt-3"><Rows items={wins.slice(SHOWN)} today={today} /></div>
+              <div className="mt-3">
+                <Rows items={wins.slice(SHOWN)} today={today} />
+              </div>
             </details>
           )}
         </>

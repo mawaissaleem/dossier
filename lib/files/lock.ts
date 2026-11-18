@@ -17,13 +17,27 @@ const RESTORING_MESSAGE = "A restore is running. Try again when it is done.";
 // Takes the lock for `job`, or says why not (the message is ready to show).
 export function tryLock(job: Job): { ok: true; release: () => void } | { ok: false; error: string } {
   if (state.job) {
-    if (state.job === "move") return { ok: false, error: job === "move" ? "The files folder is already being changed. Try again when it is done." : MOVING_MESSAGE };
+    if (state.job === "move")
+      return {
+        ok: false,
+        error:
+          job === "move" ? "The files folder is already being changed. Try again when it is done." : MOVING_MESSAGE,
+      };
     if (job === "move") return { ok: false, error: "A backup or restore is running. Try again when it is done." };
-    return { ok: false, error: job === "backup" ? "A backup is already running." : "A backup or restore is already running." };
+    return {
+      ok: false,
+      error: job === "backup" ? "A backup is already running." : "A backup or restore is already running.",
+    };
   }
-  if (job !== "backup" && state.writes > 0) return { ok: false, error: "An upload or delete is in progress. Try again when it is done." };
+  if (job !== "backup" && state.writes > 0)
+    return { ok: false, error: "An upload or delete is in progress. Try again when it is done." };
   state.job = job;
-  return { ok: true, release: () => { if (state.job === job) state.job = null; } };
+  return {
+    ok: true,
+    release: () => {
+      if (state.job === job) state.job = null;
+    },
+  };
 }
 
 export const lockedBy = (): Job | null => state.job;
@@ -34,5 +48,13 @@ export function beginWrite(): { ok: true; end: () => void } | { ok: false; error
   if (state.job === "restore") return { ok: false, error: RESTORING_MESSAGE };
   state.writes++;
   let ended = false;
-  return { ok: true, end: () => { if (!ended) { ended = true; state.writes--; } } };
+  return {
+    ok: true,
+    end: () => {
+      if (!ended) {
+        ended = true;
+        state.writes--;
+      }
+    },
+  };
 }

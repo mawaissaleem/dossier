@@ -19,19 +19,38 @@ import type { ColumnItem } from "@/lib/db/columns";
 import { toggleFilter, type Filter, type Token } from "@/lib/filter";
 
 const chipText = (col: ColumnItem, f: Filter) =>
-  [...col.options.filter((o) => f.options.includes(o.id)).map((o) => o.label), ...(f.blank ? ["(Blank)"] : [])].join(", ");
+  [...col.options.filter((o) => f.options.includes(o.id)).map((o) => o.label), ...(f.blank ? ["(Blank)"] : [])].join(
+    ", ",
+  );
 
 // The ticks for one column: its options, then "(Blank)". onSelect keeps the menu open so several can be ticked in a row.
-function OptionChecks({ col, filter, onToggle }: { col: ColumnItem; filter: Filter | undefined; onToggle: (t: Token) => void }) {
+function OptionChecks({
+  col,
+  filter,
+  onToggle,
+}: {
+  col: ColumnItem;
+  filter: Filter | undefined;
+  onToggle: (t: Token) => void;
+}) {
   const keepOpen = (e: Event) => e.preventDefault();
   return (
     <>
       {col.options.map((o) => (
-        <DropdownMenuCheckboxItem key={o.id} checked={filter?.options.includes(o.id) ?? false} onCheckedChange={() => onToggle(o.id)} onSelect={keepOpen}>
+        <DropdownMenuCheckboxItem
+          key={o.id}
+          checked={filter?.options.includes(o.id) ?? false}
+          onCheckedChange={() => onToggle(o.id)}
+          onSelect={keepOpen}
+        >
           <OptionChip option={o} />
         </DropdownMenuCheckboxItem>
       ))}
-      <DropdownMenuCheckboxItem checked={filter?.blank ?? false} onCheckedChange={() => onToggle("blank")} onSelect={keepOpen}>
+      <DropdownMenuCheckboxItem
+        checked={filter?.blank ?? false}
+        onCheckedChange={() => onToggle("blank")}
+        onSelect={keepOpen}
+      >
         (Blank)
       </DropdownMenuCheckboxItem>
     </>
@@ -40,7 +59,14 @@ function OptionChecks({ col, filter, onToggle }: { col: ColumnItem; filter: Filt
 
 // "Filter" menu (one submenu per single-select column, hidden ones marked), the active filters as chips, "Clear all" and the count.
 // Chips: the label opens the same ticks to edit; the x removes. `trailing` is the hidden-columns control, kept on the right.
-export function FilterBar({ columns, filters, onChange, shown, total, trailing }: {
+export function FilterBar({
+  columns,
+  filters,
+  onChange,
+  shown,
+  total,
+  trailing,
+}: {
   columns: ColumnItem[]; // the track's single-select columns, hidden ones included
   filters: Filter[];
   onChange: (next: Filter[]) => void;
@@ -90,7 +116,11 @@ export function FilterBar({ columns, filters, onChange, shown, total, trailing }
               {/* Portalled: the parent menu scrolls and would clip an inline submenu. */}
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="max-h-(--radix-dropdown-menu-content-available-height) overflow-y-auto">
-                  <OptionChecks col={c} filter={filters.find((f) => f.id === c.id)} onToggle={(t) => onChange(toggleFilter(filters, c.id, t))} />
+                  <OptionChecks
+                    col={c}
+                    filter={filters.find((f) => f.id === c.id)}
+                    onToggle={(t) => onChange(toggleFilter(filters, c.id, t))}
+                  />
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>
@@ -105,7 +135,10 @@ export function FilterBar({ columns, filters, onChange, shown, total, trailing }
             if (!col) return null;
             const text = `${col.name}: ${chipText(col, f)}`;
             return (
-              <span key={f.id} className="inline-flex h-7 max-w-80 items-center rounded-full border border-border bg-muted text-xs font-medium text-foreground">
+              <span
+                key={f.id}
+                className="inline-flex h-7 max-w-80 items-center rounded-full border border-border bg-muted text-xs font-medium text-foreground"
+              >
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button

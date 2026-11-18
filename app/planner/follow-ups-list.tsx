@@ -12,10 +12,25 @@ export function FollowUpsList({ items, compact }: { items: FollowUps; compact?: 
   return (
     <ul className={cn("flex flex-col", !compact && "gap-2")}>
       {items.map((it) => (
-        <li key={it.id} className={cn("flex flex-wrap items-baseline gap-x-2", compact ? "border-t border-border py-3 first:border-t-0 first:pt-0 last:pb-0" : "rounded-lg border border-border bg-card p-3")}>
-          <Link href={`/applications/${it.id}`} className="break-words rounded-sm font-medium outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">{it.title}</Link>
+        <li
+          key={it.id}
+          className={cn(
+            "flex flex-wrap items-baseline gap-x-2",
+            compact
+              ? "border-t border-border py-3 first:border-t-0 first:pt-0 last:pb-0"
+              : "rounded-lg border border-border bg-card p-3",
+          )}
+        >
+          <Link
+            href={`/applications/${it.id}`}
+            className="break-words rounded-sm font-medium outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {it.title}
+          </Link>
           <span className="text-xs text-muted-foreground">{it.trackName}</span>
-          <span className="text-sm text-muted-foreground">Follow up {deadlineInfo(it.followUp, null)?.date} · {it.text}</span>
+          <span className="text-sm text-muted-foreground">
+            Follow up {deadlineInfo(it.followUp, null)?.date} · {it.text}
+          </span>
         </li>
       ))}
     </ul>

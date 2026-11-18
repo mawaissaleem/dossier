@@ -33,8 +33,22 @@ export function ResetForm() {
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3">
       <ConfirmDialog
         open={open}
-        onOpenChange={(o) => { if (o) { setError(null); setDone(false); } setOpen(o); }}
-        trigger={<Button type="button" variant="outline" className="border-destructive text-destructive hover:text-destructive">Reset to defaults…</Button>}
+        onOpenChange={(o) => {
+          if (o) {
+            setError(null);
+            setDone(false);
+          }
+          setOpen(o);
+        }}
+        trigger={
+          <Button
+            type="button"
+            variant="outline"
+            className="border-destructive text-destructive hover:text-destructive"
+          >
+            Reset to defaults…
+          </Button>
+        }
         title="Reset planner settings to defaults?"
         description="This resets engine slots, buffers, still-to-do statuses, ranking rules and weekly capacity for every track to the shipped defaults. Your applications, columns and other settings are not changed."
         error={error}
@@ -43,7 +57,11 @@ export function ResetForm() {
         busy={pending}
         onConfirm={confirm}
       />
-      {done && <p role="status" className="text-sm text-muted-foreground">Planner settings reset.</p>}
+      {done && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Planner settings reset.
+        </p>
+      )}
     </div>
   );
 }

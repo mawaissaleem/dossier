@@ -18,7 +18,8 @@ export const MIGRATIONS_FOLDER = "./drizzle";
 export const applyMigrations = (folder: string = MIGRATIONS_FOLDER) => migrate(getDb(), { migrationsFolder: folder });
 
 // Only same-site paths (no scheme, no "//host"), so the redirect after the update cannot leave the app.
-export const safeReturnPath = (v: unknown): string => (typeof v === "string" && /^\/[\w\-/]*$/.test(v) && !v.startsWith("//") ? v : "/");
+export const safeReturnPath = (v: unknown): string =>
+  typeof v === "string" && /^\/[\w\-/]*$/.test(v) && !v.startsWith("//") ? v : "/";
 
 let journal: number[] | undefined; // the `when` of each migration the app ships
 let upToDateFor: object | undefined;
@@ -29,11 +30,19 @@ export function pendingMigrations(): number {
   journal ??= readJournal();
   let applied = 0;
   try {
-    applied = (db.$client.prepare("SELECT max(created_at) AS latest FROM __drizzle_migrations").get() as { latest: number | null }).latest ?? 0;
+    applied =
+      (
+        db.$client.prepare("SELECT max(created_at) AS latest FROM __drizzle_migrations").get() as {
+          latest: number | null;
+        }
+      ).latest ?? 0;
   } catch (e) {
     if (!/no such table/.test((e as Error).message)) throw e; // no migrations table: nothing applied yet
-    const tables = (db.$client.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'").get() as { n: number }).n;
-    if (tables === 0 && journal.length > 0) { // brand new: nothing to lose, so no page and no backup
+    const tables = (
+      db.$client.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'").get() as { n: number }
+    ).n;
+    if (tables === 0 && journal.length > 0) {
+      // brand new: nothing to lose, so no page and no backup
       applyMigrations();
       upToDateFor = db;
       return 0;
@@ -51,7 +60,9 @@ function readJournal(): number[] {
   try {
     return (JSON.parse(readFileSync(path, "utf8")) as { entries: { when: number }[] }).entries.map((e) => e.when);
   } catch (e) {
-    console.error(`Dossier could not read ${path} (${(e as Error).message}), so it cannot tell whether the database needs updating. Start Dossier from the project folder.`);
+    console.error(
+      `Dossier could not read ${path} (${(e as Error).message}), so it cannot tell whether the database needs updating. Start Dossier from the project folder.`,
+    );
     return [];
   }
 }
@@ -70,5 +81,10 @@ export const updateIntro = (pending: number) =>
 export function databaseUpdateResponse(): Response | null {
   const pending = pendingMigrations();
   if (pending === 0) return null;
-  return Response.json({ error: `${UPDATE_TITLE}. ${updateIntro(pending)} Open Dossier in your browser and choose Back up and update, or in a terminal: ${UPDATE_STEPS.join(" ")}` }, { status: 503, headers: { "Cache-Control": "no-store", "Cross-Origin-Resource-Policy": "same-origin" } });
+  return Response.json(
+    {
+      error: `${UPDATE_TITLE}. ${updateIntro(pending)} Open Dossier in your browser and choose Back up and update, or in a terminal: ${UPDATE_STEPS.join(" ")}`,
+    },
+    { status: 503, headers: { "Cache-Control": "no-store", "Cross-Origin-Resource-Policy": "same-origin" } },
+  );
 }

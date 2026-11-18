@@ -29,24 +29,36 @@ import { resolveInRoot } from "./resolve";
 export type UploadSource = { name: string; stream(): unknown }; // a web File
 export type StoredFile = { id: number; storedName: string; relativePath: string; sizeBytes: number; sha256: string };
 // setup = the files folder is unset or unusable (Settings), not-found = the application is gone, error = anything else.
-export type StoreResult = { ok: true; file: StoredFile } | { ok: true; duplicateOf: { id: number; storedName: string } } | { ok: false; kind: "setup" | "not-found" | "error"; error: string };
+export type StoreResult =
+  | { ok: true; file: StoredFile }
+  | { ok: true; duplicateOf: { id: number; storedName: string } }
+  | { ok: false; kind: "setup" | "not-found" | "error"; error: string };
 
 const MAX_TRIES = 1000;
 const fail = (kind: "setup" | "not-found" | "error", error: string) => ({ ok: false, kind, error }) as const;
 const code = (e: unknown) => (e as NodeJS.ErrnoException).code;
 // A read-only file cannot be removed on Windows, so make it writable first (a no-op error elsewhere is ignored).
-const removeFile = async (p: string) => { await chmod(p, 0o666).catch(() => {}); await rm(p, { force: true }).catch(() => {}); };
+const removeFile = async (p: string) => {
+  await chmod(p, 0o666).catch(() => {});
+  await rm(p, { force: true }).catch(() => {});
+};
 // FAT/exFAT drives and some network or sync mounts have no hard links: copy instead. COPYFILE_EXCL also refuses to overwrite (EEXIST),
 // and libuv removes a partly written copy itself.
 const NO_HARD_LINKS = new Set(["EPERM", "ENOTSUP", "EOPNOTSUPP", "ENOSYS", "EXDEV"]);
 const putInPlace = (from: string, to: string) =>
-  link(from, to).catch((e) => (NO_HARD_LINKS.has(code(e)!) ? copyFile(from, to, constants.COPYFILE_EXCL) : Promise.reject(e)));
+  link(from, to).catch((e) =>
+    NO_HARD_LINKS.has(code(e)!) ? copyFile(from, to, constants.COPYFILE_EXCL) : Promise.reject(e),
+  );
 
 // shortcut: in-process only (one server, one user); a second server process on the same files root is not serialised, upgrade then.
 const tails = new Map<number, Promise<unknown>>();
 function serialise<T>(applicationId: number, fn: () => Promise<T>): Promise<T> {
   const run = (tails.get(applicationId) ?? Promise.resolve()).then(fn);
-  const tail = run.catch(() => {}).then(() => { if (tails.get(applicationId) === tail) tails.delete(applicationId); });
+  const tail = run
+    .catch(() => {})
+    .then(() => {
+      if (tails.get(applicationId) === tail) tails.delete(applicationId);
+    });
   tails.set(applicationId, tail);
   return run;
 }
@@ -83,7 +95,14 @@ export async function storeFileUnlocked({ applicationId, file, label, uploadDate
   return result;
 }
 
-async function place(applicationId: number, file: UploadSource, label: string, uploadDate: string, folderRel: string, tmp: string): Promise<StoreResult> {
+async function place(
+  applicationId: number,
+  file: UploadSource,
+  label: string,
+  uploadDate: string,
+  folderRel: string,
+  tmp: string,
+): Promise<StoreResult> {
   const root = await getFilesRoot();
   if (!root) return fail("setup", "Choose the files folder in Settings before uploading.");
   const hash = createHash("sha256");
@@ -91,7 +110,11 @@ async function place(applicationId: number, file: UploadSource, label: string, u
   await pipeline(
     Readable.fromWeb(file.stream() as NodeWebStream),
     async function* (src: AsyncIterable<Buffer>) {
-      for await (const chunk of src) { hash.update(chunk); sizeBytes += chunk.length; yield chunk; }
+      for await (const chunk of src) {
+        hash.update(chunk);
+        sizeBytes += chunk.length;
+        yield chunk;
+      }
     },
     createWriteStream(tmp, { flags: "wx", mode: 0o600 }),
   );
@@ -117,13 +140,30 @@ async function place(applicationId: number, file: UploadSource, label: string, u
       await rm(tmp); // before the chmod (see the header)
       await chmod(target.path, 0o444);
       const id = await insertFileRow({
-        applicationId, label, originalName: capOriginalName(file.name), storedName: name.storedName, relativePath: rel.path, sha256, sizeBytes,
-        uploadDate, baseName: name.baseName, extension: name.extension, seq: name.seq,
+        applicationId,
+        label,
+        originalName: capOriginalName(file.name),
+        storedName: name.storedName,
+        relativePath: rel.path,
+        sha256,
+        sizeBytes,
+        uploadDate,
+        baseName: name.baseName,
+        extension: name.extension,
+        seq: name.seq,
       });
       return { ok: true, file: { id, storedName: name.storedName, relativePath: rel.path, sizeBytes, sha256 } };
     } catch (e) {
       // Another upload holds this name in the database: move the bytes back to the temp name (writable again) and try the next seq.
-      if (isUniqueViolation(e) && (await chmod(target.path, 0o666).then(() => rename(target.path, tmp)).then(() => true, () => false))) {
+      if (
+        isUniqueViolation(e) &&
+        (await chmod(target.path, 0o666)
+          .then(() => rename(target.path, tmp))
+          .then(
+            () => true,
+            () => false,
+          ))
+      ) {
         taken.push(name);
         continue;
       }

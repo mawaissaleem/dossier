@@ -2,5 +2,7 @@
 // isDeadline is the same kind of rule for the Deadline column (add form essentials and board card). Pure: no imports beyond types.
 import type { ColumnType } from "./db/schema";
 
-export const isPriority = (c: { name: string; type: ColumnType }) => c.type === "single_select" && c.name.trim().toLowerCase() === "priority";
-export const isDeadline = (c: { name: string; type: ColumnType }) => c.type === "date" && c.name.trim().toLowerCase() === "deadline";
+export const isPriority = (c: { name: string; type: ColumnType }) =>
+  c.type === "single_select" && c.name.trim().toLowerCase() === "priority";
+export const isDeadline = (c: { name: string; type: ColumnType }) =>
+  c.type === "date" && c.name.trim().toLowerCase() === "deadline";

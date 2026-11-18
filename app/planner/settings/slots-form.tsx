@@ -8,7 +8,17 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { savePlannerSlots } from "@/app/actions/settings";
 import { SLOT_DEFS, SLOTS, type Slot, type SlotColumn, type SlotMapping } from "@/lib/planner";
 
-export function SlotsForm({ trackId, trackName, initial, choices }: { trackId: number; trackName: string; initial: SlotMapping; choices: Record<Slot, SlotColumn[]> }) {
+export function SlotsForm({
+  trackId,
+  trackName,
+  initial,
+  choices,
+}: {
+  trackId: number;
+  trackName: string;
+  initial: SlotMapping;
+  choices: Record<Slot, SlotColumn[]>;
+}) {
   const [slots, setSlots] = useSyncedState(initial);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -36,16 +46,24 @@ export function SlotsForm({ trackId, trackName, initial, choices }: { trackId: n
         <div className="grid gap-3 sm:grid-cols-2">
           {SLOTS.map((slot) => (
             <div key={slot} className="flex flex-col gap-1.5">
-              <Label htmlFor={`slot-${trackId}-${slot}`} className="text-muted-foreground">{SLOT_DEFS[slot].label}</Label>
+              <Label htmlFor={`slot-${trackId}-${slot}`} className="text-muted-foreground">
+                {SLOT_DEFS[slot].label}
+              </Label>
               <NativeSelect
                 id={`slot-${trackId}-${slot}`}
                 className="w-full"
                 value={slots[slot] ?? ""}
-                onChange={(e) => { setSlots((s) => ({ ...s, [slot]: e.target.value === "" ? null : Number(e.target.value) })); setSaved(false); }}
+                onChange={(e) => {
+                  setSlots((s) => ({ ...s, [slot]: e.target.value === "" ? null : Number(e.target.value) }));
+                  setSaved(false);
+                }}
               >
                 <NativeSelectOption value="">None</NativeSelectOption>
                 {choices[slot].map((c) => (
-                  <NativeSelectOption key={c.id} value={c.id}>{c.name}{c.hidden ? " (hidden)" : ""}</NativeSelectOption>
+                  <NativeSelectOption key={c.id} value={c.id}>
+                    {c.name}
+                    {c.hidden ? " (hidden)" : ""}
+                  </NativeSelectOption>
                 ))}
               </NativeSelect>
             </div>
@@ -53,9 +71,19 @@ export function SlotsForm({ trackId, trackName, initial, choices }: { trackId: n
         </div>
       </fieldset>
       <div className="mt-3 flex items-center gap-3">
-        <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        {saved && <p role="status" className="text-sm text-muted-foreground">Saved.</p>}
+        <Button type="submit" disabled={pending}>
+          {pending ? "Saving…" : "Save"}
+        </Button>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {saved && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Saved.
+          </p>
+        )}
       </div>
     </form>
   );

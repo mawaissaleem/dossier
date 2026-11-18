@@ -25,8 +25,12 @@ export async function ensureApplicationFolder(applicationId: number, uploadDate:
     try {
       await mkdir(r.path); // recreate if the user removed it
     } catch (e) {
-      const isDir = await stat(r.path).then((st) => st.isDirectory(), () => false);
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST" || !isDir) return fail("Could not create the application folder.");
+      const isDir = await stat(r.path).then(
+        (st) => st.isDirectory(),
+        () => false,
+      );
+      if ((e as NodeJS.ErrnoException).code !== "EEXIST" || !isDir)
+        return fail("Could not create the application folder.");
     }
     return { ok: true, relativePath: existing, absolutePath: r.path };
   }

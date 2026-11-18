@@ -24,7 +24,14 @@ export async function listColumns(trackId: number): Promise<ColumnItem[]> {
   const db = getDb();
   const userId = getUserId();
   const cols = db
-    .select({ id: columns.id, name: columns.name, type: columns.type, hidden: columns.hidden, isStatus: columns.isStatus, defaultValue: columns.defaultValue })
+    .select({
+      id: columns.id,
+      name: columns.name,
+      type: columns.type,
+      hidden: columns.hidden,
+      isStatus: columns.isStatus,
+      defaultValue: columns.defaultValue,
+    })
     .from(columns)
     .where(and(eq(columns.trackId, trackId), eq(columns.userId, userId)))
     .orderBy(asc(columns.position), asc(columns.id))
@@ -32,7 +39,13 @@ export async function listColumns(trackId: number): Promise<ColumnItem[]> {
   const selectIds = cols.filter((c) => c.type === "single_select").map((c) => c.id);
   const opts = selectIds.length
     ? db
-        .select({ id: columnOptions.id, columnId: columnOptions.columnId, label: columnOptions.label, color: columnOptions.color, position: columnOptions.position })
+        .select({
+          id: columnOptions.id,
+          columnId: columnOptions.columnId,
+          label: columnOptions.label,
+          color: columnOptions.color,
+          position: columnOptions.position,
+        })
         .from(columnOptions)
         .where(and(inArray(columnOptions.columnId, selectIds), eq(columnOptions.userId, userId)))
         .orderBy(asc(columnOptions.position), asc(columnOptions.id))
@@ -40,7 +53,9 @@ export async function listColumns(trackId: number): Promise<ColumnItem[]> {
     : [];
   return cols.map((c) => ({
     ...c,
-    options: opts.filter((o) => o.columnId === c.id).map((o) => ({ id: o.id, label: o.label, color: o.color, position: o.position })),
+    options: opts
+      .filter((o) => o.columnId === c.id)
+      .map((o) => ({ id: o.id, label: o.label, color: o.color, position: o.position })),
   }));
 }
 
@@ -63,21 +78,41 @@ function checkName(name: unknown): { name: string } | { error: string } {
 // Appends a column after the last one (hidden=false, no default, no options). Inserts no cell rows: a missing row is blank (FR-2.1).
 // Validates here too so the data layer is safe on its own; the unique index is case-sensitive, so the case-insensitive check is in code.
 // No await between the checks and the insert, and better-sqlite3 is sync, so nothing can interleave.
-export async function addColumn({ trackId, name, type }: { trackId: number; name: string; type: ColumnType }): Promise<AddColumnResult> {
+export async function addColumn({
+  trackId,
+  name,
+  type,
+}: {
+  trackId: number;
+  name: string;
+  type: ColumnType;
+}): Promise<AddColumnResult> {
   const checked = checkName(name);
   if ("error" in checked) return { ok: false, error: checked.error };
   const n = checked.name;
   if (!COLUMN_TYPES.includes(type)) return { ok: false, error: "Choose a valid type." };
   const db = getDb();
   const userId = getUserId();
-  const track = db.select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, trackId), eq(tracks.userId, userId))).get();
+  const track = db
+    .select({ id: tracks.id })
+    .from(tracks)
+    .where(and(eq(tracks.id, trackId), eq(tracks.userId, userId)))
+    .get();
   if (!track) return { ok: false, error: "Track not found." };
-  const existing = db.select({ name: columns.name, position: columns.position }).from(columns).where(and(eq(columns.trackId, trackId), eq(columns.userId, userId))).all();
+  const existing = db
+    .select({ name: columns.name, position: columns.position })
+    .from(columns)
+    .where(and(eq(columns.trackId, trackId), eq(columns.userId, userId)))
+    .all();
   if (existing.length >= MAX_COLUMNS) return { ok: false, error: `A track can have at most ${MAX_COLUMNS} columns.` };
   if (existing.some((c) => c.name.toLowerCase() === n.toLowerCase())) return DUP;
   const position = existing.reduce((m, c) => Math.max(m, c.position + 1), 0);
   try {
-    return { ok: true, id: db.insert(columns).values({ userId, trackId, name: n, type, position }).returning({ id: columns.id }).get().id };
+    return {
+      ok: true,
+      id: db.insert(columns).values({ userId, trackId, name: n, type, position }).returning({ id: columns.id }).get()
+        .id,
+    };
   } catch (e) {
     if (isUniqueViolation(e)) return DUP;
     throw e;
@@ -106,7 +141,11 @@ export async function renameColumn(trackId: number, columnId: number, name: stri
   const n = checked.name;
   if (siblings.some((c) => c.id !== columnId && c.name.toLowerCase() === n.toLowerCase())) return DUP;
   try {
-    getDb().update(columns).set({ name: n }).where(and(eq(columns.id, columnId), eq(columns.userId, getUserId()))).run();
+    getDb()
+      .update(columns)
+      .set({ name: n })
+      .where(and(eq(columns.id, columnId), eq(columns.userId, getUserId())))
+      .run();
   } catch (e) {
     if (isUniqueViolation(e)) return DUP;
     throw e;
@@ -117,14 +156,22 @@ export async function renameColumn(trackId: number, columnId: number, name: stri
 // Hiding keeps the column and its values (FR-2.3); showing it restores it at its old position.
 export async function setColumnHidden(trackId: number, columnId: number, hidden: boolean): Promise<ColumnResult> {
   if (typeof hidden !== "boolean" || !trackColumns(trackId, columnId)) return NOT_FOUND;
-  getDb().update(columns).set({ hidden }).where(and(eq(columns.id, columnId), eq(columns.userId, getUserId()))).run();
+  getDb()
+    .update(columns)
+    .set({ hidden })
+    .where(and(eq(columns.id, columnId), eq(columns.userId, getUserId())))
+    .run();
   return { ok: true };
 }
 
 // Swaps with the nearest *visible* neighbour in that direction, so one click always moves the column one step on screen;
 // hidden columns keep their relative slot. At an edge it is a no-op (ok). Positions are then renumbered 0..n-1 in one
 // transaction, so they stay unique and gap-free whatever state they were in.
-export async function moveColumn(trackId: number, columnId: number, direction: "left" | "right"): Promise<ColumnResult> {
+export async function moveColumn(
+  trackId: number,
+  columnId: number,
+  direction: "left" | "right",
+): Promise<ColumnResult> {
   if (direction !== "left" && direction !== "right") return NOT_FOUND;
   const all = trackColumns(trackId, columnId);
   if (!all) return NOT_FOUND;
@@ -137,7 +184,13 @@ export async function moveColumn(trackId: number, columnId: number, direction: "
   [order[from], order[to]] = [order[to], order[from]];
   const userId = getUserId();
   getDb().transaction((tx) => {
-    order.forEach((id, position) => tx.update(columns).set({ position }).where(and(eq(columns.id, id), eq(columns.userId, userId))).run());
+    order.forEach((id, position) =>
+      tx
+        .update(columns)
+        .set({ position })
+        .where(and(eq(columns.id, id), eq(columns.userId, userId)))
+        .run(),
+    );
   });
   return { ok: true };
 }
@@ -149,7 +202,11 @@ export type ColumnDeleteImpact = { name: string; valueCount: number; archivedCou
 export async function getColumnDeleteImpact(columnId: number): Promise<ColumnDeleteImpact | null> {
   const db = getDb();
   const userId = getUserId();
-  const col = db.select({ name: columns.name }).from(columns).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).get();
+  const col = db
+    .select({ name: columns.name })
+    .from(columns)
+    .where(and(eq(columns.id, columnId), eq(columns.userId, userId)))
+    .get();
   if (!col) return null;
   const rows = db
     .select({ archived: applications.archived, n: count() })
@@ -158,7 +215,11 @@ export async function getColumnDeleteImpact(columnId: number): Promise<ColumnDel
     .where(and(eq(cellValues.columnId, columnId), eq(cellValues.userId, userId)))
     .groupBy(applications.archived)
     .all();
-  return { name: col.name, valueCount: rows.reduce((s, r) => s + r.n, 0), archivedCount: rows.find((r) => r.archived)?.n ?? 0 };
+  return {
+    name: col.name,
+    valueCount: rows.reduce((s, r) => s + r.n, 0),
+    archivedCount: rows.find((r) => r.archived)?.n ?? 0,
+  };
 }
 
 // Cell values and options go with the column via ON DELETE CASCADE. Positions are left as they are: the order is preserved,
@@ -168,12 +229,23 @@ export async function getColumnDeleteImpact(columnId: number): Promise<ColumnDel
 export async function deleteColumn(columnId: number, expectedValueCount: number): Promise<ColumnResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
-    const col = tx.select({ isStatus: columns.isStatus }).from(columns).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).get();
+    const col = tx
+      .select({ isStatus: columns.isStatus })
+      .from(columns)
+      .where(and(eq(columns.id, columnId), eq(columns.userId, userId)))
+      .get();
     if (!col) return NOT_FOUND;
     if (col.isStatus) return { ok: false, error: "The Status column cannot be deleted." } as const;
-    const { n } = tx.select({ n: count() }).from(cellValues).where(and(eq(cellValues.columnId, columnId), eq(cellValues.userId, userId))).get()!;
-    if (n !== expectedValueCount) return { ok: false, error: "The number of values in this column changed. Check again." } as const;
-    tx.delete(columns).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).run();
+    const { n } = tx
+      .select({ n: count() })
+      .from(cellValues)
+      .where(and(eq(cellValues.columnId, columnId), eq(cellValues.userId, userId)))
+      .get()!;
+    if (n !== expectedValueCount)
+      return { ok: false, error: "The number of values in this column changed. Check again." } as const;
+    tx.delete(columns)
+      .where(and(eq(columns.id, columnId), eq(columns.userId, userId)))
+      .run();
     return { ok: true } as const;
   });
 }
@@ -184,15 +256,30 @@ export async function deleteColumn(columnId: number, expectedValueCount: number)
 export async function setStatusColumn(trackId: number, columnId: number): Promise<ColumnResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
-    const col = tx.select({ type: columns.type, trackId: columns.trackId, isStatus: columns.isStatus }).from(columns).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).get();
+    const col = tx
+      .select({ type: columns.type, trackId: columns.trackId, isStatus: columns.isStatus })
+      .from(columns)
+      .where(and(eq(columns.id, columnId), eq(columns.userId, userId)))
+      .get();
     if (!col || col.trackId !== trackId) return NOT_FOUND;
-    if (col.type !== "single_select") return { ok: false, error: "Only a single-select column can be the Status column." } as const;
+    if (col.type !== "single_select")
+      return { ok: false, error: "Only a single-select column can be the Status column." } as const;
     if (col.isStatus) return { ok: true } as const;
-    const { n } = tx.select({ n: count() }).from(columnOptions).where(and(eq(columnOptions.columnId, columnId), eq(columnOptions.userId, userId))).get()!;
+    const { n } = tx
+      .select({ n: count() })
+      .from(columnOptions)
+      .where(and(eq(columnOptions.columnId, columnId), eq(columnOptions.userId, userId)))
+      .get()!;
     if (n === 0) return { ok: false, error: "Add at least one option before using this column as Status." } as const;
     const updatedAt = new Date();
-    tx.update(columns).set({ isStatus: false, updatedAt }).where(and(eq(columns.trackId, trackId), eq(columns.userId, userId), eq(columns.isStatus, true))).run();
-    tx.update(columns).set({ isStatus: true, updatedAt }).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).run();
+    tx.update(columns)
+      .set({ isStatus: false, updatedAt })
+      .where(and(eq(columns.trackId, trackId), eq(columns.userId, userId), eq(columns.isStatus, true)))
+      .run();
+    tx.update(columns)
+      .set({ isStatus: true, updatedAt })
+      .where(and(eq(columns.id, columnId), eq(columns.userId, userId)))
+      .run();
     return { ok: true } as const;
   });
 }
@@ -203,15 +290,32 @@ export async function setStatusColumn(trackId: number, columnId: number): Promis
 export async function setColumnDefault(columnId: number, raw: unknown): Promise<ColumnResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
-    const col = tx.select({ type: columns.type }).from(columns).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).get();
+    const col = tx
+      .select({ type: columns.type })
+      .from(columns)
+      .where(and(eq(columns.id, columnId), eq(columns.userId, userId)))
+      .get();
     if (!col) return NOT_FOUND;
     const parsed = parseCell(col.type, raw);
     if (!parsed.ok) return parsed;
     if (parsed.value !== null && col.type === "single_select") {
-      const opt = tx.select({ id: columnOptions.id }).from(columnOptions).where(and(eq(columnOptions.id, parsed.value as number), eq(columnOptions.columnId, columnId), eq(columnOptions.userId, userId))).get();
+      const opt = tx
+        .select({ id: columnOptions.id })
+        .from(columnOptions)
+        .where(
+          and(
+            eq(columnOptions.id, parsed.value as number),
+            eq(columnOptions.columnId, columnId),
+            eq(columnOptions.userId, userId),
+          ),
+        )
+        .get();
       if (!opt) return { ok: false, error: "Choose one of this column's options." } as const;
     }
-    tx.update(columns).set({ defaultValue: parsed.value === null ? null : encodeDefault(parsed.value), updatedAt: new Date() }).where(and(eq(columns.id, columnId), eq(columns.userId, userId))).run();
+    tx.update(columns)
+      .set({ defaultValue: parsed.value === null ? null : encodeDefault(parsed.value), updatedAt: new Date() })
+      .where(and(eq(columns.id, columnId), eq(columns.userId, userId)))
+      .run();
     return { ok: true } as const;
   });
 }

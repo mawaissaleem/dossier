@@ -7,15 +7,28 @@ import type { ColumnItem } from "./db/columns";
 import { filterRows, type Filter } from "./filter";
 import { isDeadline, isPriority } from "./priority";
 
-export type BoardColumn = { key: string; optionId: number | null; label: string; color: string; cards: ApplicationRow[] };
+export type BoardColumn = {
+  key: string;
+  optionId: number | null;
+  label: string;
+  color: string;
+  cards: ApplicationRow[];
+};
 
 export const NO_STATUS = "No status";
 
 // Accessible name of a column region, e.g. "Applied, 12 applications".
-export const columnLabel = (label: string, count: number) => `${label}, ${count} ${count === 1 ? "application" : "applications"}`;
+export const columnLabel = (label: string, count: number) =>
+  `${label}, ${count} ${count === 1 ? "application" : "applications"}`;
 
 export function groupByStatus(rows: ApplicationRow[], status: Pick<ColumnItem, "id" | "options">): BoardColumn[] {
-  const cols: BoardColumn[] = status.options.map((o) => ({ key: `opt-${o.id}`, optionId: o.id, label: o.label, color: o.color, cards: [] }));
+  const cols: BoardColumn[] = status.options.map((o) => ({
+    key: `opt-${o.id}`,
+    optionId: o.id,
+    label: o.label,
+    color: o.color,
+    cards: [],
+  }));
   const byOption = new Map(cols.map((c) => [c.optionId, c]));
   const none: BoardColumn = { key: "none", optionId: null, label: NO_STATUS, color: "gray", cards: [] };
   for (const row of [...rows].sort((a, b) => b.id - a.id)) {
@@ -27,8 +40,12 @@ export function groupByStatus(rows: ApplicationRow[], status: Pick<ColumnItem, "
 
 // FR-4.3: the board shows the rows the table shows. Filter first (the table's filterRows, so counts and cards match), then group; every status column
 // stays, an excluded one just has no cards. `columns` = the track's single-select columns (the filter scope), as for filterRows.
-export const boardGroups = (rows: ApplicationRow[], columns: Pick<ColumnItem, "id" | "type" | "options">[], filters: Filter[], status: Pick<ColumnItem, "id" | "options">) =>
-  groupByStatus(filterRows(rows, columns, filters), status);
+export const boardGroups = (
+  rows: ApplicationRow[],
+  columns: Pick<ColumnItem, "id" | "type" | "options">[],
+  filters: Filter[],
+  status: Pick<ColumnItem, "id" | "options">,
+) => groupByStatus(filterRows(rows, columns, filters), status);
 
 // True when the status filter leaves this column out (optionId null = No status, the "(Blank)" token). False without a status filter.
 export function columnFilteredOut(filters: Filter[], statusId: number, optionId: number | null): boolean {
@@ -37,13 +54,23 @@ export function columnFilteredOut(filters: Filter[], statusId: number, optionId:
 }
 
 // True when the filters hide `row` once `move` is applied: the card leaves the board, which is then told, not an error.
-export const hiddenAfterMove = (row: ApplicationRow, columns: Pick<ColumnItem, "id" | "type" | "options">[], filters: Filter[], statusId: number, move: Move) =>
-  filterRows(applyMove([row], statusId, move), columns, filters).length === 0;
+export const hiddenAfterMove = (
+  row: ApplicationRow,
+  columns: Pick<ColumnItem, "id" | "type" | "options">[],
+  filters: Filter[],
+  statusId: number,
+  move: Move,
+) => filterRows(applyMove([row], statusId, move), columns, filters).length === 0;
 
 // The columns a card shows besides the title: Priority and Deadline by the same name rules as the add form's essentials (trimmed,
 // case-insensitive, first visible match in column order). undefined = the track has none, so the card omits that line.
-export function cardColumns<T extends Pick<ColumnItem, "name" | "type" | "hidden">>(cols: T[]): { priority?: T; deadline?: T } {
-  return { priority: cols.find((c) => !c.hidden && isPriority(c)), deadline: cols.find((c) => !c.hidden && isDeadline(c)) };
+export function cardColumns<T extends Pick<ColumnItem, "name" | "type" | "hidden">>(
+  cols: T[],
+): { priority?: T; deadline?: T } {
+  return {
+    priority: cols.find((c) => !c.hidden && isPriority(c)),
+    deadline: cols.find((c) => !c.hidden && isDeadline(c)),
+  };
 }
 
 // A status change the user just asked for, shown at once while the server answers (FR-4.2). `from` is the raw stored value the card started
@@ -62,7 +89,11 @@ export function planMove(groups: BoardColumn[], statusId: number, rowId: number,
 
 export function applyMove(rows: ApplicationRow[], statusId: number, move: Move | null): ApplicationRow[] {
   if (!move) return rows;
-  return rows.map((r) => (r.id === move.rowId && (r.values[statusId] ?? null) === move.from ? { ...r, values: { ...r.values, [statusId]: move.to } } : r));
+  return rows.map((r) =>
+    r.id === move.rowId && (r.values[statusId] ?? null) === move.from
+      ? { ...r, values: { ...r.values, [statusId]: move.to } }
+      : r,
+  );
 }
 
 // Keyboard drag geometry. Columns sit side by side with different heights, so only x decides: a centre-to-centre distance (closestCenter)
@@ -79,5 +110,7 @@ export function columnAtX<T extends Span>(x: number, cols: T[]): T | undefined {
 // Half a width, not a pixel: a list's scrollbar shifts the card left of its own column's centre, which must not count as "to the right".
 export function nextColumn<T extends Span>(x: number, dir: 1 | -1, cols: T[]): T | undefined {
   const d = (c: Span) => (c.left + c.width / 2 - x) * dir;
-  return cols.filter((c) => d(c) > c.width / 2).reduce<T | undefined>((best, c) => (!best || d(c) < d(best) ? c : best), undefined);
+  return cols
+    .filter((c) => d(c) > c.width / 2)
+    .reduce<T | undefined>((best, c) => (!best || d(c) < d(best) ? c : best), undefined);
 }

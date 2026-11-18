@@ -2,7 +2,11 @@
 
 import { refresh } from "next/cache";
 import { MAX_TEXT } from "@/lib/cells";
-import { createApplication as insertApplication, updateApplication as changeApplication, type UpdateResult } from "@/lib/db/applications";
+import {
+  createApplication as insertApplication,
+  updateApplication as changeApplication,
+  type UpdateResult,
+} from "@/lib/db/applications";
 import { MAX_COLUMNS } from "@/lib/db/columns";
 import { isId } from "@/lib/ids";
 
@@ -19,7 +23,11 @@ const MAX_VALUE_TEXT = 10 * MAX_TEXT;
 // the user's choice, blank included; a column left out gets its default. Omit `values` for a title-only application.
 // Plain args (not FormData): the form calls this from a client handler and shows result.error inline.
 // refresh() (not revalidatePath): the track page reads the DB at request time, nothing is cached, so only the client router's payload is stale.
-export async function createApplication(title: string, trackId: number, values?: { columnId: number; value: string | number | boolean | null }[]): Promise<CreateApplicationResult> {
+export async function createApplication(
+  title: string,
+  trackId: number,
+  values?: { columnId: number; value: string | number | boolean | null }[],
+): Promise<CreateApplicationResult> {
   // Runs on any POST, so don't trust the TS types.
   const t = checkTitle(title);
   if (!t.ok) return t;
@@ -34,7 +42,11 @@ export async function createApplication(title: string, trackId: number, values?:
 // Edit form save (same limits as create). `values` is required and holds only the fields the user changed, blank (null) included.
 // refresh() only on success: nothing changed otherwise, and the form keeps what was typed.
 // A save that moves an application with no submission to a submitted status returns { needsReview: true } and saves nothing (see UpdateResult).
-export async function updateApplication(id: number, title: string, values: { columnId: number; value: string | number | boolean | null }[]): Promise<UpdateResult> {
+export async function updateApplication(
+  id: number,
+  title: string,
+  values: { columnId: number; value: string | number | boolean | null }[],
+): Promise<UpdateResult> {
   if (!isId(id)) return { ok: false, error: "Application not found." };
   const t = checkTitle(title);
   if (!t.ok) return t;
@@ -47,11 +59,25 @@ export async function updateApplication(id: number, title: string, values: { col
 function checkTitle(title: unknown): { ok: true; title: string } | { ok: false; error: string } {
   if (typeof title !== "string" || !title.trim()) return { ok: false, error: "Title is required." };
   const t = title.trim();
-  return t.length > MAX_TITLE ? { ok: false, error: `Title must be at most ${MAX_TITLE} characters.` } : { ok: true, title: t };
+  return t.length > MAX_TITLE
+    ? { ok: false, error: `Title must be at most ${MAX_TITLE} characters.` }
+    : { ok: true, title: t };
 }
 
 function validValues(v: unknown): v is { columnId: number; value: string | number | boolean | null }[] {
-  return Array.isArray(v) && v.length <= MAX_VALUES && v.every((e) =>
-    typeof e === "object" && e !== null && !Array.isArray(e) && isId(e.columnId) &&
-    (e.value === null || typeof e.value === "number" || typeof e.value === "boolean" || (typeof e.value === "string" && e.value.length <= MAX_VALUE_TEXT)));
+  return (
+    Array.isArray(v) &&
+    v.length <= MAX_VALUES &&
+    v.every(
+      (e) =>
+        typeof e === "object" &&
+        e !== null &&
+        !Array.isArray(e) &&
+        isId(e.columnId) &&
+        (e.value === null ||
+          typeof e.value === "number" ||
+          typeof e.value === "boolean" ||
+          (typeof e.value === "string" && e.value.length <= MAX_VALUE_TEXT)),
+    )
+  );
 }

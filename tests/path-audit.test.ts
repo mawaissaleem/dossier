@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path, { join } from "node:path";
 import { NextRequest } from "next/server";
@@ -31,17 +40,34 @@ async function mkApp(title: string) {
   return r.id;
 }
 async function store(name: string, content: string, app = appId) {
-  const r = await storeUploadedFile({ applicationId: app, file: new File([content], name), label: "CV", uploadDate: "2026-11-08" });
+  const r = await storeUploadedFile({
+    applicationId: app,
+    file: new File([content], name),
+    label: "CV",
+    uploadDate: "2026-11-08",
+  });
   if (!r.ok || !("file" in r)) throw new Error("store failed");
   return r.file;
 }
-const setPath = (id: number, relativePath: string) => db.update(files).set({ relativePath }).where(eq(files.id, id)).run();
+const setPath = (id: number, relativePath: string) =>
+  db.update(files).set({ relativePath }).where(eq(files.id, id)).run();
 const req = (url: string) => new NextRequest(`http://localhost:3000${url}`, { headers: { host: "localhost:3000" } });
 const open = (id: number) => getFile(req(`/api/files/${id}`), { params: Promise.resolve({ id: String(id) }) } as never);
-const zip = (id: number, q = "") => getZip(req(`/api/applications/${id}/zip${q}`), { params: Promise.resolve({ id: String(id) }) } as never);
+const zip = (id: number, q = "") =>
+  getZip(req(`/api/applications/${id}/zip${q}`), { params: Promise.resolve({ id: String(id) }) } as never);
 
 // Every form a tampered files.relative_path might take to leave the root. "%2e%2e%2f" is not here: it is a harmless literal name (below).
-const ESCAPES = ["..", "../secret.txt", "a/../../secret.txt", "/etc/passwd", "..\\secret.txt", "a\\..\\..\\secret.txt", "C:\\secret.txt", "a\0b/../../secret.txt", "./../secret.txt"];
+const ESCAPES = [
+  "..",
+  "../secret.txt",
+  "a/../../secret.txt",
+  "/etc/passwd",
+  "..\\secret.txt",
+  "a\\..\\..\\secret.txt",
+  "C:\\secret.txt",
+  "a\0b/../../secret.txt",
+  "./../secret.txt",
+];
 
 beforeEach(async () => {
   db = useTestDb();
@@ -123,7 +149,12 @@ describe("symlinks inside the files root that point outside", () => {
     rmSync(folder, { recursive: true });
     symlinkSync(outside, folder);
     const before = readdirSync(outside);
-    const r = await storeUploadedFile({ applicationId: appId, file: new File(["again"], "b.pdf"), label: "CV", uploadDate: "2026-11-08" });
+    const r = await storeUploadedFile({
+      applicationId: appId,
+      file: new File(["again"], "b.pdf"),
+      label: "CV",
+      uploadDate: "2026-11-08",
+    });
     expect(r.ok).toBe(false);
     expect(readdirSync(outside)).toEqual(before);
     expect(db.select().from(files).all()).toHaveLength(1);
@@ -156,18 +187,21 @@ describe("symlinks inside the files root that point outside", () => {
 });
 
 describe("a tampered stored name cannot make a zip-slip entry in the download", () => {
-  it.each(["../../evil.txt", "/etc/evil.txt", "a/b.txt", "..", "a\\b.txt", "C:evil.txt", "x\0y.txt"])("%j is left out of the zip", async (bad) => {
-    const good = await store("ok.pdf", "fine");
-    const other = await store("other.pdf", "other bytes");
-    db.update(files).set({ storedName: bad }).where(eq(files.id, other.id)).run();
-    const res = await zip(appId); // the page lists the problem; ?anyway=1 downloads the rest
-    expect(res.status).toBe(409);
-    const z = await zip(appId, "?anyway=1");
-    expect(z.status).toBe(200);
-    const f = join(base, "out.zip");
-    writeFileSync(f, Buffer.from(await z.arrayBuffer()));
-    expect([...readZip(f).keys()]).toEqual([good.storedName]);
-  });
+  it.each(["../../evil.txt", "/etc/evil.txt", "a/b.txt", "..", "a\\b.txt", "C:evil.txt", "x\0y.txt"])(
+    "%j is left out of the zip",
+    async (bad) => {
+      const good = await store("ok.pdf", "fine");
+      const other = await store("other.pdf", "other bytes");
+      db.update(files).set({ storedName: bad }).where(eq(files.id, other.id)).run();
+      const res = await zip(appId); // the page lists the problem; ?anyway=1 downloads the rest
+      expect(res.status).toBe(409);
+      const z = await zip(appId, "?anyway=1");
+      expect(z.status).toBe(200);
+      const f = join(base, "out.zip");
+      writeFileSync(f, Buffer.from(await z.arrayBuffer()));
+      expect([...readZip(f).keys()]).toEqual([good.storedName]);
+    },
+  );
 
   it("when that is the only file there is no zip at all", async () => {
     const f = await store("only.pdf", "x");
@@ -177,11 +211,30 @@ describe("a tampered stored name cannot make a zip-slip entry in the download", 
 });
 
 describe("typed paths (files root, backup folder, restore zip)", () => {
-  const HOSTILE = ["..", "../x", "..\\..\\x", "%2e%2e%2f%2e%2e%2fx", "~", "~/x", "a\0b", "C:\\x", "\\\\server\\share", "relative/dir", "/does/not/exist/../../x", ""];
+  const HOSTILE = [
+    "..",
+    "../x",
+    "..\\..\\x",
+    "%2e%2e%2f%2e%2e%2fx",
+    "~",
+    "~/x",
+    "a\0b",
+    "C:\\x",
+    "\\\\server\\share",
+    "relative/dir",
+    "/does/not/exist/../../x",
+    "",
+  ];
 
   it.each(HOSTILE)("%j is refused by every validator and creates nothing", async (typed) => {
     const before = readdirSync(base);
-    for (const r of [await validateFilesRoot(typed), await validateBackupDestination(typed), await checkBackup(typed), await repointStoredFiles(typed), await moveStoredFiles(typed, { fileCount: 0, totalBytes: 0 })]) {
+    for (const r of [
+      await validateFilesRoot(typed),
+      await validateBackupDestination(typed),
+      await checkBackup(typed),
+      await repointStoredFiles(typed),
+      await moveStoredFiles(typed, { fileCount: 0, totalBytes: 0 }),
+    ]) {
       expect(r.ok).toBe(false);
     }
     expect(readdirSync(base)).toEqual(before);
@@ -190,7 +243,11 @@ describe("typed paths (files root, backup folder, restore zip)", () => {
 
   it("a .. that normalises into the project or its data folder is still refused", async () => {
     const proj = path.basename(process.cwd());
-    for (const typed of [`${process.cwd()}/node_modules/..`, `${process.cwd()}/data/../data`, join(process.cwd(), "..", proj, "src", "..")]) {
+    for (const typed of [
+      `${process.cwd()}/node_modules/..`,
+      `${process.cwd()}/data/../data`,
+      join(process.cwd(), "..", proj, "src", ".."),
+    ]) {
       expect((await validateFilesRoot(typed)).ok, typed).toBe(false);
       expect((await validateBackupDestination(typed)).ok, typed).toBe(false);
     }

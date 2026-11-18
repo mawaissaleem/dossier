@@ -11,7 +11,8 @@ import { parseSearchQuery } from "@/lib/search";
 const NO_STORE = { "Cache-Control": "no-store" };
 
 export async function GET(request: NextRequest) {
-  if (!isLocalHost(request.headers)) return NextResponse.json({ error: "Local use only." }, { status: 403, headers: NO_STORE });
+  if (!isLocalHost(request.headers))
+    return NextResponse.json({ error: "Local use only." }, { status: 403, headers: NO_STORE });
   const behind = databaseUpdateResponse(); // 503 while migrations are pending, instead of a "no such table" crash
   if (behind) return behind;
   const parsed = parseSearchQuery(request.nextUrl.searchParams.get("q"));

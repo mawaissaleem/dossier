@@ -22,7 +22,11 @@ async function Summary() {
   await connection();
   const today = localToday();
   if (!(await getTrackOverviews(today)).length) return null;
-  const [overdue, upcoming, { count, capacity }] = [await getOverdueAlerts(today), await getUpcomingDeadlines(today, 1), await getWeeklyProgress(today)];
+  const [overdue, upcoming, { count, capacity }] = [
+    await getOverdueAlerts(today),
+    await getUpcomingDeadlines(today, 1),
+    await getWeeklyProgress(today),
+  ];
   return summaryLine(today, { overdue: overdue.length, nextDays: upcoming[0]?.days ?? null, count, capacity });
 }
 
@@ -39,19 +43,35 @@ async function Cards() {
   const today = localToday();
   const tracks = await getTrackOverviews(today);
   if (!tracks.length) {
-    return <EmptyState title="Start here" description="Dossier keeps your applications in tracks. Add a track from the Job or PhD template, or a blank one, then add your first application."><AddTrack /></EmptyState>;
+    return (
+      <EmptyState
+        title="Start here"
+        description="Dossier keeps your applications in tracks. Add a track from the Job or PhD template, or a blank one, then add your first application."
+      >
+        <AddTrack />
+      </EmptyState>
+    );
   }
   const [overdue, { labels }] = [await getOverdueAlerts(today), await getWins()];
-  const rail = [overdue.length > 0 && OverdueCard, FollowUpsCard, labels.length > 0 && WinsCard].filter((C): C is Exclude<typeof C, false> => C !== false);
+  const rail = [overdue.length > 0 && OverdueCard, FollowUpsCard, labels.length > 0 && WinsCard].filter(
+    (C): C is Exclude<typeof C, false> => C !== false,
+  );
   const n = tracks.length + 1;
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-12">
       <DashboardTiles />
       <PlanCard className="col-span-full xl:col-span-8" />
       <div className="col-span-full grid grid-cols-1 gap-4 md:grid-cols-2 xl:col-span-4 xl:flex xl:flex-col">
-        {rail.map((C, i) => <C key={i} className={`xl:flex-1 ${rail.length % 2 === 1 && i === rail.length - 1 ? "md:max-xl:col-span-2" : ""}`} />)}
+        {rail.map((C, i) => (
+          <C
+            key={i}
+            className={`xl:flex-1 ${rail.length % 2 === 1 && i === rail.length - 1 ? "md:max-xl:col-span-2" : ""}`}
+          />
+        ))}
       </div>
-      {tracks.map((t, i) => <TrackCard key={t.id} track={t} className={spans(i, n)} />)}
+      {tracks.map((t, i) => (
+        <TrackCard key={t.id} track={t} className={spans(i, n)} />
+      ))}
       <AllTracksTile tracks={tracks} className={spans(tracks.length, n)} />
     </div>
   );
@@ -64,8 +84,19 @@ export default function DashboardPage() {
       <Page>
         <PageHeader
           title="Dashboard"
-          description={<Suspense fallback={null}><Summary /></Suspense>}
-          actions={<><SearchHeaderButton /><Suspense fallback={null}><AddApplication /></Suspense></>}
+          description={
+            <Suspense fallback={null}>
+              <Summary />
+            </Suspense>
+          }
+          actions={
+            <>
+              <SearchHeaderButton />
+              <Suspense fallback={null}>
+                <AddApplication />
+              </Suspense>
+            </>
+          }
         />
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
           <Cards />

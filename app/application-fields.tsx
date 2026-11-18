@@ -6,14 +6,35 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { BAD_DATE, errorField, errorNamesColumn, inputKind, splitEssentials, type FormState } from "@/lib/application-form";
+import {
+  BAD_DATE,
+  errorField,
+  errorNamesColumn,
+  inputKind,
+  splitEssentials,
+  type FormState,
+} from "@/lib/application-form";
 import type { ColumnItem } from "@/lib/db/columns";
 
 // Essentials first (see splitEssentials), every other column in a closed <details> that stays mounted, so nothing typed is lost
 // by collapsing. `error` is the submit error: if it names a field inside the section, the section opens (parents clear it at the start of a submit so a repeat reopens it).
 // An error that names a field (errorField) is shown under that field and marks it aria-invalid; any other error is the parent's form-level alert.
 // State is controlled by the parent (values in, onChange out), so the same component serves the add form and the detail-page edit form. The title input is part of it. A column absent from `state` shows blank.
-export function ApplicationFields({ title, onTitleChange, columns, state, onChange, error }: { title: string; onTitleChange: (title: string) => void; columns: ColumnItem[]; state: FormState; onChange: (columnId: number, value: string | boolean) => void; error?: string | null }) {
+export function ApplicationFields({
+  title,
+  onTitleChange,
+  columns,
+  state,
+  onChange,
+  error,
+}: {
+  title: string;
+  onTitleChange: (title: string) => void;
+  columns: ColumnItem[];
+  state: FormState;
+  onChange: (columnId: number, value: string | boolean) => void;
+  error?: string | null;
+}) {
   const uid = useId();
   const more = useRef<HTMLDetailsElement>(null);
   const { essentials, rest } = splitEssentials(columns);
@@ -23,28 +44,54 @@ export function ApplicationFields({ title, onTitleChange, columns, state, onChan
     if (errorInRest && more.current) more.current.open = true;
   }, [errorInRest, error]);
   // aria-describedby points at the message under the field; it exists only while this field is the one the error names.
-  const invalid = (key: number | "title", id: string) => bad === key ? ({ "aria-invalid": true, "aria-describedby": `${id}-err` } as const) : {};
-  const message = (key: number | "title", id: string) => bad === key && <p id={`${id}-err`} role="alert" className="text-sm text-destructive">{error}</p>;
+  const invalid = (key: number | "title", id: string) =>
+    bad === key ? ({ "aria-invalid": true, "aria-describedby": `${id}-err` } as const) : {};
+  const message = (key: number | "title", id: string) =>
+    bad === key && (
+      <p id={`${id}-err`} role="alert" className="text-sm text-destructive">
+        {error}
+      </p>
+    );
   const field = (c: ColumnItem) => {
     const id = `${uid}-${c.id}`;
     const kind = inputKind(c.type);
     const v = state[c.id];
     const read = (el: HTMLInputElement) => onChange(c.id, el.validity.badInput ? BAD_DATE : el.value);
-    const label = <Label htmlFor={id} className={kind === "checkbox" ? "" : "text-muted-foreground"}>{c.name}{c.hidden && <span className="font-normal text-muted-foreground">(hidden)</span>}</Label>;
+    const label = (
+      <Label htmlFor={id} className={kind === "checkbox" ? "" : "text-muted-foreground"}>
+        {c.name}
+        {c.hidden && <span className="font-normal text-muted-foreground">(hidden)</span>}
+      </Label>
+    );
     return (
       <div key={c.id} className="flex min-w-0 flex-col gap-1.5">
         {kind === "checkbox" ? (
           <div className="flex h-8 items-center gap-2">
-            <Checkbox id={id} checked={v === true} onCheckedChange={(c2) => onChange(c.id, c2 === true)} {...invalid(c.id, id)} />
+            <Checkbox
+              id={id}
+              checked={v === true}
+              onCheckedChange={(c2) => onChange(c.id, c2 === true)}
+              {...invalid(c.id, id)}
+            />
             {label}
           </div>
         ) : (
           <>
             {label}
             {kind === "select" ? (
-              <NativeSelect id={id} value={typeof v === "string" ? v : ""} onChange={(e) => onChange(c.id, e.target.value)} className="w-full" {...invalid(c.id, id)}>
+              <NativeSelect
+                id={id}
+                value={typeof v === "string" ? v : ""}
+                onChange={(e) => onChange(c.id, e.target.value)}
+                className="w-full"
+                {...invalid(c.id, id)}
+              >
                 <NativeSelectOption value=""></NativeSelectOption>
-                {c.options.map((o) => <NativeSelectOption key={o.id} value={o.id}>{o.label}</NativeSelectOption>)}
+                {c.options.map((o) => (
+                  <NativeSelectOption key={o.id} value={o.id}>
+                    {o.label}
+                  </NativeSelectOption>
+                ))}
               </NativeSelect>
             ) : (
               <Input
@@ -72,7 +119,13 @@ export function ApplicationFields({ title, onTitleChange, columns, state, onChan
       <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2">
           <Label htmlFor={titleId}>Title</Label>
-          <Input id={titleId} value={title} onChange={(e) => onTitleChange(e.target.value)} className="font-medium" {...invalid("title", titleId)} />
+          <Input
+            id={titleId}
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            className="font-medium"
+            {...invalid("title", titleId)}
+          />
           {message("title", titleId)}
         </div>
         {essentials.map(field)}

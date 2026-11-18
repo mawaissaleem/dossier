@@ -32,10 +32,24 @@ describe("recently viewed list (pure)", () => {
     expect(list).toEqual([v(1, "table", 1)]);
   });
   it("deleted tracks are filtered out, keeping the order", () => {
-    expect(onlyExisting([v(3, "table", 3), v(2, "board", 2), v(1, "table", 1)], new Set([1, 3]))).toEqual([v(3, "table", 3), v(1, "table", 1)]);
+    expect(onlyExisting([v(3, "table", 3), v(2, "board", 2), v(1, "table", 1)], new Set([1, 3]))).toEqual([
+      v(3, "table", 3),
+      v(1, "table", 1),
+    ]);
   });
   it("parsing cleans whatever was stored: wrong shapes dropped, newest first, deduped, capped", () => {
-    const stored = [v(1, "table", 5), v(2, "board", 9), v(1, "table", 7), { trackId: 0, view: "table", at: 1 }, { trackId: 1.5, view: "table", at: 1 }, { trackId: 3, view: "grid", at: 1 }, { trackId: 4, view: "table", at: "x" }, null, "x", 7];
+    const stored = [
+      v(1, "table", 5),
+      v(2, "board", 9),
+      v(1, "table", 7),
+      { trackId: 0, view: "table", at: 1 },
+      { trackId: 1.5, view: "table", at: 1 },
+      { trackId: 3, view: "grid", at: 1 },
+      { trackId: 4, view: "table", at: "x" },
+      null,
+      "x",
+      7,
+    ];
     expect(parseViewed(stored)).toEqual([v(2, "board", 9), v(1, "table", 7)]);
     for (const bad of [undefined, null, "x", 5, {}]) expect(parseViewed(bad)).toEqual([]);
     expect(parseViewed(Array.from({ length: 20 }, (_, i) => v(i + 1, "table", i)))).toHaveLength(MAX_RECENTLY_VIEWED);
@@ -46,10 +60,17 @@ const stored = async () => (await getRecentlyViewed()).map((e) => ({ trackId: e.
 
 describe("recording a view (data layer and action)", () => {
   let db: ReturnType<typeof useTestDb>;
-  beforeEach(() => { vi.mocked(refresh).mockClear(); db = useTestDb(); });
+  beforeEach(() => {
+    vi.mocked(refresh).mockClear();
+    db = useTestDb();
+  });
   afterEach(dropTestDb);
 
-  const add = async (name: string) => { const r = await createTrackFromTemplate(name, "blank"); if (!r.ok) throw new Error(r.error); return r.id; };
+  const add = async (name: string) => {
+    const r = await createTrackFromTemplate(name, "blank");
+    if (!r.ok) throw new Error(r.error);
+    return r.id;
+  };
 
   it("stores one settings row, newest first, deduped by track and view", async () => {
     const [a, b] = [await add("Job"), await add("PhD")];
@@ -58,7 +79,13 @@ describe("recording a view (data layer and action)", () => {
     await recordTrackView(a, "table", 300);
     expect(await stored()).toEqual([v(a, "table", 300), v(b, "board", 200)]);
     expect((await getRecentlyViewed(300 + 3 * 3_600_000)).map((e) => e.when)).toEqual(["3 hours ago", "3 hours ago"]); // the age in words, computed at the request
-    expect(db.select().from(settings).all().filter((s) => s.key === RECENTLY_VIEWED_KEY)).toHaveLength(1);
+    expect(
+      db
+        .select()
+        .from(settings)
+        .all()
+        .filter((s) => s.key === RECENTLY_VIEWED_KEY),
+    ).toHaveLength(1);
   });
 
   it("refuses an unknown view, a missing track and another user's track, and writes nothing", async () => {
@@ -87,7 +114,8 @@ describe("recording a view (data layer and action)", () => {
 
   it("the action checks its arguments (it runs on any POST), records, and does not refresh the page", async () => {
     const a = await add("Job");
-    for (const id of [0, -1, 1.5, NaN, "1" as unknown as number]) expect(await recordAction(id, "table")).toEqual({ ok: false, error: "Track not found." });
+    for (const id of [0, -1, 1.5, NaN, "1" as unknown as number])
+      expect(await recordAction(id, "table")).toEqual({ ok: false, error: "Track not found." });
     expect(await recordAction(a, 5 as unknown as string)).toEqual({ ok: false, error: "Track not found." });
     expect(await stored()).toEqual([]);
     expect(await recordAction(a, "board")).toEqual({ ok: true });

@@ -31,7 +31,8 @@ describe("track actions", () => {
     const r = await createTrack("Job", "blank");
     if (!r.ok) throw new Error(r.error);
     vi.mocked(refresh).mockClear();
-    for (const id of [0, -1, 1.5, NaN, "1" as unknown as number]) expect(await updateTrack(id, "X", "red")).toEqual({ ok: false, error: "Track not found." });
+    for (const id of [0, -1, 1.5, NaN, "1" as unknown as number])
+      expect(await updateTrack(id, "X", "red")).toEqual({ ok: false, error: "Track not found." });
     expect(await updateTrack(r.id, 5 as unknown as string, "red")).toMatchObject({ ok: false });
     expect(await updateTrack(r.id, "X", "#fff")).toMatchObject({ ok: false });
     expect(refresh).not.toHaveBeenCalled();
@@ -44,8 +45,10 @@ describe("track actions", () => {
     const r = await createTrack("Job", "blank");
     if (!r.ok) throw new Error(r.error);
     vi.mocked(refresh).mockClear();
-    for (const id of [0, -1, 1.5, NaN, "1" as unknown as number]) expect(await setStarred(id, true)).toEqual({ ok: false, error: "Track not found." });
-    for (const flag of ["true", 1, null, undefined] as unknown[]) expect(await setStarred(r.id, flag as boolean)).toEqual({ ok: false, error: "Track not found." });
+    for (const id of [0, -1, 1.5, NaN, "1" as unknown as number])
+      expect(await setStarred(id, true)).toEqual({ ok: false, error: "Track not found." });
+    for (const flag of ["true", 1, null, undefined] as unknown[])
+      expect(await setStarred(r.id, flag as boolean)).toEqual({ ok: false, error: "Track not found." });
     expect(await setStarred(9999, true)).toEqual({ ok: false, error: "Track not found." });
     expect(refresh).not.toHaveBeenCalled();
     expect(await setStarred(r.id, true)).toEqual({ ok: true });
@@ -66,7 +69,9 @@ describe("track actions", () => {
     expect(await deleteTrack(r.id, false as unknown as true, "Job", none)).toMatchObject({ ok: false });
     expect(await deleteTrack(r.id, true, "Jo", none)).toMatchObject({ ok: false });
     expect(await deleteTrack(r.id, true, "Job", { ...none, columns: -1 })).toMatchObject({ ok: false });
-    expect(await deleteTrack(r.id, true, "Job", { ...none, notes: "0" as unknown as number })).toMatchObject({ ok: false });
+    expect(await deleteTrack(r.id, true, "Job", { ...none, notes: "0" as unknown as number })).toMatchObject({
+      ok: false,
+    });
     expect(await deleteTrack(r.id, true, "Job", null as never)).toMatchObject({ ok: false });
     expect(await deleteTrack(r.id, true, "Job", { ...none, files: 3 })).toMatchObject({ ok: false });
     expect(db.select().from(tracks).all()).toHaveLength(1);

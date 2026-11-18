@@ -12,9 +12,14 @@ export function IntegrityBadge({ state, checkedAt }: { state: IntegrityState; ch
   return (
     <>
       <span className="inline-flex shrink-0 items-center gap-1 rounded-sm bg-destructive px-1.5 text-xs leading-5 font-medium text-destructive-foreground">
-        <Icon aria-hidden className="size-3" />{label}
+        <Icon aria-hidden className="size-3" />
+        {label}
       </span>
-      {checkedAt && <span className="shrink-0 text-xs text-muted-foreground">Checked <NoteTime iso={checkedAt.toISOString()} /></span>}
+      {checkedAt && (
+        <span className="shrink-0 text-xs text-muted-foreground">
+          Checked <NoteTime iso={checkedAt.toISOString()} />
+        </span>
+      )}
     </>
   );
 }

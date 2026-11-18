@@ -17,10 +17,25 @@ export const getTrackOverviews = cache(async (today: string, nowMs: number = Dat
   const userId = getUserId();
   const pipelines = await getPipelineCounts();
   const rows = db
-    .select({ id: applications.id, title: applications.title, trackId: applications.trackId, statusId: cellValues.valueOptionId })
+    .select({
+      id: applications.id,
+      title: applications.title,
+      trackId: applications.trackId,
+      statusId: cellValues.valueOptionId,
+    })
     .from(applications)
-    .leftJoin(columns, and(eq(columns.trackId, applications.trackId), eq(columns.isStatus, true), eq(columns.userId, userId)))
-    .leftJoin(cellValues, and(eq(cellValues.applicationId, applications.id), eq(cellValues.columnId, columns.id), eq(cellValues.userId, userId)))
+    .leftJoin(
+      columns,
+      and(eq(columns.trackId, applications.trackId), eq(columns.isStatus, true), eq(columns.userId, userId)),
+    )
+    .leftJoin(
+      cellValues,
+      and(
+        eq(cellValues.applicationId, applications.id),
+        eq(cellValues.columnId, columns.id),
+        eq(cellValues.userId, userId),
+      ),
+    )
     .where(and(eq(applications.userId, userId), eq(applications.archived, false)))
     .all();
   const touched = lastTouchedMs();
@@ -28,11 +43,26 @@ export const getTrackOverviews = cache(async (today: string, nowMs: number = Dat
   const byTrack = new Map<number, OverviewApp[]>();
   for (const r of rows) {
     const list = byTrack.get(r.trackId) ?? [];
-    list.push({ id: r.id, title: r.title, statusId: r.statusId, touchedMs: touched.get(r.id) ?? 0, deadline: deadlines.get(r.id) ?? null });
+    list.push({
+      id: r.id,
+      title: r.title,
+      statusId: r.statusId,
+      touchedMs: touched.get(r.id) ?? 0,
+      deadline: deadlines.get(r.id) ?? null,
+    });
     byTrack.set(r.trackId, list);
   }
-  return pipelines.map((pipeline) => trackOverview(
-    { pipeline, todoIds: stillToDoIds(pipeline.id), submittedIds: submittedStatusIds(pipeline.id), winIds: winStatusIds(pipeline.id), apps: byTrack.get(pipeline.id) ?? [] },
-    today, nowMs,
-  ));
+  return pipelines.map((pipeline) =>
+    trackOverview(
+      {
+        pipeline,
+        todoIds: stillToDoIds(pipeline.id),
+        submittedIds: submittedStatusIds(pipeline.id),
+        winIds: winStatusIds(pipeline.id),
+        apps: byTrack.get(pipeline.id) ?? [],
+      },
+      today,
+      nowMs,
+    ),
+  );
 });

@@ -11,7 +11,11 @@ import { MIGRATION_COUNT } from "./helpers/db";
 
 const cookieSet = vi.fn();
 vi.mock("next/headers", () => ({ cookies: async () => ({ set: cookieSet, delete: vi.fn() }) }));
-vi.mock("next/navigation", () => ({ redirect: (to: string) => { throw new Error(`REDIRECT ${to}`); } }));
+vi.mock("next/navigation", () => ({
+  redirect: (to: string) => {
+    throw new Error(`REDIRECT ${to}`);
+  },
+}));
 
 let dir: string;
 const dbFile = () => join(dir, "data", "test.db");
@@ -37,8 +41,17 @@ function folder(keep: number, bad = false) {
   journal.entries = journal.entries.slice(0, keep);
   for (const e of journal.entries) cpSync(`drizzle/${e.tag}.sql`, join(out, `${e.tag}.sql`));
   if (bad) {
-    journal.entries.push({ idx: keep, version: "6", when: journal.entries[keep - 1].when + 1000, tag: "9999_bad", breakpoints: true });
-    writeFileSync(join(out, "9999_bad.sql"), "CREATE TABLE half_done (x integer);--> statement-breakpoint\nINSERT INTO no_such_table VALUES (1);");
+    journal.entries.push({
+      idx: keep,
+      version: "6",
+      when: journal.entries[keep - 1].when + 1000,
+      tag: "9999_bad",
+      breakpoints: true,
+    });
+    writeFileSync(
+      join(out, "9999_bad.sql"),
+      "CREATE TABLE half_done (x integer);--> statement-breakpoint\nINSERT INTO no_such_table VALUES (1);",
+    );
   }
   writeFileSync(join(out, "meta/_journal.json"), JSON.stringify(journal));
   return out;
@@ -48,16 +61,25 @@ function folder(keep: number, bad = false) {
 function oldDb() {
   applyMigrations(folder(5));
   const now = Date.now();
-  getDb().$client.prepare("INSERT INTO tracks (user_id, created_at, updated_at, name, position) VALUES ('local', ?, ?, 'Job', 0)").run(now, now);
-  getDb().$client.prepare("INSERT INTO settings (user_id, created_at, updated_at, key, value) VALUES ('local', ?, ?, 'k', '\"v\"')").run(now, now);
+  getDb()
+    .$client.prepare(
+      "INSERT INTO tracks (user_id, created_at, updated_at, name, position) VALUES ('local', ?, ?, 'Job', 0)",
+    )
+    .run(now, now);
+  getDb()
+    .$client.prepare(
+      "INSERT INTO settings (user_id, created_at, updated_at, key, value) VALUES ('local', ?, ?, 'k', '\"v\"')",
+    )
+    .run(now, now);
 }
 
-const snapshot = () => JSON.stringify([
-  getDb().$client.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all(),
-  getDb().$client.prepare("SELECT * FROM tracks").all(),
-  getDb().$client.prepare("SELECT * FROM settings").all(),
-  getDb().$client.prepare("SELECT hash, created_at FROM __drizzle_migrations").all(),
-]);
+const snapshot = () =>
+  JSON.stringify([
+    getDb().$client.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all(),
+    getDb().$client.prepare("SELECT * FROM tracks").all(),
+    getDb().$client.prepare("SELECT * FROM settings").all(),
+    getDb().$client.prepare("SELECT hash, created_at FROM __drizzle_migrations").all(),
+  ]);
 
 describe("Back up and update", () => {
   it("backs up first, migrates, keeps the data, and the backup opens with the old schema", async () => {
@@ -135,7 +157,9 @@ describe("Back up and update", () => {
     expect(r.error).toContain(backup);
     expect(existsSync(backup)).toBe(true);
     expect(snapshot()).toBe(before); // all-or-nothing: the migrations before the bad one were rolled back too, no half_done table
-    expect(getDb().$client.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'half_done'").get()).toEqual({ n: 0 });
+    expect(getDb().$client.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'half_done'").get()).toEqual({
+      n: 0,
+    });
   });
 
   it("a double submit runs once", async () => {
@@ -155,7 +179,11 @@ describe("the update action", () => {
     const form = new FormData();
     form.set("returnTo", "/tracks/1");
     await expect(backUpAndUpdate(null, form)).rejects.toThrow("REDIRECT /tracks/1");
-    expect(cookieSet).toHaveBeenCalledWith("dossier_updated", expect.stringContaining("dossier-before-update-"), expect.objectContaining({ maxAge: 600, httpOnly: true }));
+    expect(cookieSet).toHaveBeenCalledWith(
+      "dossier_updated",
+      expect.stringContaining("dossier-before-update-"),
+      expect.objectContaining({ maxAge: 600, httpOnly: true }),
+    );
     expect(pendingMigrations()).toBe(0);
   });
   it("returns the error and sets no note when the update fails", async () => {
@@ -168,7 +196,8 @@ describe("the update action", () => {
   });
   it("only same-site paths are followed", () => {
     expect(safeReturnPath("/planner")).toBe("/planner");
-    for (const bad of ["//evil.example", "https://evil.example", "/\\evil", "/a?b=c", null, 5]) expect(safeReturnPath(bad)).toBe("/");
+    for (const bad of ["//evil.example", "https://evil.example", "/\\evil", "/a?b=c", null, 5])
+      expect(safeReturnPath(bad)).toBe("/");
   });
 });
 
@@ -176,7 +205,9 @@ describe("a brand-new database", () => {
   it("a missing file is created and migrated by the first check, with no gate", () => {
     expect(existsSync(dbFile())).toBe(false);
     expect(pendingMigrations()).toBe(0);
-    expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({ n: MIGRATION_COUNT });
+    expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({
+      n: MIGRATION_COUNT,
+    });
     expect(getDb().$client.prepare("SELECT count(*) AS n FROM tracks").get()).toEqual({ n: 0 }); // empty install: no tracks, no seed
   });
   it("an empty file (no tables) is migrated too", () => {
@@ -193,6 +224,8 @@ describe("a brand-new database", () => {
   it("a database with tables but no migrations table (not Dossier's own) is left alone", () => {
     getDb().$client.exec("CREATE TABLE something (x integer)");
     expect(pendingMigrations()).toBe(MIGRATION_COUNT);
-    expect(getDb().$client.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'").get()).toEqual({ n: 1 });
+    expect(getDb().$client.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'").get()).toEqual({
+      n: 1,
+    });
   });
 });

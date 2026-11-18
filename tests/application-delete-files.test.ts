@@ -1,4 +1,17 @@
-import { chmodSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  linkSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,14 +37,24 @@ async function mkApp(title: string) {
   return r.id;
 }
 async function store(name: string, content: string, app = appId) {
-  const r = await storeUploadedFile({ applicationId: app, file: new File([content], name), label: "CV", uploadDate: "2026-11-08" });
+  const r = await storeUploadedFile({
+    applicationId: app,
+    file: new File([content], name),
+    label: "CV",
+    uploadDate: "2026-11-08",
+  });
   if (!r.ok || !("file" in r)) throw new Error("store failed");
   return r.file;
 }
 async function del(id = appId) {
   const i = await getDeleteImpact(id);
   if (!i) throw new Error("no impact");
-  return deleteAction(id, true, { cellCount: i.cellCount, fileCount: i.fileCount, submissionCount: i.submissionCount, noteCount: i.noteCount });
+  return deleteAction(id, true, {
+    cellCount: i.cellCount,
+    fileCount: i.fileCount,
+    submissionCount: i.submissionCount,
+    noteCount: i.noteCount,
+  });
 }
 const appRows = () => db.select().from(files).all();
 
@@ -86,28 +109,37 @@ describe("deleting an application removes its files from disk", () => {
     expect(appRows()).toEqual([]);
   });
 
-  it.runIf(canBlockUnlink)("a file that cannot be removed is reported, logged, and the delete still stands", async () => {
-    const f = await store("a.pdf", "1");
-    const folder = join(root, f.relativePath.split("/")[0]);
-    chmodSync(folder, 0o555);
-    try {
-      const r = await del();
-      expect(r).toMatchObject({ ok: true, warning: expect.stringMatching(/Deleted, but 1 file could not be removed from Acme/) });
-      expect(existsSync(join(root, f.relativePath))).toBe(true);
-      expect(mode(join(root, f.relativePath))).toBe(0o444); // still read-only after the failed unlink
-      expect(console.error).toHaveBeenCalled();
-      expect(appRows()).toEqual([]);
-    } finally {
-      chmodSync(folder, 0o755);
-    }
-  });
+  it.runIf(canBlockUnlink)(
+    "a file that cannot be removed is reported, logged, and the delete still stands",
+    async () => {
+      const f = await store("a.pdf", "1");
+      const folder = join(root, f.relativePath.split("/")[0]);
+      chmodSync(folder, 0o555);
+      try {
+        const r = await del();
+        expect(r).toMatchObject({
+          ok: true,
+          warning: expect.stringMatching(/Deleted, but 1 file could not be removed from Acme/),
+        });
+        expect(existsSync(join(root, f.relativePath))).toBe(true);
+        expect(mode(join(root, f.relativePath))).toBe(0o444); // still read-only after the failed unlink
+        expect(console.error).toHaveBeenCalled();
+        expect(appRows()).toEqual([]);
+      } finally {
+        chmodSync(folder, 0o755);
+      }
+    },
+  );
 
   it.runIf(canBlockUnlink)("a folder that cannot be removed is reported; its files are still removed", async () => {
     const f = await store("a.pdf", "1");
     chmodSync(root, 0o555);
     try {
       const r = await del();
-      expect(r).toMatchObject({ ok: true, warning: expect.stringMatching(/^Deleted, but the folder Acme\S* could not be removed\.$/) });
+      expect(r).toMatchObject({
+        ok: true,
+        warning: expect.stringMatching(/^Deleted, but the folder Acme\S* could not be removed\.$/),
+      });
       expect(existsSync(join(root, f.relativePath))).toBe(false);
       expect(appRows()).toEqual([]);
     } finally {
@@ -136,64 +168,84 @@ describe("deleting an application removes its files from disk", () => {
     expect(existsSync(outside)).toBe(true);
   });
 
-  it.runIf(canSymlink)("an application folder replaced by a symlink to another application's folder: the other's file survives", async () => {
-    const a = await store("a.pdf", "mine");
-    const other = await mkApp("Other");
-    const o = await store("a.pdf", "theirs", other);
-    expect(a.relativePath.split("/")[1]).toBe(o.relativePath.split("/")[1]); // same stored name in both folders
-    const folder = join(root, a.relativePath.split("/")[0]);
-    chmodSync(join(root, a.relativePath), 0o666);
-    rmSync(folder, { recursive: true });
-    symlinkSync(join(root, o.relativePath.split("/")[0]), folder);
-    const r = await del();
-    expect(r).toMatchObject({ ok: true, warning: expect.stringMatching(/^Deleted, but 1 file could not be removed from Acme\S* and the folder Acme\S* could not be removed\.$/) });
-    expect(readFileSync(join(root, o.relativePath), "utf8")).toBe("theirs");
-    expect(mode(join(root, o.relativePath))).toBe(0o444);
-    expect(lstatSync(folder).isSymbolicLink()).toBe(true);
-    expect(appRows().map((f) => f.id)).toEqual([o.id]);
-  });
+  it.runIf(canSymlink)(
+    "an application folder replaced by a symlink to another application's folder: the other's file survives",
+    async () => {
+      const a = await store("a.pdf", "mine");
+      const other = await mkApp("Other");
+      const o = await store("a.pdf", "theirs", other);
+      expect(a.relativePath.split("/")[1]).toBe(o.relativePath.split("/")[1]); // same stored name in both folders
+      const folder = join(root, a.relativePath.split("/")[0]);
+      chmodSync(join(root, a.relativePath), 0o666);
+      rmSync(folder, { recursive: true });
+      symlinkSync(join(root, o.relativePath.split("/")[0]), folder);
+      const r = await del();
+      expect(r).toMatchObject({
+        ok: true,
+        warning: expect.stringMatching(
+          /^Deleted, but 1 file could not be removed from Acme\S* and the folder Acme\S* could not be removed\.$/,
+        ),
+      });
+      expect(readFileSync(join(root, o.relativePath), "utf8")).toBe("theirs");
+      expect(mode(join(root, o.relativePath))).toBe(0o444);
+      expect(lstatSync(folder).isSymbolicLink()).toBe(true);
+      expect(appRows().map((f) => f.id)).toEqual([o.id]);
+    },
+  );
 
-  it.runIf(canSymlink)("a stored file replaced by a symlink to another stored file: the link is left, the target keeps its content and mode", async () => {
-    const a = await store("a.pdf", "mine");
-    const other = await mkApp("Other");
-    const o = await store("z.pdf", "theirs", other);
-    chmodSync(join(root, a.relativePath), 0o666);
-    rmSync(join(root, a.relativePath));
-    symlinkSync(join(root, o.relativePath), join(root, a.relativePath));
-    const r = await del();
-    expect(r).toMatchObject({ ok: true, warning: expect.stringMatching(/^Deleted, but 1 file could not be removed from Acme\S*\.$/) });
-    expect(readFileSync(join(root, o.relativePath), "utf8")).toBe("theirs");
-    expect(mode(join(root, o.relativePath))).toBe(0o444);
-    expect(lstatSync(join(root, a.relativePath)).isSymbolicLink()).toBe(true);
-  });
+  it.runIf(canSymlink)(
+    "a stored file replaced by a symlink to another stored file: the link is left, the target keeps its content and mode",
+    async () => {
+      const a = await store("a.pdf", "mine");
+      const other = await mkApp("Other");
+      const o = await store("z.pdf", "theirs", other);
+      chmodSync(join(root, a.relativePath), 0o666);
+      rmSync(join(root, a.relativePath));
+      symlinkSync(join(root, o.relativePath), join(root, a.relativePath));
+      const r = await del();
+      expect(r).toMatchObject({
+        ok: true,
+        warning: expect.stringMatching(/^Deleted, but 1 file could not be removed from Acme\S*\.$/),
+      });
+      expect(readFileSync(join(root, o.relativePath), "utf8")).toBe("theirs");
+      expect(mode(join(root, o.relativePath))).toBe(0o444);
+      expect(lstatSync(join(root, a.relativePath)).isSymbolicLink()).toBe(true);
+    },
+  );
 
-  it.runIf(posix)("a stored file hard-linked to another application's file: only the name goes, the other keeps content and mode", async () => {
-    const a = await store("a.pdf", "mine");
-    const other = await mkApp("Other");
-    const o = await store("z.pdf", "theirs", other);
-    chmodSync(join(root, a.relativePath), 0o666);
-    rmSync(join(root, a.relativePath));
-    linkSync(join(root, o.relativePath), join(root, a.relativePath));
-    const r = await del();
-    expect(r).toEqual({ ok: true, trackId: expect.any(Number) });
-    expect(existsSync(join(root, a.relativePath.split("/")[0]))).toBe(false);
-    expect(readFileSync(join(root, o.relativePath), "utf8")).toBe("theirs");
-    expect(mode(join(root, o.relativePath))).toBe(0o444);
-    expect(appRows().map((f) => f.id)).toEqual([o.id]);
-  });
+  it.runIf(posix)(
+    "a stored file hard-linked to another application's file: only the name goes, the other keeps content and mode",
+    async () => {
+      const a = await store("a.pdf", "mine");
+      const other = await mkApp("Other");
+      const o = await store("z.pdf", "theirs", other);
+      chmodSync(join(root, a.relativePath), 0o666);
+      rmSync(join(root, a.relativePath));
+      linkSync(join(root, o.relativePath), join(root, a.relativePath));
+      const r = await del();
+      expect(r).toEqual({ ok: true, trackId: expect.any(Number) });
+      expect(existsSync(join(root, a.relativePath.split("/")[0]))).toBe(false);
+      expect(readFileSync(join(root, o.relativePath), "utf8")).toBe("theirs");
+      expect(mode(join(root, o.relativePath))).toBe(0o444);
+      expect(appRows().map((f) => f.id)).toEqual([o.id]);
+    },
+  );
 
-  it.runIf(posix)("a stored file hard-linked to a private file outside the root: the outside file keeps its 0o600 mode and content", async () => {
-    const a = await store("a.pdf", "mine");
-    const outside = join(base, "private.txt");
-    writeFileSync(outside, "secret", { mode: 0o600 });
-    chmodSync(join(root, a.relativePath), 0o666);
-    rmSync(join(root, a.relativePath));
-    linkSync(outside, join(root, a.relativePath));
-    await del();
-    expect(existsSync(join(root, a.relativePath))).toBe(false);
-    expect(readFileSync(outside, "utf8")).toBe("secret");
-    expect(mode(outside)).toBe(0o600);
-  });
+  it.runIf(posix)(
+    "a stored file hard-linked to a private file outside the root: the outside file keeps its 0o600 mode and content",
+    async () => {
+      const a = await store("a.pdf", "mine");
+      const outside = join(base, "private.txt");
+      writeFileSync(outside, "secret", { mode: 0o600 });
+      chmodSync(join(root, a.relativePath), 0o666);
+      rmSync(join(root, a.relativePath));
+      linkSync(outside, join(root, a.relativePath));
+      await del();
+      expect(existsSync(join(root, a.relativePath))).toBe(false);
+      expect(readFileSync(outside, "utf8")).toBe("secret");
+      expect(mode(outside)).toBe(0o600);
+    },
+  );
 
   it("files folder unset: the rows are still deleted, the message says the files were left", async () => {
     const f = await store("a.pdf", "1");
@@ -208,7 +260,12 @@ describe("deleting an application removes its files from disk", () => {
   it("a refused delete (stale count) touches no file", async () => {
     const f = await store("a.pdf", "1");
     const i = (await getDeleteImpact(appId))!;
-    const r = await deleteAction(appId, true, { cellCount: i.cellCount, fileCount: i.fileCount + 1, submissionCount: i.submissionCount, noteCount: i.noteCount });
+    const r = await deleteAction(appId, true, {
+      cellCount: i.cellCount,
+      fileCount: i.fileCount + 1,
+      submissionCount: i.submissionCount,
+      noteCount: i.noteCount,
+    });
     expect(r.ok).toBe(false);
     expect(existsSync(join(root, f.relativePath))).toBe(true);
     expect(appRows()).toHaveLength(1);

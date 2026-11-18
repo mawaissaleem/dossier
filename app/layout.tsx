@@ -27,7 +27,12 @@ const tracks = (
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // data-theme is set before first paint by the inline script (the choice lives in localStorage, so the layout stays static); the attribute differs from the server's, hence suppressHydrationWarning.
-    <html lang="en" data-theme={DEFAULT_THEME} suppressHydrationWarning className={`${GeistSans.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      data-theme={DEFAULT_THEME}
+      suppressHydrationWarning
+      className={`${GeistSans.variable} h-full antialiased`}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* Copies the sidebar cookie to <html data-sidebar> before first paint (same trick as the theme): the layout stays static and the first paint has the right width. */}
