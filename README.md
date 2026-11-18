@@ -96,6 +96,7 @@ Listed honestly so you know what you are getting.
 - File preview uses your browser's built-in PDF viewer, so what it shows depends on the browser. **Open** and **Download** always work.
 - Board drag and drop on touch screens has had little testing. The **Move to** menu on each card works everywhere.
 - A backup interrupted by a crash or power loss leaves a `.zip.partial` file in the backup folder. It is not a backup; delete it.
+- A restore interrupted by a crash or power loss can leave hidden `.dossier-restore-*` folders in the files folder and next to the database. They may hold your data from before the restore, so Dossier does not delete them. Check that your data looks right (the safety backup made before the restore is in your backup folder), then delete them.
 
 
 ## Requirements
