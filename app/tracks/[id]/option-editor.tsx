@@ -47,8 +47,9 @@ export type DeleteChoice = { confirm: true; reassignTo: number | null; expectedU
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 // One option: grip handle, chip preview of the draft, label input, colour swatches, Save, Delete.
-// The parent keys the row by id+label+color, so after a save the draft resets to the stored values.
-// `savedRowRef` holds the id of the row just saved: a save that changes the label or colour re-keys (remounts) the row, so its new label input takes the focus.
+// The parent keys the row by id+label+color, so after a save the draft resets to the stored values. `savedRowRef` holds
+// the id of the row just saved: a save that changes the label or colour re-keys (remounts) the row, so its new label
+// input takes the focus.
 function OptionRow({
   option,
   locked,
@@ -67,7 +68,8 @@ function OptionRow({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const labelInput = useRef<HTMLInputElement>(null);
-  // Only on mount (an effect, not an inline ref, which would also fire on the re-render while the save runs, before this row is replaced).
+  // Only on mount (an effect, not an inline ref, which would also fire on the re-render while the save runs, before
+  // this row is replaced).
   useEffect(() => {
     if (savedRowRef.current !== option.id) return;
     savedRowRef.current = null;
@@ -77,7 +79,8 @@ function OptionRow({
     id: option.id,
     disabled: locked,
   });
-  // No native `disabled` while saving: a disabled button drops focus to <body>; useSortable sets aria-disabled and ignores input.
+  // No native `disabled` while saving: a disabled button drops focus to <body>; useSortable sets aria-disabled and
+  // ignores input.
   return (
     <li
       ref={setNodeRef}
@@ -88,7 +91,8 @@ function OptionRow({
         className="flex flex-wrap items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          savedRowRef.current = option.id; // set before the save: the remounted row can appear before the action's promise settles
+          // set before the save: the remounted row can appear before the action's promise settles
+          savedRowRef.current = option.id;
           startTransition(async () => {
             try {
               const r = await onSave({ label, color });
@@ -151,9 +155,10 @@ function OptionRow({
   );
 }
 
-// Dialog listing a single-select column's options in position order, with add / rename / recolour. Values keep following
-// their option (FR-3.3). Drag the handle (or Space/Enter then arrow keys) to reorder; the full new order is saved in one call.
-// Delete opens a confirm that states how many applications use the option and makes the user pick reassign or leave blank (FR-3.4).
+// Dialog listing a single-select column's options in position order, with add / rename / recolour. Values keep
+// following their option (FR-3.3). Drag the handle (or Space/Enter then arrow keys) to reorder; the full new order is
+// saved in one call. Delete opens a confirm that states how many applications use the option and makes the user pick
+// reassign or leave blank (FR-3.4).
 export function OptionEditor({
   column,
   open,
@@ -175,12 +180,15 @@ export function OptionEditor({
   onLoadImpact: (optionId: number) => Promise<OptionImpact>;
   onDelete: (optionId: number, choice: DeleteChoice) => Promise<Result>;
 }) {
-  // Also the DndContext id: without one dnd-kit numbers aria-describedby from a server-wide counter, so SSR and client ids differ.
+  // Also the DndContext id: without one dnd-kit numbers aria-describedby from a server-wide counter, so SSR and client
+  // ids differ.
   const uid = useId();
-  // Shows the dropped order while the save runs; React drops it when the transition ends, so a failure reverts to the server order.
+  // Shows the dropped order while the save runs; React drops it when the transition ends, so a failure reverts to the
+  // server order.
   const [options, setOrder] = useOptimistic(
     column.options,
-    (cur, ids: number[]) => ids.flatMap((id) => cur.filter((o) => o.id === id)), // skips an id that vanished while the save runs
+    // skips an id that vanished while the save runs
+    (cur, ids: number[]) => ids.flatMap((id) => cur.filter((o) => o.id === id)),
   );
   const [reordering, startReorder] = useTransition();
   const [reorderError, setReorderError] = useState<string | null>(null);
@@ -224,7 +232,8 @@ export function OptionEditor({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  // Delete confirm. The count is fetched fresh on every open; confirm stays disabled until it is shown and, if rows use the option, a choice is made.
+  // Delete confirm. The count is fetched fresh on every open; confirm stays disabled until it is shown and, if rows use
+  // the option, a choice is made.
   const [delOpen, setDelOpen] = useState(false);
   const back = useReturnFocus();
   const savedRow = useRef<number | null>(null); // the option row to put focus back in after a save remounts it
@@ -268,7 +277,8 @@ export function OptionEditor({
           refocusNew.current = true;
           setDelOpen(false);
         } else {
-          // Refused (e.g. the count changed meanwhile): show the fresh count and ask for the choice again before confirm re-enables.
+          // Refused (e.g. the count changed meanwhile): show the fresh count and ask for the choice again before
+          // confirm re-enables.
           setDelError(r.error);
           setImpact(null);
           setChoice("");

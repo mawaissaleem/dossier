@@ -10,8 +10,9 @@ import { cn } from "@/lib/utils";
 const btn =
   "inline-flex h-7 items-center gap-1.5 rounded-full border px-1.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-// One row of toggle chips per quick column (Status, Priority): "All" clears that column's filter, a chip toggles its option via toggleFilter.
-// Counts ignore the column's own filter but respect the others (lib/quick-filter.ts). `columns` is every single-select column (the filter scope).
+// One row of toggle chips per quick column (Status, Priority): "All" clears that column's filter, a chip toggles its
+// option via toggleFilter. Counts ignore the column's own filter but respect the others (lib/quick-filter.ts).
+// `columns` is every single-select column (the filter scope).
 export function QuickFilters({
   quick,
   columns,

@@ -1,7 +1,7 @@
-// Pure string rules for a stored relative path (no fs, no DB). The stored form is canonical: forward slashes only, no leading or
-// trailing slash, no empty, "." or ".." segments. Windows forms (drive letters, backslashes, UNC) are rejected on every OS so a
-// database written on Linux stays valid on Windows. Percent-decoding is the CALLER's job (URLs, 5.10): "%2e%2e" here is just a
-// harmless file name, and a decoded ".." is rejected.
+// Pure string rules for a stored relative path (no fs, no DB). The stored form is canonical: forward slashes only, no
+// leading or trailing slash, no empty, "." or ".." segments. Windows forms (drive letters, backslashes, UNC) are
+// rejected on every OS so a database written on Linux stays valid on Windows. Percent-decoding is the CALLER's job
+// (URLs): "%2e%2e" here is just a harmless file name, and a decoded ".." is rejected.
 import path, { relative, resolve, sep } from "node:path";
 
 export type PathResult = { ok: true; path: string } | { ok: false; error: string };
@@ -25,7 +25,8 @@ export function checkRelativePath(input: unknown): PathResult {
   return { ok: true, path: input };
 }
 
-// Absolute AND anchored: on Windows a drive-less "\foo" counts as absolute to node but resolves against the current drive.
+// Absolute AND anchored: on Windows a drive-less "\foo" counts as absolute to node but resolves against the current
+// drive.
 export const isFullyAbsolute = (p: string, m: path.PlatformPath = path) =>
   m.isAbsolute(p) && (m.sep === "/" || /^([a-z]:[\\/]|\\\\)/i.test(p));
 

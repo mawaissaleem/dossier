@@ -16,7 +16,8 @@ const NO_COLUMN = { ok: false, error: "Column not found." } as const;
 const NO_OPTION = { ok: false, error: "Option not found." } as const;
 const STALE_COUNT = { ok: false, error: "The number of applications using this option changed. Check again." } as const;
 
-// The column's options in position order, or an error result if the column is not the current user's single-select column.
+// The column's options in position order, or an error result if the column is not the current user's single-select
+// column.
 function selectOptions(columnId: number) {
   const db = getDb();
   const userId = getUserId();
@@ -34,8 +35,8 @@ function selectOptions(columnId: number) {
     .all();
 }
 
-// Appends at the end with the next unused palette colour. The unique index is case-sensitive, so the case-insensitive check is here;
-// no await between the check and the insert and better-sqlite3 is sync, so nothing can interleave.
+// Appends at the end with the next unused palette colour. The unique index is case-sensitive, so the case-insensitive
+// check is here; no await between the check and the insert and better-sqlite3 is sync, so nothing can interleave.
 export async function addOption(columnId: number, label: string): Promise<AddOptionResult> {
   const checked = checkOptionLabel(label);
   if ("error" in checked) return { ok: false, error: checked.error };
@@ -104,8 +105,8 @@ export async function updateOption(
   return { ok: true };
 }
 
-// Rewrites positions 0..n-1 in the given order in one transaction. The list must be exactly the column's current option ids,
-// otherwise nothing changes. Selected inside the transaction so the check and the writes see the same state.
+// Rewrites positions 0..n-1 in the given order in one transaction. The list must be exactly the column's current option
+// ids, otherwise nothing changes. Selected inside the transaction so the check and the writes see the same state.
 export async function reorderOptions(columnId: number, orderedIds: number[]): Promise<OptionResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
@@ -132,7 +133,8 @@ export async function reorderOptions(columnId: number, orderedIds: number[]): Pr
 
 export type OptionDeleteImpact = { label: string; useCount: number; archivedCount: number };
 
-// The cell rows deleteOption rewrites; getOptionDeleteImpact counts the same set so the shown count and the delete agree.
+// The cell rows deleteOption rewrites; getOptionDeleteImpact counts the same set so the shown count and the delete
+// agree.
 const holding = (columnId: number, optionId: number, userId: string) =>
   and(eq(cellValues.columnId, columnId), eq(cellValues.valueOptionId, optionId), eq(cellValues.userId, userId));
 
@@ -161,10 +163,11 @@ export async function getOptionDeleteImpact(optionId: number): Promise<OptionDel
   };
 }
 
-// One transaction: move this option's cell values to `reassignTo` (another option of the same column) or, for null, delete those
-// cell rows (blank = missing row); repoint or clear the column default if it was this option; delete the option; close the position gap.
-// The last option of the Status column is refused so the status default cannot dangle. Callers must have confirmed with the user,
-// and `expectedUseCount` is the count they were shown: if it no longer matches, nothing is written (values added meanwhile are never wiped).
+// One transaction: move this option's cell values to `reassignTo` (another option of the same column) or, for null,
+// delete those cell rows (blank = missing row); repoint or clear the column default if it was this option; delete the
+// option; close the position gap. The last option of the Status column is refused so the status default cannot dangle.
+// Callers must have confirmed with the user, and `expectedUseCount` is the count they were shown: if it no longer
+// matches, nothing is written (values added meanwhile are never wiped).
 export async function deleteOption(
   optionId: number,
   reassignTo: number | null,
@@ -199,7 +202,8 @@ export async function deleteOption(
       const held = holding(opt.columnId, optionId, userId);
       if (tx.select({ n: count() }).from(cellValues).where(held).get()!.n !== expectedUseCount) return STALE_COUNT;
       if (col.isStatus) {
-        // One status_changed event per affected application, written before the cells move (labels are snapshots; the option row is deleted below).
+        // One status_changed event per affected application, written before the cells move (labels are snapshots; the
+        // option row is deleted below).
         const from = {
           id: optionId,
           label: tx

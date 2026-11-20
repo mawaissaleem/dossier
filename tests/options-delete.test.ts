@@ -230,7 +230,8 @@ describe("stale use count (FR-3.4: values added while the dialog was open are ne
       expect(await deleteOption(x, { confirm: true, reassignTo, expectedUseCount: 12 }), String(reassignTo)).toEqual(
         STALE,
       );
-    expect(await deleteOption(x, { confirm: true, reassignTo: null, expectedUseCount: 14 })).toEqual(STALE); // fewer than shown is refused too
+    // fewer than shown is refused too
+    expect(await deleteOption(x, { confirm: true, reassignTo: null, expectedUseCount: 14 })).toEqual(STALE);
     expect(snapshot()).toBe(before);
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -253,7 +254,8 @@ describe("stale use count (FR-3.4: values added while the dialog was open are ne
       .values({ userId: "local", trackId, name: "Other", type: "single_select", position: 1 })
       .returning()
       .get().id;
-    // Not reachable through the app (set-cell checks the column), written directly to prove count and delete use one filter.
+    // Not reachable through the app (set-cell checks the column), written directly to prove count and delete use one
+    // filter.
     db.insert(cellValues)
       .values({ userId: "local", applicationId: appIds[0], columnId: otherCol, valueOptionId: z })
       .run();

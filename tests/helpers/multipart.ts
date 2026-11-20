@@ -1,6 +1,6 @@
-// Encodes a FormData as raw multipart bytes for a test Request body. Node 24's built-in undici streams a FormData body with a
-// race (a late enqueue after the reader closed the stream), which surfaces as an unhandled "ReadableStream is already closed"
-// rejection and fails the run. Real uploads arrive as bytes from the socket, so tests send bytes too.
+// Encodes a FormData as raw multipart bytes for a test Request body. Node 24's built-in undici streams a FormData body
+// with a race (a late enqueue after the reader closed the stream), which surfaces as an unhandled "ReadableStream is
+// already closed" rejection and fails the run. Real uploads arrive as bytes from the socket, so tests send bytes too.
 export async function multipart(form: FormData): Promise<{ body: Uint8Array<ArrayBuffer>; contentType: string }> {
   const boundary = "----dossierTestBoundary";
   const enc = new TextEncoder();

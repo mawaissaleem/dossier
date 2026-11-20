@@ -62,7 +62,8 @@ let work: string, root: string, dest: string, db: ReturnType<typeof useTestDb>;
 const sharedTmp = process.env.TMPDIR;
 beforeEach(() => {
   db = useTestDb();
-  work = realpathSync.native(mkdtempSync(join(tmpdir(), "dossier-bk-"))); // long form: Windows tmpdir() can be an 8.3 short path (RUNNER~1), the app returns real paths
+  // long form: Windows tmpdir() can be an 8.3 short path (RUNNER~1), the app returns real paths
+  work = realpathSync.native(mkdtempSync(join(tmpdir(), "dossier-bk-")));
   // a private temp folder, so the "no temp folder left" checks do not see other test files' backups running in parallel
   mkdirSync(join(work, "tmp"));
   process.env.TMPDIR = join(work, "tmp");

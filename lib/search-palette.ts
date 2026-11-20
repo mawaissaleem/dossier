@@ -1,10 +1,11 @@
-// Pure logic for the search palette (task 4.7). No DOM, React or DB imports.
+// Pure logic for the search palette. No DOM, React or DB imports.
 import { foldWithMap, searchWords } from "./search";
 
 export type Segment = { text: string; match: boolean };
 
-// Splits `text` into runs, marking the parts that match a query word (folded: case and accents ignored, like the search itself).
-// Returns plain strings only; the caller renders them as React text, so nothing in `text` is ever read as HTML.
+// Splits `text` into runs, marking the parts that match a query word (folded: case and accents ignored, like the search
+// itself). Returns plain strings only; the caller renders them as React text, so nothing in `text` is ever read as
+// HTML.
 export function highlightSegments(text: string, query: string): Segment[] {
   const words = searchWords(query);
   if (!text) return [];
@@ -28,7 +29,8 @@ export const isMacPlatform = (platform: string) => /mac|iphone|ipad|ipod/i.test(
 // The shortcut as shown to the user.
 export const chordLabel = (mac: boolean) => (mac ? "⌘K" : "Ctrl K");
 
-// Cmd+K on macOS, Ctrl+K elsewhere; no other modifier. (Ctrl+K on a Mac is kill-line in text fields, so it is left alone there.)
+// Cmd+K on macOS, Ctrl+K elsewhere; no other modifier. (Ctrl+K on a Mac is kill-line in text fields, so it is left
+// alone there.)
 export function isSearchChord(
   e: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean },
   mac: boolean,

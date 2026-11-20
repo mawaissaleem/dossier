@@ -19,7 +19,8 @@ export function StillToDoForm({
   choices: Choice[];
 }) {
   const savedIds = choices.filter((c) => c.stillToDo).map((c) => c.id);
-  const [on, setOn] = useSyncedState(new Set(savedIds), savedIds.join()); // a Set is not JSON, so the key is the id list
+  // a Set is not JSON, so the key is the id list
+  const [on, setOn] = useSyncedState(new Set(savedIds), savedIds.join());
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();

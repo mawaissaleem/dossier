@@ -38,7 +38,8 @@ export async function updateOption(
   ) {
     return { ok: false, error: "Nothing to change." };
   }
-  const r = await update(columnId, optionId, { label: patch.label, color: patch.color }); // only the two known keys reach the data layer
+  // only the two known keys reach the data layer
+  const r = await update(columnId, optionId, { label: patch.label, color: patch.color });
   if (r.ok) refresh();
   return r;
 }
@@ -62,8 +63,8 @@ export async function fetchOptionDeleteImpact(
   return impact ? { ok: true, ...impact } : { ok: false, error: "Option not found." };
 }
 
-// `confirm` must be literally true and `reassignTo` explicit: another option's id, or null to leave those applications blank (FR-3.4, NFR-4).
-// `expectedUseCount` is the count the dialog showed; the data layer refuses if it changed since.
+// `confirm` must be literally true and `reassignTo` explicit: another option's id, or null to leave those applications
+// blank (FR-3.4, NFR-4). `expectedUseCount` is the count the dialog showed; the data layer refuses if it changed since.
 export async function deleteOption(
   optionId: number,
   choice: { confirm: boolean; reassignTo: number | null; expectedUseCount: number },

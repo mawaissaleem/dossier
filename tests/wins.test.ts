@@ -73,7 +73,8 @@ describe("win statuses and getWins (data layer)", () => {
       db.insert(columnOptions).values({ userId, columnId: status, label, color: "blue", position: p }).returning().get()
         .id;
     const [todo, interview, offer] = [opt("To apply", 0), opt("Interview", 1), opt("Offer", 2)];
-    // `at` = the day the status change into `to` was logged (ms); none = no event, so created_at is used (`updated` is an edit and must not matter)
+    // `at` = the day the status change into `to` was logged (ms); none = no event, so created_at is used (`updated` is
+    // an edit and must not matter)
     const add = (
       title: string,
       to: number | null,
@@ -169,7 +170,8 @@ describe("win statuses and getWins (data layer)", () => {
     const b = j.add("new offer", j.offer, { at: 5_000_000 });
     const c = j.add("archived interview", j.interview, { at: 3_000_000, archived: true });
     const d = p.add("no event", p.offer, { created: 4_000_000, updated: 4_500_000 });
-    const e = p.add("tie with d", p.offer, { created: 4_000_000, updated: 9_999_999 }); // edited long after: still ties with d, does not jump to the top
+    // edited long after: still ties with d, does not jump to the top
+    const e = p.add("tie with d", p.offer, { created: 4_000_000, updated: 9_999_999 });
     j.add("not a win", j.todo, { at: 9_000_000 });
     j.add("no status", null);
     // an older event into a different status must not count: the newest into the *current* one does
@@ -207,7 +209,8 @@ describe("win statuses and getWins (data layer)", () => {
   it("scoping: another user's applications, tracks and status events never count towards my wins", async () => {
     const j = track("Job", 0);
     const mine = j.add("mine, no event of mine", j.offer, { created: 2_000_000 });
-    // someone else's event on MY application (same ids) and someone else's row in my track: neither may date or add a win
+    // someone else's event on MY application (same ids) and someone else's row in my track: neither may date or add a
+    // win
     db.insert(activityEvents)
       .values({
         userId: "someone",

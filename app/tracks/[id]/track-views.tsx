@@ -22,10 +22,12 @@ const VIEWS = [
   { id: "board", label: "Board" },
 ] as const;
 
-// Table or Board of one track. The view is ?view=board (anything else is the table); other params are kept, so going back to the table restores them.
-// The filters (?f, lib/filter.ts) are one state for both views (FR-4.3): read and written here, applied to the rows before either view sees them, and set with
-// the same FilterBar and QuickFilters above both. ?sort and ?dir are table-only: kept in the URL, ignored by the board. There is no text search here; search is the Ctrl+K palette.
-// pushState (synced with useSearchParams by Next) makes each switch a history entry, so Back returns to the previous view, and keeps the switch instant.
+// Table or Board of one track. The view is ?view=board (anything else is the table); other params are kept, so going
+// back to the table restores them. The filters (?f, lib/filter.ts) are one state for both views (FR-4.3): read and
+// written here, applied to the rows before either view sees them, and set with the same FilterBar and QuickFilters
+// above both. ?sort and ?dir are table-only: kept in the URL, ignored by the board. There is no text search here;
+// search is the Ctrl+K palette. pushState (synced with useSearchParams by Next) makes each switch a history entry, so
+// Back returns to the previous view, and keeps the switch instant.
 export function TrackViews({
   trackId,
   columns,
@@ -37,18 +39,21 @@ export function TrackViews({
 }) {
   const params = useSearchParams();
   const view = params.get("view") === "board" ? "board" : "table";
-  // "Recently viewed" on /tracks: opening the track (or switching its view) is recorded from here, never while rendering. A failed save is not worth interrupting the page for.
+  // "Recently viewed" on /tracks: opening the track (or switching its view) is recorded from here, never while
+  // rendering. A failed save is not worth interrupting the page for.
   useEffect(() => {
     recordTrackView(trackId, view).catch(() => undefined);
   }, [trackId, view]);
-  // Filters live in the URL, may use hidden columns, and run on the rows the server sent. Keyed on the f params as a string, so sorting does not re-filter.
+  // Filters live in the URL, may use hidden columns, and run on the rows the server sent. Keyed on the f params as a
+  // string, so sorting does not re-filter.
   const selects = useMemo(() => columns.filter((c) => c.type === "single_select"), [columns]);
   const quick = useMemo(() => quickColumns(selects), [selects]);
   const hidden = columns.filter((c) => c.hidden);
   const fKey = params.getAll("f").join("\n");
   const filters = useMemo(() => parseFilters(fKey ? fKey.split("\n") : [], selects), [fKey, selects]);
   const filtered = useMemo(() => filterRows(rows, selects, filters), [rows, selects, filters]);
-  // replaceState (synced with useSearchParams by Next) keeps the click instant: no server round trip, no history entry per click.
+  // replaceState (synced with useSearchParams by Next) keeps the click instant: no server round trip, no history entry
+  // per click.
   const setFilters = (f: Filter[]) => {
     const q = withFilters(params.toString(), f);
     window.history.replaceState(null, "", q ? `?${q}` : window.location.pathname);

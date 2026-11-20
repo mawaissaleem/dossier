@@ -1,5 +1,6 @@
-// Pure (no DB, no UI). The `details` JSON of an activity event (FR-11.2): one typed shape per kind, a builder and a parser.
-// The timeline line is rendered from the parsed details alone, so each shape is a full snapshot (nothing is looked up later).
+// Pure (no DB, no UI). The `details` JSON of an activity event (FR-11.2): one typed shape per kind, a builder and a
+// parser. The timeline line is rendered from the parsed details alone, so each shape is a full snapshot (nothing is
+// looked up later).
 import type { ActivityKind } from "./db/schema";
 import type { CounterEntry } from "./filename";
 
@@ -17,7 +18,8 @@ export type FileUploadedDetails = {
   label: string;
   uploadDate: string;
 };
-// submissionCount > 0: a record of the file stays in them. counter: the FR-6.2 counter entry, so the stored name stays reserved once the row is gone (absent in events written before it existed).
+// submissionCount > 0: a record of the file stays in them. counter: the FR-6.2 counter entry, so the stored name stays
+// reserved once the row is gone (absent in events written before it existed).
 export type FileDeletedDetails = {
   fileId: number;
   originalName: string;
@@ -26,7 +28,8 @@ export type FileDeletedDetails = {
   submissionCount: number;
   counter?: CounterEntry;
 };
-export type SubmissionCreatedDetails = { submissionId: number; date: string; fileCount: number; fileNames: string[] }; // stored names
+// stored names
+export type SubmissionCreatedDetails = { submissionId: number; date: string; fileCount: number; fileNames: string[] };
 
 export type ActivityDetails =
   | ({ kind: "status_changed" } & StatusChangedDetails)
@@ -124,7 +127,8 @@ export function parseActivityDetails(kind: string, json: string): ActivityDetail
   }
 }
 
-// The JSON text to store. Throws if the details do not pass the parser, so a bug rolls back the caller's transaction instead of writing a line that cannot be shown.
+// The JSON text to store. Throws if the details do not pass the parser, so a bug rolls back the caller's transaction
+// instead of writing a line that cannot be shown.
 export function buildActivityDetails(d: Exclude<ActivityDetails, { kind: "unknown" }>): string {
   const { kind, ...rest } = d;
   const json = JSON.stringify(rest);
@@ -133,8 +137,9 @@ export function buildActivityDetails(d: Exclude<ActivityDetails, { kind: "unknow
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
-// When a submission counts as happening (a backdated one must sort by its date in the history): now if its date is today (local time),
-// otherwise the last millisecond of that day, so it follows the files uploaded that day. `date` must be a real YYYY-MM-DD date.
+// When a submission counts as happening (a backdated one must sort by its date in the history): now if its date is
+// today (local time), otherwise the last millisecond of that day, so it follows the files uploaded that day. `date`
+// must be a real YYYY-MM-DD date.
 export function submissionOccurredAt(date: string, now: Date): Date {
   if (date === `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`) return now;
   const [y, m, d] = date.split("-").map(Number);

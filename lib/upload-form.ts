@@ -1,4 +1,4 @@
-// Pure (no fs, no DB). Validates the text fields of an upload (5.7): the label (FR-5.3) and the upload date (FR-6.4).
+// Pure (no fs, no DB). Validates the text fields of an upload: the label (FR-5.3) and the upload date (FR-6.4).
 // The editable label list does not exist yet, so any short single-line text is accepted for now.
 import { isValidDate, todayLocal } from "./filename";
 

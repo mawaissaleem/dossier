@@ -111,7 +111,8 @@ describe("streak (pure)", () => {
     expect(run(d, 1, TODAY, 10).weeks).toBe(10);
     expect(run([...d, dayStringFor(0)], 1).weeks).toBe(521); // plus this week
   });
-  // The bound only catches a runaway (quadratic) walk over 5000 dates, which would take many seconds; a loaded CI machine stays far below 2 s.
+  // The bound only catches a runaway (quadratic) walk over 5000 dates, which would take many seconds; a loaded CI
+  // machine stays far below 2 s.
   it("is fast on a long history", () => {
     const d = weeks(
       Array.from({ length: 5000 }, (_, i) => i),

@@ -14,7 +14,8 @@ let work: string, root: string, dest: string;
 beforeEach(() => {
   vi.mocked(refresh).mockClear();
   useTestDb();
-  work = realpathSync(mkdtempSync(join(tmpdir(), "dossier-bka-"))); // long form: Windows tmpdir() can be an 8.3 short path (RUNNER~1), the app returns real paths
+  // long form: Windows tmpdir() can be an 8.3 short path (RUNNER~1), the app returns real paths
+  work = realpathSync(mkdtempSync(join(tmpdir(), "dossier-bka-")));
   root = join(work, "files");
   dest = join(work, "out");
   mkdirSync(root);

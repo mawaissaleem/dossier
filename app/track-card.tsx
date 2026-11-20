@@ -17,8 +17,10 @@ function Figure({ label, value }: { label: string; value: number }) {
   );
 }
 
-// The dashboard's compact track card (DASH.3, DESIGN.md "Dashboard"): the same flat `bg-card` section as every card. Header: the track's colour marker, the name (a link to its table) and a primary
-// "+ Add"; body: three numbers (Applications, To apply, Submitted), the status bar (its label lists every count) and Table / Board. The visually hidden name tells the cards' identical labels apart.
+// The dashboard's compact track card: the same flat `bg-card` section as every card. Header: the track's colour marker,
+// the name (a link to its table) and a primary "+ Add"; body: three numbers (Applications, To apply, Submitted), the
+// status bar (its label lists every count) and Table / Board. The visually hidden name tells the cards' identical
+// labels apart.
 export function TrackCard({ track: t, className }: { track: TrackOverview; className?: string }) {
   const sr = <span className="sr-only"> {t.name}</span>;
   return (
@@ -62,7 +64,8 @@ export function TrackCard({ track: t, className }: { track: TrackOverview; class
   );
 }
 
-// The last tile of the track row: the totals, how many need attention, and the way to /tracks. One link (name = its text).
+// The last tile of the track row: the totals, how many need attention, and the way to /tracks. One link (name = its
+// text).
 export function AllTracksTile({ tracks, className }: { tracks: readonly TrackOverview[]; className?: string }) {
   const apps = tracks.reduce((n, t) => n + t.total, 0);
   const need = tracks.reduce((n, t) => n + t.attention.length, 0);

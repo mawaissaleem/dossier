@@ -1,20 +1,14 @@
-// Pure rules for reading a backup zip back (no fs, no DB). Task 8.4 (restore). Layout: lib/backup.ts. The reader is lib/files/restore.ts.
-//
-// A backup zip is untrusted input (it may be damaged, hand-made or hostile), so the entry list is judged from the central directory
-// BEFORE any byte is read or written. Refused outright (the whole restore stops, nothing is changed):
-//   - names with a NUL, a backslash, a leading "/", a drive letter ("C:"), a "." or ".." segment (zip-slip), and the Windows forms
-//     lib/files/relative.ts already refuses for stored paths (colon, trailing dot or space); duplicate names; a file that is also a folder
-//   - any entry that is not the manifest, the database or a regular file under files/ (a folder entry is allowed only when empty)
-//   - symlinks and other special entry types (read from the Unix mode in the entry's attributes), encrypted entries, and compression
-//     methods other than stored/deflate
-//   - zip bombs: LIMITS below. The numbers: 50,000 entries (a backup holds one entry per stored file, so tens to a few thousand);
-//     20 GiB uncompressed in total (far above a personal archive of CVs and letters, far below what a bomb needs to hurt, and the free
-//     space check in the reader is the real guard); a 500:1 compression ratio for any entry over 1 MiB (deflate tops out near 1000:1,
-//     real PDFs and databases stay well under 100:1); manifest at most 64 KiB. The reader also refuses an entry whose real size differs
-//     from its declared size, so the declared sizes checked here can be trusted.
+// Pure rules for reading a backup zip back (no fs, no DB): the entry checks, the zip-bomb limits and the restore
+// counts. A backup zip is untrusted input, so its entry list is judged before any byte is read (see checkListing).
+// Layout: lib/backup.ts. The reader is lib/files/restore.ts.
 import { DB_ENTRY, FILES_PREFIX, MANIFEST_NAME } from "./backup";
 import { checkRelativePath } from "./files/relative";
 
+// Zip-bomb limits. 50,000 entries (a backup holds one entry per stored file, so tens to a few thousand); 20 GiB
+// uncompressed in total (far above a personal archive of CVs and letters, far below what a bomb needs to hurt, and the
+// free space check in the reader is the real guard); a 500:1 compression ratio for any entry over 1 MiB (deflate tops
+// out near 1000:1, real PDFs and databases stay well under 100:1); manifest at most 64 KiB. The reader also refuses an
+// entry whose real size differs from its declared size, so the declared sizes checked here can be trusted.
 export const LIMITS = {
   maxEntries: 50_000,
   maxTotalBytes: 20 * 1024 ** 3,
@@ -24,13 +18,15 @@ export const LIMITS = {
 };
 export type Limits = typeof LIMITS;
 
-// Restore's staging and aside folders (next to the database and at the top of the files folder). Backups skip them in the files folder.
+// Restore's staging and aside folders (next to the database and at the top of the files folder). Backups skip them in
+// the files folder.
 export const STAGE_PREFIX = ".dossier-restore-";
 
-// The settings that belong to THIS computer and survive a restore (their current values are kept, or stay unset). A backup made on
-// another machine would otherwise bring its files folder path, backup folder and reminder with it: the files folder would point
-// somewhere that does not exist here, and restoring must never silently change where files are stored or where backups go.
-// Everything else in settings (file labels, expected labels, submitted statuses) is app content and comes from the backup.
+// The settings that belong to THIS computer and survive a restore (their current values are kept, or stay unset). A
+// backup made on another machine would otherwise bring its files folder path, backup folder and reminder with it: the
+// files folder would point somewhere that does not exist here, and restoring must never silently change where files are
+// stored or where backups go. Everything else in settings (file labels, expected labels, submitted statuses) is app
+// content and comes from the backup.
 export const KEPT_SETTING_KEYS = [
   "files_root",
   "backup_destination",
@@ -49,8 +45,8 @@ export type ZipEntryInfo = {
 };
 export type EntryKind = "file" | "dir" | "symlink" | "other";
 
-// Unix mode lives in the top 16 bits of the external attributes when the entry was made on Unix (host 3) or macOS (host 19);
-// elsewhere only the DOS directory bit (0x10) exists.
+// Unix mode lives in the top 16 bits of the external attributes when the entry was made on Unix (host 3) or macOS (host
+// 19); elsewhere only the DOS directory bit (0x10) exists.
 export function entryKind(e: Pick<ZipEntryInfo, "name" | "versionMadeBy" | "externalAttributes">): EntryKind {
   const host = e.versionMadeBy >> 8;
   if (host === 3 || host === 19) {
@@ -70,6 +66,15 @@ export type Listing =
 const shown = (name: string) => JSON.stringify(name.length > 80 ? `${name.slice(0, 80)}...` : name);
 const bad = (error: string): Listing => ({ ok: false, error });
 
+// A backup zip is untrusted input (it may be damaged, hand-made or hostile), so the entry list is judged from the
+// central directory BEFORE any byte is read or written. Refused outright (the whole restore stops, nothing is changed):
+//   - names with a NUL, a backslash, a leading "/", a drive letter ("C:"), a "." or ".." segment (zip-slip), and the
+//     Windows forms lib/files/relative.ts already refuses for stored paths (colon, trailing dot or space); duplicate
+//     names; a file that is also a folder
+//   - any entry that is not the manifest, the database or a regular file under files/ (a folder entry is allowed only
+//     when empty)
+//   - symlinks and other special entry types (read from the Unix mode in the entry's attributes), encrypted entries,
+//     and compression methods other than stored/deflate
 export function checkListing(entries: ZipEntryInfo[], limits: Limits = LIMITS): Listing {
   if (entries.length > limits.maxEntries)
     return bad(`This backup holds too many entries (${entries.length}; the limit is ${limits.maxEntries}).`);

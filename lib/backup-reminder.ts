@@ -4,7 +4,8 @@ export const MIN_REMINDER_DAYS = 1;
 export const MAX_REMINDER_DAYS = 365;
 const DAY_MS = 86_400_000;
 
-// A whole number of days, MIN..MAX. A number or a typed string of digits (the form sends text); anything else is refused.
+// A whole number of days, MIN..MAX. A number or a typed string of digits (the form sends text); anything else is
+// refused.
 export function parseReminderDays(input: unknown): { ok: true; days: number } | { ok: false; error: string } {
   const n =
     typeof input === "number"
@@ -27,10 +28,11 @@ export const reminderDaysOrDefault = (stored: unknown): number => {
 export type BackupReminder = { kind: "never" } | { kind: "overdue"; days: number };
 
 // null = no reminder.
-// - Backed up before: overdue only when the last backup is strictly older than `intervalDays` (exactly N days is not overdue).
-//   A last backup in the future (the clock moved back) or a garbled time is not trusted as "recent": a future time counts as just made
-//   (no reminder), a garbled one as never.
-// - Never backed up: remind only once the app holds an application (`hasApplications`); a fresh empty install has nothing to lose, so no nagging.
+// - Backed up before: overdue only when the last backup is strictly older than `intervalDays` (exactly N days is not
+//   overdue). A last backup in the future (the clock moved back) or a garbled time is not trusted as "recent": a future
+//   time counts as just made (no reminder), a garbled one as never.
+// - Never backed up: remind only once the app holds an application (`hasApplications`); a fresh empty install has
+//   nothing to lose, so no nagging.
 export function backupReminder({
   lastBackupAt,
   intervalDays,

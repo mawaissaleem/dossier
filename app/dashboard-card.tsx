@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-// The dashboard card pattern (DESIGN.md "Dashboard"): a flat `bg-card` panel with a header (h2, optional count, optional link) and a body. Every dashboard card uses it.
-// The two link styles inside cards (hover and focus included), so every card reads the same.
+// The dashboard card pattern: a flat `bg-card` panel with a header (h2, optional count, optional link) and a body.
+// Every dashboard card uses it. The two link styles inside cards (hover and focus included), so every card reads the
+// same.
 export const ACCENT_LINK =
   "rounded-sm text-accent underline outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
 export const ROW_LINK = "rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring";

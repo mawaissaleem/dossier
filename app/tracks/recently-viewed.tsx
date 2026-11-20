@@ -3,7 +3,8 @@ import { TRACK_VIEW_LABELS, type ViewedTrack } from "@/lib/recently-viewed";
 import type { TrackOverview } from "@/lib/track-overview";
 import { TrackMarker } from "../track-marker";
 
-// Up to six chips: the track's colour tile, "Job · Board" and when. Each is one link to that track in that view. `items` is already cleaned (no deleted tracks).
+// Up to six chips: the track's colour tile, "Job · Board" and when. Each is one link to that track in that view.
+// `items` is already cleaned (no deleted tracks).
 export function RecentlyViewed({
   items,
   tracks,

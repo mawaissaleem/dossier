@@ -22,9 +22,10 @@ import { getUserId } from "./user";
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 
-// Cell rows a new application starts with: every track column's default (FR-1.6), Status included (one mechanism, see decodeDefault).
-// A default is used only if it decodes for the column's type and, for a single_select, names an option that still belongs to that
-// column; anything else (hand-edited, deleted or foreign option) is skipped, so the application is created with a blank cell.
+// Cell rows a new application starts with: every track column's default (FR-1.6), Status included (one mechanism, see
+// decodeDefault). A default is used only if it decodes for the column's type and, for a single_select, names an option
+// that still belongs to that column; anything else (hand-edited, deleted or foreign option) is skipped, so the
+// application is created with a blank cell.
 function defaultCells(tx: Tx, trackId: number, userId: string) {
   const cols = tx
     .select({ id: columns.id, type: columns.type, defaultValue: columns.defaultValue })
@@ -58,9 +59,10 @@ function defaultCells(tx: Tx, trackId: number, userId: string) {
 export type NewCell = { columnId: number; value: unknown };
 export type CreateResult = { ok: true; id: number } | { ok: false; error: string };
 
-// The one per-value check for create and update. Every value is validated before anything is written. Errors name the column.
-// A column that is missing, in another track or another user's is "A column was removed or changed" (it can be deleted while the form is open).
-// Result: columnId -> typed value, null = blank (no row). Insertion order = submitted order.
+// The one per-value check for create and update. Every value is validated before anything is written. Errors name the
+// column. A column that is missing, in another track or another user's is "A column was removed or changed" (it can be
+// deleted while the form is open). Result: columnId -> typed value, null = blank (no row). Insertion order = submitted
+// order.
 function validateValues(tx: Tx, userId: string, trackId: number, values: NewCell[]) {
   const cols = new Map(
     tx
@@ -88,11 +90,12 @@ function validateValues(tx: Tx, userId: string, trackId: number, values: NewCell
   return { ok: true as const, submitted };
 }
 
-// `values` are the submitted cells. A column listed there (even blank, value null) is the user's choice and gets no default;
-// a column not listed gets its default (FR-1.6). Every value is validated before anything is inserted, and the application,
-// submitted cells and defaults go in one transaction, so a bad value creates nothing and the application is never half filled.
-// A new application may start in a submitted status (default or chosen): it has no files yet, so there is nothing to review and no
-// submission is created (the submission review, FR-7.2, only guards moving an existing application). Add the submission later (6.6).
+// `values` are the submitted cells. A column listed there (even blank, value null) is the user's choice and gets no
+// default; a column not listed gets its default (FR-1.6). Every value is validated before anything is inserted, and the
+// application, submitted cells and defaults go in one transaction, so a bad value creates nothing and the application
+// is never half filled. A new application may start in a submitted status (default or chosen): it has no files yet, so
+// there is nothing to review and no submission is created (the submission review, FR-7.2, only guards moving an
+// existing application). Add the submission later.
 export async function createApplication({
   title,
   trackId,
@@ -119,7 +122,8 @@ export async function createApplication({
         .map(([columnId, c]) => ({ columnId, [CELL_FIELD[c.type]]: c.value })),
       ...defaultCells(tx, trackId, userId).filter((c) => !v.submitted.has(c.columnId)),
     ];
-    // Initial status: one event "from blank to X" (the application starts with a status, which is a change from nothing).
+    // Initial status: one event "from blank to X" (the application starts with a status, which is a change from
+    // nothing).
     const statusCol = tx
       .select({ id: columns.id })
       .from(columns)
@@ -142,13 +146,15 @@ export async function createApplication({
   });
 }
 
-// needsReview: the save would move a submission-less application to a submitted status. Nothing is saved (not even the title or other
-// cells); the caller runs the submission review (confirmSubmittedStatus) and saves the rest after it. Same rule as setCellValue.
+// needsReview: the save would move a submission-less application to a submitted status. Nothing is saved (not even the
+// title or other cells); the caller runs the submission review (confirmSubmittedStatus) and saves the rest after it.
+// Same rule as setCellValue.
 export type UpdateResult = { ok: true } | { ok: false; error: string; needsReview?: true };
 
-// Edit form save: sets the title and writes only the listed cells (the form sends just the fields the user changed), in one transaction.
-// Same validation as create; a blank value deletes the cell row; no defaults. A bad value changes nothing. Works on archived
-// applications and leaves them archived. "Application not found." if missing or not the current user's.
+// Edit form save: sets the title and writes only the listed cells (the form sends just the fields the user changed), in
+// one transaction. Same validation as create; a blank value deletes the cell row; no defaults. A bad value changes
+// nothing. Works on archived applications and leaves them archived. "Application not found." if missing or not the
+// current user's.
 export async function updateApplication({
   id,
   title,
@@ -286,7 +292,8 @@ export async function getApplicationDetail(id: number): Promise<ApplicationDetai
   };
 }
 
-// True if the current user's application exists (also when the flag already had that value). Reversible, so no confirmation.
+// True if the current user's application exists (also when the flag already had that value). Reversible, so no
+// confirmation.
 export async function archiveApplication(id: number, archived: boolean): Promise<boolean> {
   return (
     getDb()
@@ -297,7 +304,8 @@ export async function archiveApplication(id: number, archived: boolean): Promise
   );
 }
 
-// Live stored files of the application (deleted ones, 8.8, have no bytes: their rows only go with the cascade), so the delete confirmation states the real number (NFR-4).
+// Live stored files of the application (deleted ones, have no bytes: their rows only go with the cascade), so the
+// delete confirmation states the real number (NFR-4).
 async function countApplicationFiles(applicationId: number): Promise<number> {
   const { n } = getDb()
     .select({ n: count() })
@@ -318,7 +326,8 @@ async function countApplicationNotes(applicationId: number): Promise<number> {
   return n;
 }
 
-// Submissions of the application: deleting it removes them and their file links, so the confirmation states the number (NFR-4).
+// Submissions of the application: deleting it removes them and their file links, so the confirmation states the number
+// (NFR-4).
 async function countApplicationSubmissions(applicationId: number): Promise<number> {
   const { n } = getDb()
     .select({ n: count() })
@@ -336,7 +345,8 @@ export type DeleteImpact = {
   noteCount: number;
 };
 
-// What deleting would lose: stored cell values (a blank cell has no row, FR-1.4), files, submissions and notes. Null if missing or not the current user's.
+// What deleting would lose: stored cell values (a blank cell has no row, FR-1.4), files, submissions and notes. Null if
+// missing or not the current user's.
 export async function getDeleteImpact(id: number): Promise<DeleteImpact | null> {
   const db = getDb();
   const userId = getUserId();
@@ -363,8 +373,9 @@ export async function getDeleteImpact(id: number): Promise<DeleteImpact | null> 
 export type DeleteResult = { ok: true; trackId: number } | { ok: false; error: string };
 const NO_APP = { ok: false, error: "Application not found." } as const;
 
-// Returns the application's track id (for the redirect). Cell values, file rows, submissions, notes and activity events go with it via ON DELETE CASCADE (foreign_keys is on, see client.ts).
-// Callers must have confirmed with the user, and `expected` is the impact they were shown: if a count changed since, nothing is deleted (NFR-4).
+// Returns the application's track id (for the redirect). Cell values, file rows, submissions, notes and activity events
+// go with it via ON DELETE CASCADE (foreign_keys is on, see client.ts). Callers must have confirmed with the user, and
+// `expected` is the impact they were shown: if a count changed since, nothing is deleted (NFR-4).
 export async function deleteApplication(
   id: number,
   expected: { cellCount: number; fileCount: number; submissionCount: number; noteCount: number },
@@ -380,7 +391,7 @@ export async function deleteApplication(
       .where(and(eq(cellValues.applicationId, id), eq(cellValues.userId, userId)))
       .get()!;
     if (n !== expected.cellCount) return stale;
-    // Files can be uploaded at any moment (5.7), so the count is checked here, in the same transaction as the delete.
+    // Files can be uploaded at any moment, so the count is checked here, in the same transaction as the delete.
     const f = tx
       .select({ n: count() })
       .from(files)

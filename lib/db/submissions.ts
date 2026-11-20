@@ -1,4 +1,5 @@
-// Server-only. See lib/db/tracks.ts for the convention. Submissions (FR-7): a dated, noted set of an application's files.
+// Server-only. See lib/db/tracks.ts for the convention. Submissions (FR-7): a dated, noted set of an application's
+// files.
 import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { submissionOccurredAt } from "../activity";
 import { isValidDate } from "../filename";
@@ -15,8 +16,9 @@ export type CreateSubmissionResult = { ok: true; id: number } | { ok: false; err
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 
-// Everything is checked and written in one transaction: a refusal writes nothing. Zero files is allowed here (6.5 warns, FR-7.3).
-// Every file must belong to this application and user and still be live (a deleted file, 8.8, cannot join a new submission): the DB only checks that the file exists (see schema.ts).
+// Everything is checked and written in one transaction: a refusal writes nothing. Zero files is allowed here (the form
+// warns, FR-7.3). Every file must belong to this application and user and still be live (a deleted file, cannot join a
+// new submission): the DB only checks that the file exists (see schema.ts).
 export async function createSubmission(
   applicationId: number,
   fileIds: number[],
@@ -27,7 +29,8 @@ export async function createSubmission(
   return getDb().transaction((tx) => insertSubmission(tx, userId, applicationId, fileIds, date, note));
 }
 
-// The checks and inserts of createSubmission, inside the caller's transaction. A refusal returns before writing anything.
+// The checks and inserts of createSubmission, inside the caller's transaction. A refusal returns before writing
+// anything.
 function insertSubmission(
   tx: Tx,
   userId: string,
@@ -76,7 +79,8 @@ function insertSubmission(
     tx.insert(submissionFiles)
       .values(ids.map((fileId) => ({ userId, submissionId: id, fileId })))
       .run();
-  // The event sorts by the submission date (a backdated one lands in its place in the history); the details keep the file names as of now.
+  // The event sorts by the submission date (a backdated one lands in its place in the history); the details keep the
+  // file names as of now.
   insertEvent(
     tx,
     userId,
@@ -88,8 +92,9 @@ function insertSubmission(
   return { ok: true, id };
 }
 
-// FR-7.6: the note is the only field of a submission that can change. There is deliberately no function to change its date or files, or to delete
-// a submission (not in the SRS): a mistake is corrected by adding a new submission. Same note rules as creation; blank clears the note.
+// FR-7.6: the note is the only field of a submission that can change. There is deliberately no function to change its
+// date or files, or to delete a submission (not in the SRS): a mistake is corrected by adding a new submission. Same
+// note rules as creation; blank clears the note.
 export async function updateSubmissionNote(
   id: number,
   note: string | null | undefined,
@@ -104,7 +109,8 @@ export async function updateSubmissionNote(
   return r.changes ? { ok: true } : { ok: false, error: "Submission not found." };
 }
 
-// Null if the column is the status column of the application's track and the option is one of its options, else the message to show.
+// Null if the column is the status column of the application's track and the option is one of its options, else the
+// message to show.
 function statusChoiceError(tx: Tx, userId: string, trackId: number, columnId: number, optionId: number): string | null {
   const col = tx
     .select({ trackId: columns.trackId, isStatus: columns.isStatus })
@@ -118,10 +124,10 @@ function statusChoiceError(tx: Tx, userId: string, trackId: number, columnId: nu
   return null;
 }
 
-// The confirm step of the submission review (FR-7.2): sets the application's status cell and creates its FIRST submission in one
-// transaction, both or neither. Refuses (nothing written) when the column is not the application's status column, the option is not a
-// submitted status of the track, a submission already exists (reload: the review no longer applies; further ones are manual, 6.6),
-// or the submission itself is invalid (bad date, note, foreign file).
+// The confirm step of the submission review (FR-7.2): sets the application's status cell and creates its FIRST
+// submission in one transaction, both or neither. Refuses (nothing written) when the column is not the application's
+// status column, the option is not a submitted status of the track, a submission already exists (reload: the review no
+// longer applies; further ones are manual), or the submission itself is invalid (bad date, note, foreign file).
 export async function submitWithStatus(
   applicationId: number,
   columnId: number,
@@ -154,10 +160,10 @@ export async function submitWithStatus(
   });
 }
 
-// A further submission made by hand (FR-7.4): at least one file, any date and note, and optionally a status change saved in the same
-// transaction (both or neither). It works with or without earlier submissions; the status is written directly, so the review (FR-7.2)
-// is never asked for: this submission is the record. A refusal writes nothing. Archived applications are allowed on purpose: a reply or
-// an extra document can come after archiving.
+// A further submission made by hand (FR-7.4): at least one file, any date and note, and optionally a status change
+// saved in the same transaction (both or neither). It works with or without earlier submissions; the status is written
+// directly, so the review (FR-7.2) is never asked for: this submission is the record. A refusal writes nothing.
+// Archived applications are allowed on purpose: a reply or an extra document can come after archiving.
 export async function createManualSubmission(
   applicationId: number,
   fileIds: number[],
@@ -184,7 +190,8 @@ export async function createManualSubmission(
   });
 }
 
-// deletedAt (8.8): the file was deleted after it was submitted; the row is the record (name, label, size, hash), the bytes are gone.
+// deletedAt: the file was deleted after it was submitted; the row is the record (name, label, size, hash), the bytes
+// are gone.
 export type SubmissionFileItem = {
   id: number;
   originalName: string;

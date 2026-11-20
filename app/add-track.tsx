@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MAX_TRACK_NAME, TEMPLATES, TEMPLATE_IDS, isTemplateId, type TemplateId } from "@/lib/track-templates";
 
-// "Add track": a template (Job, PhD or Blank) and a name, prefilled from the template until the user types their own. The dialog stays open on an error (duplicate name).
+// "Add track": a template (Job, PhD or Blank) and a name, prefilled from the template until the user types their own.
+// The dialog stays open on an error (duplicate name).
 export function AddTrack({ size }: { size?: "sm" }) {
   const uid = useId();
   const [open, setOpen] = useState(false);

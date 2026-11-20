@@ -3,8 +3,9 @@ export const NOTE_BODY_MAX = 5000;
 
 export type NoteBodyResult = { ok: true; body: string } | { ok: false; error: string };
 
-// JS trim() covers Unicode whitespace (U+00A0, U+2028, ...) that the DB CHECK on notes.body misses (7.1 review). Zero-width characters
-// are not whitespace to JS but show as nothing, so a body of only those counts as blank. Line breaks inside the text are kept.
+// JS trim() covers Unicode whitespace (U+00A0, U+2028, ...) that the DB CHECK on notes.body misses. Zero-width
+// characters are not whitespace to JS but show as nothing, so a body of only those counts as blank. Line breaks inside
+// the text are kept.
 export function checkNoteBody(body: unknown): NoteBodyResult {
   if (typeof body !== "string") return { ok: false, error: "Write a note first." };
   const trimmed = body.trim();

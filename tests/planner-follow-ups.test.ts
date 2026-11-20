@@ -98,7 +98,8 @@ describe("getFollowUpsDue (temp DB)", () => {
   it("lists submitted ones whose date arrived, across tracks, oldest first, with track and text", async () => {
     const job = track("Job");
     const a = job.add("by-status", { status: job.applied, followUp: "2026-11-10" });
-    const b = job.add("by-submission", { status: job.todo, followUp: "2026-11-12", submission: true }); // submission row, status not submitted
+    // submission row, status not submitted
+    const b = job.add("by-submission", { status: job.todo, followUp: "2026-11-12", submission: true });
     job.add("future", { status: job.applied, followUp: "2026-11-13" });
     job.add("not-submitted", { status: job.todo, followUp: "2026-11-01" });
     job.add("archived", { status: job.applied, followUp: "2026-11-01", archived: true });

@@ -1,4 +1,4 @@
-// Server-only. See lib/db/tracks.ts for the convention. Read helpers for the application folder rule (5.4).
+// Server-only. See lib/db/tracks.ts for the convention. Read helpers for the application folder rule.
 import { and, asc, count, desc, eq, isNull, ne } from "drizzle-orm";
 import { dirname } from "node:path/posix";
 import { parseActivityDetails } from "../activity";
@@ -20,7 +20,8 @@ import { sameFiles, type LiveFile } from "../relocate";
 import { setFilesRoot } from "./settings";
 import { getUserId } from "./user";
 
-// The folder of an application's existing files (stored paths are relative, forward slashes), or null before its first upload.
+// The folder of an application's existing files (stored paths are relative, forward slashes), or null before its first
+// upload.
 export async function getApplicationFolder(applicationId: number): Promise<string | null> {
   const row = getDb()
     .select({ p: files.relativePath })
@@ -42,8 +43,9 @@ export async function getUsedFolders(exceptApplicationId: number): Promise<strin
   return [...new Set(rows.map((r) => dirname(r.p)))];
 }
 
-// Everything the folder-name rule reads: title, track name and the application's text cells (name + value, blank = null).
-// Hidden columns are included on purpose: hiding a column hides it from the table, but its value is still the application's data.
+// Everything the folder-name rule reads: title, track name and the application's text cells (name + value, blank =
+// null). Hidden columns are included on purpose: hiding a column hides it from the table, but its value is still the
+// application's data.
 export async function getFolderNameData(applicationId: number) {
   const db = getDb();
   const userId = getUserId();
@@ -64,10 +66,11 @@ export async function getFolderNameData(applicationId: number) {
   return { ...app, cells };
 }
 
-// The application's existing (base name, date, extension, seq) entries for the FR-6.2 counter; feed them to buildStoredName (lib/filename.ts).
-// Every deleted file (8.8) keeps its stored name reserved, so no later file carries the name of one in a submission record, the History
-// or an older backup: a kept (marked) row is read here like any row, and a dropped row's entry comes from its file_deleted event.
-// Starts with application_id, so files_counter_uniq serves the lookup.
+// The application's existing (base name, date, extension, seq) entries for the FR-6.2 counter; feed them to
+// buildStoredName (lib/filename.ts). Every deleted file keeps its stored name reserved, so no later file carries the
+// name of one in a submission record, the History or an older backup: a kept (marked) row is read here like any row,
+// and a dropped row's entry comes from its file_deleted event. Starts with application_id, so files_counter_uniq serves
+// the lookup.
 export async function getCounterEntries(applicationId: number): Promise<CounterEntry[]> {
   const db = getDb();
   const userId = getUserId();
@@ -102,8 +105,8 @@ export async function applicationExists(applicationId: number): Promise<boolean>
     .get();
 }
 
-// The earliest LIVE file of this application with this SHA-256 (FR-5.7; served by files_application_id_sha256_idx), or null.
-// A deleted file (8.8) is not a duplicate: its bytes are gone, so the same file can be uploaded again.
+// The earliest LIVE file of this application with this SHA-256 (FR-5.7; served by files_application_id_sha256_idx), or
+// null. A deleted file is not a duplicate: its bytes are gone, so the same file can be uploaded again.
 export async function findFileByHash(
   applicationId: number,
   sha256: string,
@@ -128,8 +131,9 @@ export async function findFileByHash(
 
 export type NewFileRow = Omit<typeof files.$inferInsert, "id" | "userId" | "createdAt" | "updatedAt">;
 
-// Throws on a unique violation (counter or path taken: the caller picks the next seq) or a foreign key violation (application gone).
-// The file_uploaded event (7.3) is written in the same transaction. Its occurred_at is now: the upload date is user-editable and is kept in the details.
+// Throws on a unique violation (counter or path taken: the caller picks the next seq) or a foreign key violation
+// (application gone). The file_uploaded event is written in the same transaction. Its occurred_at is now: the upload
+// date is user-editable and is kept in the details.
 export async function insertFileRow(row: NewFileRow): Promise<number> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
@@ -168,7 +172,8 @@ export type FileListItem = {
   checkedAt: Date | null;
 };
 
-// The application's live uploaded files for the detail page: DB rows only (FR-5.11), deleted ones (8.8) left out, newest upload date first, then the counter.
+// The application's live uploaded files for the detail page: DB rows only (FR-5.11), deleted ones left out, newest
+// upload date first, then the counter.
 export async function listApplicationFiles(applicationId: number): Promise<FileListItem[]> {
   return getDb()
     .select({
@@ -187,7 +192,8 @@ export async function listApplicationFiles(applicationId: number): Promise<FileL
     .all();
 }
 
-// The row behind Open, by id and user. The path comes from here, never from the request. `deleted` (8.8): the bytes are gone on purpose.
+// The row behind Open, by id and user. The path comes from here, never from the request. `deleted`: the bytes are gone
+// on purpose.
 export async function getFileForOpen(id: number): Promise<{
   applicationId: number;
   storedName: string;
@@ -220,7 +226,8 @@ export async function getFileForOpen(id: number): Promise<{
     : null;
 }
 
-// Records the result of a hash check (8.6) so the file list can show it without re-hashing (8.7). A file that matches again goes back to ok.
+// Records the result of a hash check so the file list can show it without re-hashing. A file that matches again goes
+// back to ok.
 export async function recordIntegrity(id: number, integrity: IntegrityState): Promise<void> {
   getDb()
     .update(files)
@@ -229,7 +236,7 @@ export async function recordIntegrity(id: number, integrity: IntegrityState): Pr
     .run();
 }
 
-// Ids of the application's live files (this user's), for the on-demand check (8.7). Deleted files (8.8) have nothing to check.
+// Ids of the application's live files (this user's), for the on-demand check. Deleted files have nothing to check.
 export async function listApplicationFileIds(applicationId: number): Promise<number[]> {
   return getDb()
     .select({ id: files.id })
@@ -240,7 +247,8 @@ export async function listApplicationFileIds(applicationId: number): Promise<num
     .map((r) => r.id);
 }
 
-// Relative paths of every live stored file of the application (deleted ones have no bytes). Read before deleting it: the rows (and these paths) go with the delete.
+// Relative paths of every live stored file of the application (deleted ones have no bytes). Read before deleting it:
+// the rows (and these paths) go with the delete.
 export async function listApplicationFilePaths(applicationId: number): Promise<string[]> {
   return getDb()
     .select({ p: files.relativePath })
@@ -250,7 +258,8 @@ export async function listApplicationFilePaths(applicationId: number): Promise<s
     .map((r) => r.p);
 }
 
-// ---- Delete one file (8.8, FR-5.8). The steps are driven by lib/files/remove.ts (deleteStoredFile); the order is explained there. ----
+// ---- Delete one file (FR-5.8). The steps are driven by lib/files/remove.ts (deleteStoredFile); the order is explained
+// there. ----
 
 export type FileDeleteImpact = {
   id: number;
@@ -262,7 +271,8 @@ export type FileDeleteImpact = {
   submissions: { id: number; date: string }[];
 };
 
-// What deleting this live file would lose, for the confirm. Null if missing, already deleted or not this user's. Submissions newest first.
+// What deleting this live file would lose, for the confirm. Null if missing, already deleted or not this user's.
+// Submissions newest first.
 export async function getFileDeleteImpact(id: number): Promise<FileDeleteImpact | null> {
   const db = getDb();
   const userId = getUserId();
@@ -291,8 +301,9 @@ export async function getFileDeleteImpact(id: number): Promise<FileDeleteImpact 
 
 export type BeginDeleteResult = { ok: true; relativePath: string } | { ok: false; error: string };
 
-// Step 1: the stale check and the mark in ONE transaction. Once deleted_at is set, no new submission can pick the file (insertSubmission only
-// accepts live files), so the count checked here cannot grow afterwards: that is what makes "the file joined a submission" safe to refuse here.
+// Step 1: the stale check and the mark in ONE transaction. Once deleted_at is set, no new submission can pick the file
+// (insertSubmission only accepts live files), so the count checked here cannot grow afterwards: that is what makes "the
+// file joined a submission" safe to refuse here.
 export async function beginFileDelete(id: number, expectedSubmissions: number): Promise<BeginDeleteResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
@@ -327,8 +338,8 @@ export async function abortFileDelete(id: number): Promise<void> {
     .run();
 }
 
-// Step 3, after the bytes are gone: one transaction writes the history event and either drops the row (no submission lists it) or leaves
-// the marked row as the submissions' record. Returns true when the row was kept.
+// Step 3, after the bytes are gone: one transaction writes the history event and either drops the row (no submission
+// lists it) or leaves the marked row as the submissions' record. Returns true when the row was kept.
 export async function finishFileDelete(id: number): Promise<boolean> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
@@ -343,7 +354,8 @@ export async function finishFileDelete(id: number): Promise<boolean> {
       .from(submissionFiles)
       .where(and(eq(submissionFiles.fileId, id), eq(submissionFiles.userId, userId)))
       .get()!;
-    if (n === 0) tx.delete(files).where(eq(files.id, id)).run(); // the file_uploaded event keeps its snapshot (file_id goes null)
+    // the file_uploaded event keeps its snapshot (file_id goes null)
+    if (n === 0) tx.delete(files).where(eq(files.id, id)).run();
     insertEvent(
       tx,
       userId,
@@ -356,7 +368,8 @@ export async function finishFileDelete(id: number): Promise<boolean> {
         storedName: f.storedName,
         label: f.label,
         submissionCount: n,
-        counter: { baseName: f.baseName, uploadDate: f.uploadDate, extension: f.extension, seq: f.seq }, // keeps the stored name reserved (getCounterEntries)
+        // keeps the stored name reserved (getCounterEntries)
+        counter: { baseName: f.baseName, uploadDate: f.uploadDate, extension: f.extension, seq: f.seq },
       },
       n > 0 ? { fileId: id } : {},
     );
@@ -364,7 +377,7 @@ export async function finishFileDelete(id: number): Promise<boolean> {
   });
 }
 
-// ---- Relocate the files root (8.10) ----
+// ---- Relocate the files root ----
 
 // Every live file of this user (deleted ones have no bytes), what a move or re-point has to carry or find.
 const readLiveFiles = (): LiveFile[] =>
@@ -376,8 +389,9 @@ const readLiveFiles = (): LiveFile[] =>
     .all();
 export const listLiveFiles = async (): Promise<LiveFile[]> => readLiveFiles();
 
-// The switch: saves the new root only if the live files are still exactly `verified` (the set that was copied or found there). All of it runs in one
-// tick (better-sqlite3 is sync, nothing is awaited between the read and the write), so no upload or delete can slip in between.
+// The switch: saves the new root only if the live files are still exactly `verified` (the set that was copied or found
+// there). All of it runs in one tick (better-sqlite3 is sync, nothing is awaited between the read and the write), so no
+// upload or delete can slip in between.
 export async function switchFilesRoot(newRoot: string, verified: LiveFile[]): Promise<boolean> {
   if (!sameFiles(readLiveFiles(), verified)) return false;
   const saved = setFilesRoot(newRoot); // its body is synchronous: the write has happened when this returns

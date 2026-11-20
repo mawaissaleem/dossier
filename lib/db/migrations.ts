@@ -1,10 +1,6 @@
-// Server-only. Is the database behind the migrations in ./drizzle? A page or route that queries a table a pending migration would have created
-// crashes with "no such table"; this lets the app say so calmly instead. "Pending" is what drizzle's own migrator would apply: journal entries
-// newer (`when`) than the newest row in __drizzle_migrations. Existing data is never migrated here: the user presses "Back up and update"
-// (lib/files/update.ts) or runs npm run db:migrate. The one exception is a brand-new database (no tables at all, so nothing to lose): the
-// first check creates it by applying every migration. The journal is read once per process; an up-to-date answer is remembered per
-// connection (migrations are never undone under a live connection, and a restore reopens it), while a "behind" answer is re-checked on
-// every call (a single MAX query) so the page recovers by itself once the user has migrated.
+// Server-only. Is the database behind the migrations in ./drizzle? A page or route that queries a table a pending
+// migration would have created crashes with "no such table"; this lets the app say so calmly instead. Details above
+// pendingMigrations.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
@@ -12,9 +8,10 @@ import { getDb } from "./client";
 
 export const MIGRATIONS_FOLDER = "./drizzle";
 
-// The one migrator (npm run db:migrate, the update button, a new database). Synchronous and all-or-nothing: drizzle's better-sqlite3
-// migrator runs every pending migration between one BEGIN and COMMIT and rolls back on the first error, so a failing migration leaves
-// the database as it was, and nothing else in this process can run (or see a half-updated schema) while it works.
+// The one migrator (npm run db:migrate, the update button, a new database). Synchronous and all-or-nothing: drizzle's
+// better-sqlite3 migrator runs every pending migration between one BEGIN and COMMIT and rolls back on the first error,
+// so a failing migration leaves the database as it was, and nothing else in this process can run (or see a half-updated
+// schema) while it works.
 export const applyMigrations = (folder: string = MIGRATIONS_FOLDER) => migrate(getDb(), { migrationsFolder: folder });
 
 // Only same-site paths (no scheme, no "//host"), so the redirect after the update cannot leave the app.
@@ -24,6 +21,13 @@ export const safeReturnPath = (v: unknown): string =>
 let journal: number[] | undefined; // the `when` of each migration the app ships
 let upToDateFor: object | undefined;
 
+// crashes with "no such table"; this lets the app say so calmly instead. "Pending" is what drizzle's own migrator would
+// apply: journal entries newer (`when`) than the newest row in __drizzle_migrations. Existing data is never migrated
+// here: the user presses "Back up and update" (lib/files/update.ts) or runs npm run db:migrate. The one exception is a
+// brand-new database (no tables at all, so nothing to lose): the first check creates it by applying every migration.
+// The journal is read once per process; an up-to-date answer is remembered per connection (migrations are never undone
+// under a live connection, and a restore reopens it), while a "behind" answer is re-checked on every call (a single MAX
+// query) so the page recovers by itself once the user has migrated.
 export function pendingMigrations(): number {
   const db = getDb();
   if (upToDateFor === db) return 0;
@@ -53,8 +57,8 @@ export function pendingMigrations(): number {
   return pending;
 }
 
-// An unreadable journal (app started outside the project folder, file removed) means "unknown": warn once and don't block
-// every page over it; a page that hits a missing table still fails as it did before this check existed.
+// An unreadable journal (app started outside the project folder, file removed) means "unknown": warn once and don't
+// block every page over it; a page that hits a missing table still fails as it did before this check existed.
 function readJournal(): number[] {
   const path = resolve(/*turbopackIgnore: true*/ "drizzle/meta/_journal.json");
   try {

@@ -3,8 +3,9 @@ import { integrityLabel } from "@/lib/file-integrity";
 import type { IntegrityState } from "@/lib/db/schema";
 import { NoteTime } from "./note-time";
 
-// The red flag for a file whose last hash check failed (FR-5.5, AT-8). Text plus an icon, never colour alone; ok files show nothing.
-// Dates are shown as text next to the badge, not only in a title, so keyboard and touch users get them too.
+// The red flag for a file whose last hash check failed (FR-5.5, AT-8). Text plus an icon, never colour alone; ok files
+// show nothing. Dates are shown as text next to the badge, not only in a title, so keyboard and touch users get them
+// too.
 export function IntegrityBadge({ state, checkedAt }: { state: IntegrityState; checkedAt: Date | null }) {
   const label = integrityLabel(state);
   if (!label) return null;

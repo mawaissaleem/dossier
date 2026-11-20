@@ -100,7 +100,7 @@ beforeEach(() => {
     opt(statusCol, "To apply", 0),
     opt(statusCol, "Applied", 1),
     opt(statusCol, "Interview", 2),
-  ]; // "Applied" counts as submitted by default (6.1)
+  ]; // "Applied" counts as submitted by default
   appId = mkApp();
   setStatus(toApply);
 });
@@ -248,7 +248,8 @@ describe("confirmSubmittedStatus", () => {
     expect(counts()[0]).toBe(1);
   });
 
-  // One argument broken per case, everything else valid (status column, submitted option, real file), so only the input check can refuse it.
+  // One argument broken per case, everything else valid (status column, submitted option, real file), so only the input
+  // check can refuse it.
   it.each([
     ["string application id", 0, "1"],
     ["zero application id", 0, 0],

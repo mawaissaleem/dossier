@@ -1,18 +1,6 @@
-// Server-only. "Back up now" (FR-12.1): writes ONE zip into a folder the user chooses. Layout and manifest: lib/backup.ts.
-//  1. check the destination  2. list the files under the files root (read-only: nothing under the root is touched)
-//  3. copy the database with SQLite's online backup into a private temp folder  4. zip manifest + db copy + files
-//  5. record the time in settings (only after the zip is complete).
-// Destination refusals: not a full path, not an existing folder, not writable, inside the files root (the zip would contain itself),
-// or inside the project folder / database folder (the same set the files root refuses): a backup next to the live data is lost with it.
-// The zip is written as <name>.zip.partial (claimed with O_EXCL, for a name whose .zip does not exist yet) and renamed to <name>.zip only
-// when complete, so a .zip in the folder is always a whole backup and an existing file is never overwritten. Backups run one at a time
-// (lock.ts), so no other backup can take that name in between. Any failure deletes the .partial file and the temp folder.
-// Limits: a crash (power loss, kill) mid-write leaves a .zip.partial file; nothing sweeps it (it sits in the user's folder). The files root is read
-// with lstat and symlinks are skipped, so nothing outside the root is read; a file replaced by a symlink (or a folder) during the
-// backup fails it, so files/ only ever holds regular files.
-// turbopackIgnore comments on three fs calls: without them Next warns that the build traces the whole project (they take user-typed paths on purpose).
-// Errors name their source: an unwritable destination, an unreadable file or folder in the files root (with its relative path),
-// or a generic failure (e.g. the database copy).
+// Server-only. "Back up now" (FR-12.1): writes one zip (manifest, database copy, files) into a folder the user chooses.
+// Layout and manifest: lib/backup.ts. The steps, the .partial naming and the limits are described above createBackup.
+// turbopackIgnore on three fs calls with user-typed paths: without it Next warns that the build traces everything.
 import { access, mkdtemp, lstat, open, readdir, realpath, rename, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { once } from "node:events";
@@ -44,8 +32,11 @@ const isPermission = (e: unknown) => ["EACCES", "EPERM", "EROFS"].includes(code(
 
 class ShownError extends Error {} // its message is already written for the user
 
-// The user-facing message for a failure after the checks. Errors carrying a path inside the files root came from reading it.
+// The user-facing message for a failure after the checks. Errors carrying a path inside the files root came from
+// reading it.
 
+// Errors name their source: an unwritable destination, an unreadable file or folder in the files root (with its
+// relative path), or a generic failure (e.g. the database copy).
 function explain(e: unknown, rootReal: string | null): string {
   if (e instanceof ShownError) return e.message;
   const p = (e as NodeJS.ErrnoException).path;
@@ -61,9 +52,10 @@ function explain(e: unknown, rootReal: string | null): string {
 
 type Found = { abs: string; name: string; size: number };
 
-// Regular files only, depth first. Symlinks and other special entries are skipped; folders that are (or sit in) the app's own
-// folders are skipped, for a root that contains the app (the files root's own refusal covers a root placed inside it), and so are
-// a restore's top-level staging/aside folders: the safety backup must hold the files as they were, not the incoming copy.
+// Regular files only, depth first. Symlinks and other special entries are skipped; folders that are (or sit in) the
+// app's own folders are skipped, for a root that contains the app (the files root's own refusal covers a root placed
+// inside it), and so are a restore's top-level staging/aside folders: the safety backup must hold the files as they
+// were, not the incoming copy.
 async function listFiles(root: string, skip: string[]): Promise<Found[]> {
   const out: Found[] = [];
   const walk = async (dir: string, prefix: string): Promise<void> => {
@@ -88,7 +80,8 @@ const exists = (p: string) =>
     (e) => code(e) !== "ENOENT",
   );
 
-// The first name whose .zip does not exist, with its .partial file claimed (a leftover .partial from a crash skips that name too).
+// The first name whose .zip does not exist, with its .partial file claimed (a leftover .partial from a crash skips that
+// name too).
 async function claimZip(dir: string, now: Date) {
   for (let n = 1; n <= MAX_NAME_TRIES; n++) {
     const path = join(dir, backupFileName(now, n));
@@ -108,7 +101,10 @@ type Checked =
 
 const no = (error: string): Checked => ({ ok: false, error });
 
-// The destination checks, shared by "save the destination" (8.2) and createBackup. Writability is only found out when the zip is claimed.
+// Destination refusals: not a full path, not an existing folder, not writable, inside the files root (the zip would
+// contain itself), or inside the project folder / database folder (the same set the files root refuses): a backup next
+// to the live data is lost with it. The destination checks, shared by "save the destination" and createBackup.
+// Writability is only found out when the zip is claimed.
 async function checkDestination(destination: unknown): Promise<Checked> {
   if (typeof destination !== "string" || destination.trim() === "")
     return no("Enter the full path of the folder for the backup.");
@@ -160,13 +156,25 @@ export async function validateBackupDestination(
   return c.ok ? { ok: true, path: resolve(/*turbopackIgnore: true*/ c.typed) } : c;
 }
 
+// Steps:
+//  1. check the destination  2. list the files under the files root (read-only: nothing under the root is touched)
+//  3. copy the database with SQLite's online backup into a private temp folder  4. zip manifest + db copy + files
+//  5. record the time in settings (only after the zip is complete).
+// The zip is written as <name>.zip.partial (claimed with O_EXCL, for a name whose .zip does not exist yet) and renamed
+// to <name>.zip only when complete, so a .zip in the folder is always a whole backup and an existing file is never
+// overwritten. Backups run one at a time (lock.ts), so no other backup can take that name in between. Any failure
+// deletes the .partial file and the temp folder.
+// Limits: a crash (power loss, kill) mid-write leaves a .zip.partial file; nothing sweeps it (it sits in the user's
+// folder). The files root is read with lstat and symlinks are skipped, so nothing outside the root is read; a file
+// replaced by a symlink (or a folder) during the backup fails it, so files/ only ever holds regular files.
 export async function createBackup(destination: unknown, now: Date = new Date()): Promise<BackupResult> {
   const checked = await checkDestination(destination);
   if (!checked.ok) return checked;
   const { dest, root, rootReal, skip } = checked;
 
   let partialPath: string | undefined;
-  let zipPath: string | undefined; // set once the .partial is renamed: a later failure (recording the time) deletes it too
+  // set once the .partial is renamed: a later failure (recording the time) deletes it too
+  let zipPath: string | undefined;
   const tmp = await mkdtemp(join(tmpdir(), "dossier-backup-"));
   try {
     const found = rootReal ? await listFiles(rootReal, skip) : [];
@@ -200,7 +208,8 @@ export async function createBackup(destination: unknown, now: Date = new Date())
       out.on("error", reject);
       archive.on("error", reject);
       archive.on("warning", reject); // a vanished file fails the backup rather than leaving a gap
-      // archiver stores a symlink (or folder) found at a listed path as such; refuse it so files/ holds regular files only
+      // archiver stores a symlink (or folder) found at a listed path as such; refuse it so files/ holds regular files
+      // only
       archive.on("entry", (d) => {
         if (d.name.startsWith(FILES_PREFIX) && d.type !== "file")
           reject(
@@ -219,7 +228,8 @@ export async function createBackup(destination: unknown, now: Date = new Date())
     } catch (e) {
       archive.abort();
       out.destroy();
-      if (!out.closed) await once(out, "close").catch(() => {}); // release the fd before the zip is deleted (Windows refuses to delete an open file)
+      // release the fd before the zip is deleted (Windows refuses to delete an open file)
+      if (!out.closed) await once(out, "close").catch(() => {});
       throw e;
     }
     await rename(partial, path);

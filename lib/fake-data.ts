@@ -1,5 +1,5 @@
-// Pure fake-application generator (task 4.4): given a track's columns and a PRNG, returns rows of raw cell values.
-// No DB or UI imports; scripts/seed-fake.ts writes the result. Values are raw input for parseCell (the app's own validation).
+// Pure fake-application generator: given a track's columns and a PRNG, returns rows of raw cell values. No DB or UI
+// imports; scripts/seed-fake.ts writes the result. Values are raw input for parseCell (the app's own validation).
 import type { CellScalar } from "./cells";
 import type { ColumnType } from "./db/schema";
 import { chance, pick, randInt, shuffle, type Rng } from "./prng";
@@ -209,8 +209,9 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-// Generates `count` rows for one track. Coverage first: when the track has a status and a Priority single-select, row i takes the
-// (i mod S*P)-th status x priority pair, so every combination appears once count >= S*P (the rest are random). Then ~5% archived.
+// Generates `count` rows for one track. Coverage first: when the track has a status and a Priority single-select, row i
+// takes the (i mod S*P)-th status x priority pair, so every combination appears once count >= S*P (the rest are
+// random). Then ~5% archived.
 export function generateApplications(cols: FakeColumn[], count: number, rng: Rng, base = DEFAULT_BASE): FakeRow[] {
   const companies = companyPool(rng);
   const universities = universityPool(rng);

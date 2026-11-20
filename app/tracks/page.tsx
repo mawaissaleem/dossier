@@ -19,8 +19,9 @@ type Props = { searchParams: Promise<{ [key: string]: string | string[] | undefi
 const GRID = "grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4";
 const H2 = "mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground [&_svg]:size-4";
 
-// Request-time data under cacheComponents: connection() opts out of prerendering, Suspense keeps the heading in the static shell.
-// The header sentence and the sections share one cached read (getTrackOverviews), so they cannot disagree.
+// Request-time data under cacheComponents: connection() opts out of prerendering, Suspense keeps the heading in the
+// static shell. The header sentence and the sections share one cached read (getTrackOverviews), so they cannot
+// disagree.
 async function Summary() {
   await connection();
   const tracks = await getTrackOverviews(localToday());
@@ -34,7 +35,8 @@ async function Sort({ searchParams }: Props) {
   return <SortControl sort={parseTrackSort((await searchParams).sort)} />;
 }
 
-// Recently viewed (when any), Starred (when any), then every track: the same tile in an auto-fill grid (300px minimum), so every width fills its rows.
+// Recently viewed (when any), Starred (when any), then every track: the same tile in an auto-fill grid (300px minimum),
+// so every width fills its rows.
 async function Sections({ searchParams }: Props) {
   await connection();
   const sort = parseTrackSort((await searchParams).sort);

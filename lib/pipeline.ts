@@ -9,7 +9,8 @@ export type PipelineTrackInput = {
 };
 // One grouped-query row: how many applications of the track hold this status option (null = no value).
 export type PipelineRow = { trackId: number; optionId: number | null; n: number };
-// token = the option id, or "blank" for "No status" (the same words the table's `?f=` filter uses). color null = no status (drawn with the muted token).
+// token = the option id, or "blank" for "No status" (the same words the table's `?f=` filter uses). color null = no
+// status (drawn with the muted token).
 export type PipelineSegment = { token: number | "blank"; label: string; color: string | null; count: number };
 export type TrackPipeline = {
   id: number;
@@ -20,8 +21,9 @@ export type TrackPipeline = {
   total: number;
 };
 
-// Every status option in its configured order (zero counts kept, so the legend is stable), then "No status" only when > 0.
-// A value that is no longer an option of the track counts as "No status" (the filter treats it as blank too). A track without a status column has no segments, only a total.
+// Every status option in its configured order (zero counts kept, so the legend is stable), then "No status" only when >
+// 0. A value that is no longer an option of the track counts as "No status" (the filter treats it as blank too). A
+// track without a status column has no segments, only a total.
 export function pipelineCounts(rows: readonly PipelineRow[], tracks: readonly PipelineTrackInput[]): TrackPipeline[] {
   return tracks.map((t) => {
     const byOption = new Map<number, number>();
@@ -58,8 +60,10 @@ export const pipelineSummary = (p: { total: number; segments: readonly { label: 
 
 export type CountedStatus = { label: string; color: string | null; count: number };
 
-// The "Pipeline · all tracks" bar: every track's segments added up by label (Job's "Applied" and PhD's "Applied" are one entry), in order of first appearance, zero counts kept so the
-// legend stays stable. A track without a status column counts its applications as "No status", so `total` is always what the bar shows. A label keeps the colour it first had.
+// The "Pipeline · all tracks" bar: every track's segments added up by label (Job's "Applied" and PhD's "Applied" are
+// one entry), in order of first appearance, zero counts kept so the legend stays stable. A track without a status
+// column counts its applications as "No status", so `total` is always what the bar shows. A label keeps the colour it
+// first had.
 export function allTracksPipeline(pipelines: readonly TrackPipeline[]): { segments: CountedStatus[]; total: number } {
   const byLabel = new Map<string, CountedStatus>();
   const add = (label: string, color: string | null, count: number) => {

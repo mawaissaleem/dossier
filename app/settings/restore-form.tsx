@@ -17,7 +17,8 @@ const summary = (c: Counts) =>
   `${plural(c.applications, "application")}, ${plural(c.columns, "column")}, ${plural(c.files, "file")}, ${plural(c.submissions, "submission")} and ${plural(c.notes, "note")}`;
 const when = (iso: string) => new Date(iso).toLocaleString();
 const names = (p: string[]) => p.slice(0, 3).join(", ") + (p.length > 3 ? ` and ${p.length - 3} more` : "");
-// Files the backup's database lists that are changed or absent in the zip: restored flagged, as Open would find them (not refused).
+// Files the backup's database lists that are changed or absent in the zip: restored flagged, as Open would find them
+// (not refused).
 const flagged = (i: BackupInfo) =>
   [
     ...(i.changed.length
@@ -35,8 +36,9 @@ const flagged = (i: BackupInfo) =>
 type Impact = { ok: true; counts: Counts; destination: string | null } | { ok: false; error: string };
 type Done = { safetyBackupPath: string; createdAt: string; counts: Counts; warnings: string[] };
 
-// Two steps, as in the Files form: Check backup reads and validates the zip and changes nothing; Restore opens the confirm, which states
-// what is replaced (counted fresh on every open, DESIGN.md) and sends those counts back so the server refuses if they changed.
+// Two steps, as in the Files form: Check backup reads and validates the zip and changes nothing; Restore opens the
+// confirm, which states what is replaced (counted fresh on every open) and sends those counts back so the server
+// refuses if they changed.
 export function RestoreForm({ destination }: { destination: string | null }) {
   const [value, setValue] = useState("");
   const [checked, setChecked] = useState<{ path: string; info: BackupInfo } | null>(null);

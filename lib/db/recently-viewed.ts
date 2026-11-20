@@ -1,4 +1,5 @@
-// Server-only. The "Recently viewed" list of /tracks: one settings row (JSON list, newest first), see lib/recently-viewed.ts for the rules.
+// Server-only. The "Recently viewed" list of /tracks: one settings row (JSON list, newest first), see
+// lib/recently-viewed.ts for the rules.
 import { and, eq } from "drizzle-orm";
 import { isTrackView, parseViewed, recordViewed, type ViewedTrack } from "../recently-viewed";
 import { relativeTime } from "../track-overview";
@@ -10,13 +11,15 @@ import { getUserId } from "./user";
 
 export const RECENTLY_VIEWED_KEY = "tracks.recently_viewed";
 
-// Cleaned on every read, with each entry's age in words ("10 minutes ago"); deleted tracks are filtered by the page, which already has the track list.
+// Cleaned on every read, with each entry's age in words ("10 minutes ago"); deleted tracks are filtered by the page,
+// which already has the track list.
 export async function getRecentlyViewed(nowMs: number = Date.now()): Promise<(ViewedTrack & { when: string })[]> {
   return parseViewed(readSetting(RECENTLY_VIEWED_KEY)).map((e) => ({ ...e, when: relativeTime(e.at, nowMs) }));
 }
 
-// Called when a track page is opened (a client effect posts it; nothing writes during render). The read and the write run with no await between them, so two calls cannot interleave.
-// `view` and `trackId` come from a POST, so both are checked here; an unknown or foreign track is refused and nothing is written.
+// Called when a track page is opened (a client effect posts it; nothing writes during render). The read and the write
+// run with no await between them, so two calls cannot interleave. `view` and `trackId` come from a POST, so both are
+// checked here; an unknown or foreign track is refused and nothing is written.
 export async function recordTrackView(trackId: number, view: string, nowMs: number = Date.now()): Promise<TrackResult> {
   if (
     !isTrackView(view) ||

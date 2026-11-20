@@ -1,5 +1,6 @@
-// Server-only. Convention for lib/db/<area>.ts: import getDb and tables, export plain async functions returning plain objects
-// (never query builders). Async even though better-sqlite3 is sync, so callers don't change when v2 moves to Postgres (NFR-6).
+// Server-only. Convention for lib/db/<area>.ts: import getDb and tables, export plain async functions returning plain
+// objects (never query builders). Async even though better-sqlite3 is sync, so callers don't change when v2 moves to
+// Postgres (NFR-6).
 import { and, asc, count, eq, like, ne, sql } from "drizzle-orm";
 import {
   TEMPLATES,
@@ -57,8 +58,9 @@ const otherNames = (excludeId?: number) =>
     .all()
     .map((t) => t.name);
 
-// Writes the template's columns, options, settings and default value for a new last track; synchronous so the seed can run it inside its own transaction (nested, so a savepoint).
-// Names and colour are checked by the callers. This is the one place a track is built: `npm run db:seed` and the Add track dialog both come here.
+// Writes the template's columns, options, settings and default value for a new last track; synchronous so the seed can
+// run it inside its own transaction (nested, so a savepoint). Names and colour are checked by the callers. This is the
+// one place a track is built: `npm run db:seed` and the Add track dialog both come here.
 export function insertTrackFromTemplate(name: string, t: TrackTemplate, color: string): number {
   const userId = getUserId();
   return getDb().transaction((tx) => {
@@ -110,7 +112,8 @@ export function insertTrackFromTemplate(name: string, t: TrackTemplate, color: s
   });
 }
 
-// "Add track": the name is trimmed and must be new; the colour is the first one no track uses yet. The template id comes from a POST, so it is checked.
+// "Add track": the name is trimmed and must be new; the colour is the first one no track uses yet. The template id
+// comes from a POST, so it is checked.
 export async function createTrackFromTemplate(
   name: string,
   template: string,
@@ -131,7 +134,8 @@ export async function createTrackFromTemplate(
   });
 }
 
-// Rename and recolour in one save. Another track may not have the name (case-insensitive); the track itself may keep it.
+// Rename and recolour in one save. Another track may not have the name (case-insensitive); the track itself may keep
+// it.
 export async function updateTrack(id: number, name: string, color: string): Promise<TrackResult> {
   const c = checkTrackColor(color);
   if (!c.ok) return c;
@@ -153,8 +157,9 @@ export type TrackDeleteImpact = {
   files: number;
 };
 
-// What deleting the track loses (NFR-4): every application (archived too), its columns, and their submissions, notes and file records (rows; the files on disk stay).
-// Takes the connection or a transaction, so deleteTrack counts inside its own transaction.
+// What deleting the track loses (NFR-4): every application (archived too), its columns, and their submissions, notes
+// and file records (rows; the files on disk stay). Takes the connection or a transaction, so deleteTrack counts inside
+// its own transaction.
 function countImpact(db: Pick<ReturnType<typeof getDb>, "select">, id: number): TrackDeleteImpact {
   const userId = getUserId();
   const n = (q: { get(): { n: number } | undefined }) => q.get()!.n;
@@ -195,8 +200,10 @@ export async function getTrackDeleteImpact(id: number): Promise<({ name: string 
   return t ? { name: t.name, ...countImpact(getDb(), id) } : null;
 }
 
-// One transaction: the track row (applications, columns, options, values, files, submissions, notes and events go with it via ON DELETE CASCADE) and its `track.<id>.*` settings
-// (submitted, win, still-to-do, expected labels, planner slots). Files on disk are not touched. Refuses unless `typedName` is the track's name and `expected` is the impact the user saw.
+// One transaction: the track row (applications, columns, options, values, files, submissions, notes and events go with
+// it via ON DELETE CASCADE) and its `track.<id>.*` settings (submitted, win, still-to-do, expected labels, planner
+// slots). Files on disk are not touched. Refuses unless `typedName` is the track's name and `expected` is the impact
+// the user saw.
 export async function deleteTrack(id: number, typedName: string, expected: TrackDeleteImpact): Promise<TrackResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
@@ -220,7 +227,8 @@ export async function deleteTrack(id: number, typedName: string, expected: Track
   });
 }
 
-// The starred tracks: one query over the `track.<id>.starred` settings. A star of a deleted track cannot exist (deleteTrack removes `track.<id>.*`).
+// The starred tracks: one query over the `track.<id>.starred` settings. A star of a deleted track cannot exist
+// (deleteTrack removes `track.<id>.*`).
 export async function getStarredTrackIds(): Promise<Set<number>> {
   return starredIds(
     getDb()
@@ -231,7 +239,8 @@ export async function getStarredTrackIds(): Promise<Set<number>> {
   );
 }
 
-// Star or unstar a track the user owns. Unstarring deletes the row (nothing is stored for the common case), so the other `track.<id>.*` cleanup stays the only one there is.
+// Star or unstar a track the user owns. Unstarring deletes the row (nothing is stored for the common case), so the
+// other `track.<id>.*` cleanup stays the only one there is.
 export async function setTrackStarred(id: number, starred: boolean): Promise<TrackResult> {
   const userId = getUserId();
   if (

@@ -1,9 +1,10 @@
-// Pure search logic (task 4.6): query checks, folding, matching and ranking. No DB, React or Next imports.
+// Pure search logic: query checks, folding, matching and ranking. No DB, React or Next imports.
 export const SEARCH_MAX_QUERY = 200;
 export const SEARCH_DEFAULT_LIMIT = 20;
 export const SEARCH_MAX_LIMIT = 50;
 
-// Rank tiers, best first. A title match beats a cell match, which beats a note match; ties go to the newest application (higher id).
+// Rank tiers, best first. A title match beats a cell match, which beats a note match; ties go to the newest application
+// (higher id).
 export const TIER = { exact: 0, prefix: 1, wordStart: 2, contains: 3, cell: 4, note: 5 } as const;
 
 export type ParsedQuery = { ok: true; query: string } | { ok: false; error: string };
@@ -28,8 +29,8 @@ export function clampLimit(raw: unknown): number {
 // which is why matching happens here and not in SQL. Not folded: "ß" stays "ß" (it does not match "ss").
 export const foldText = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
-// Same fold, char by char, so `at[i]` = where folded char i starts in the original and `at[text.length]` = the original's length.
-// Slower than foldText, so only the one field a snippet is cut from goes through it.
+// Same fold, char by char, so `at[i]` = where folded char i starts in the original and `at[text.length]` = the
+// original's length. Slower than foldText, so only the one field a snippet is cut from goes through it.
 export function foldWithMap(s: string): { text: string; at: number[] } {
   let text = "";
   const at: number[] = [];
@@ -50,7 +51,8 @@ export const searchWords = (query: string) => [...new Set(foldText(query).split(
 
 const isWordChar = (c: string) => /[\p{L}\p{N}]/u.test(c);
 
-// Tier of an application's title (already folded) against the whole folded query; `cell` if the words are not all in the title.
+// Tier of an application's title (already folded) against the whole folded query; `cell` if the words are not all in
+// the title.
 function titleTier(title: string, words: string[]): number {
   const t = title.replace(/\s+/g, " ").trim();
   const phrase = words.join(" ");
@@ -68,10 +70,11 @@ export type Match = { tier: number; matched: Matched };
 const SNIPPET_BEFORE = 20;
 const SNIPPET_AFTER = 40;
 
-// Null unless every word appears in the title, some cell or some note (a query may split across them, as across cells). `matched` is
-// the field holding the most words (earliest wins a tie: title, cells, then `notes` in the order given), with a short snippet around
-// the first word found in it. Tier: the title's if all words are in the title; else `cell` if title and cells together hold every
-// word; else `note` (a note was needed). So a note never outranks a title or cell match, and many notes still make one hit.
+// Null unless every word appears in the title, some cell or some note (a query may split across them, as across cells).
+// `matched` is the field holding the most words (earliest wins a tie: title, cells, then `notes` in the order given),
+// with a short snippet around the first word found in it. Tier: the title's if all words are in the title; else `cell`
+// if title and cells together hold every word; else `note` (a note was needed). So a note never outranks a title or
+// cell match, and many notes still make one hit.
 export function matchApplication(
   words: string[],
   title: string,
@@ -107,7 +110,8 @@ export function matchApplication(
   if (!best || found.size !== words.length) return null;
   const { text } = best.field;
   const { at, text: folded } = foldWithMap(text);
-  const start = Math.max(0, folded.indexOf(best.word)); // re-found in the mapped fold, so the offsets always agree with `at`
+  // re-found in the mapped fold, so the offsets always agree with `at`
+  const start = Math.max(0, folded.indexOf(best.word));
   const from = Math.max(0, at[start] - SNIPPET_BEFORE);
   const to = Math.min(text.length, at[start + best.word.length] + SNIPPET_AFTER);
   const snippet =

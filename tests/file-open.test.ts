@@ -62,7 +62,8 @@ describe("listApplicationFiles", () => {
   it("lists newest upload date first, then seq, and only this application's files of this user", async () => {
     const a = await store("a.pdf", "1", "2026-11-01");
     const b = await store("b.pdf", "2", "2026-11-05", "Cover letter");
-    const c = await store("a.pdf", "3", "2026-11-05"); // same date as b, other base name: seq 1 as well, so id breaks the tie
+    // same date as b, other base name: seq 1 as well, so id breaks the tie
+    const c = await store("a.pdf", "3", "2026-11-05");
     const d = await store("a.pdf", "4", "2026-11-05"); // seq 2
     const other = await mkApp("Other");
     await store("z.pdf", "5", "2026-11-09", "CV", other);
@@ -210,9 +211,11 @@ describe("GET /api/files/:id", () => {
     const changed = await get(f.id, { "sec-fetch-site": "same-origin", "sec-fetch-dest": "iframe" });
     expect(changed.status).toBe(409);
     expect(changed.headers.get("content-security-policy")).toMatch(/frame-ancestors 'self'$/);
-    expect(changed.headers.get("content-security-policy")).not.toMatch(/sandbox/); // a sandboxed frame's own links would count as cross-site
+    // a sandboxed frame's own links would count as cross-site
+    expect(changed.headers.get("content-security-policy")).not.toMatch(/sandbox/);
     const html = await changed.text();
-    expect(html).toContain(`<a href="/api/files/${f.id}?anyway=1">Open anyway</a>`); // no target: loads in the frame, same-origin
+    // no target: loads in the frame, same-origin
+    expect(html).toContain(`<a href="/api/files/${f.id}?anyway=1">Open anyway</a>`);
     expect(html).toContain('target="_top"');
     db.delete(settings).run();
     const setup = await get(f.id, { "sec-fetch-site": "same-origin", "sec-fetch-dest": "iframe" });
@@ -340,7 +343,8 @@ describe("hash verification on open (8.6)", () => {
   });
   it("a tampered stored hash is escaped on the changed page: markup shows as text", async () => {
     const f = await store("a.pdf", "original", "2026-11-08");
-    db.$client.pragma("ignore_check_constraints = ON"); // the CHECK on files.sha256 would refuse this; a hand-edited database file would not
+    // the CHECK on files.sha256 would refuse this; a hand-edited database file would not
+    db.$client.pragma("ignore_check_constraints = ON");
     db.update(files).set({ sha256: "<style>x</style><script>" }).where(eq(files.id, f.id)).run();
     const html = await (await get(f.id)).text();
     expect(html).not.toMatch(/<style>x|<script>/);

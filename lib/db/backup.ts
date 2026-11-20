@@ -1,5 +1,5 @@
-// Server-only. The database side of a backup: a consistent copy of the live file, the schema version for the manifest, and the
-// last-backup time (settings) that 8.3's reminder reads.
+// Server-only. The database side of a backup: a consistent copy of the live file, the schema version for the manifest,
+// and the last-backup time (settings) that the backup reminder reads.
 import { count, eq } from "drizzle-orm";
 import { backupReminder, parseReminderDays, reminderDaysOrDefault, type BackupReminder } from "../backup-reminder";
 import { getDb } from "./client";
@@ -52,7 +52,8 @@ export async function setReminderDays(
   return r;
 }
 
-// What the app-wide banner shows now (null = nothing). "Has applications" counts archived ones too: they are still data.
+// What the app-wide banner shows now (null = nothing). "Has applications" counts archived ones too: they are still
+// data.
 export async function getBackupReminder(now = new Date()): Promise<BackupReminder | null> {
   const [lastBackupAt, intervalDays] = await Promise.all([getLastBackupAt(), getReminderDays()]);
   const n = getDb().select({ n: count() }).from(applications).where(eq(applications.userId, getUserId())).get()?.n ?? 0;

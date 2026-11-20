@@ -2,8 +2,9 @@ import { asc } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { columnOptions, columns, settings, tracks } from "@/lib/db/schema";
 
-// Everything a track template writes, with ids replaced by names and labels so two databases compare equal. `settingKeys` = every `track.<id>.*` key the track has (so a key the template or the seed
-// adds that no field below reads still shows up); settings that belong to no track (file_labels) are left out.
+// Everything a track template writes, with ids replaced by names and labels so two databases compare equal.
+// `settingKeys` = every `track.<id>.*` key the track has (so a key the template or the seed adds that no field below
+// reads still shows up); settings that belong to no track (file_labels) are left out.
 export function trackSnapshot() {
   const db = getDb();
   const opts = db.select().from(columnOptions).orderBy(asc(columnOptions.position)).all();

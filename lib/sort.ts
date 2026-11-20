@@ -1,5 +1,6 @@
-// Pure table sorting: no DB or React imports (type-only imports are erased). Runs client-side on the rows the server page already sent:
-// at 500 rows one memoised in-memory sort is instant and needs no round trip (4.5 handles larger scale), and the order stays shareable via the URL.
+// Pure table sorting: no DB or React imports (type-only imports are erased). Runs client-side on the rows the server
+// page already sent: at 500 rows one memoised in-memory sort is instant and needs no round trip (virtual rows handle
+// larger tables), and the order stays shareable via the URL.
 import type { ApplicationRow } from "./db/applications";
 import type { ColumnItem } from "./db/columns";
 import { columnId } from "./column-id";
@@ -8,10 +9,12 @@ export type SortDir = "asc" | "desc";
 // id is the table column id: "title" or columnId(col) ("col-<n>").
 export type Sort = { id: string; dir: SortDir };
 
-// Fixed locale so the order does not depend on the machine; numeric makes "Job 2" sort before "Job 10", base ignores case and accents.
+// Fixed locale so the order does not depend on the machine; numeric makes "Job 2" sort before "Job 10", base ignores
+// case and accents.
 const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 
-// Reads ?sort=<id>&dir=asc|desc. Anything unknown, half-given or not a visible column means default order (null), never an error.
+// Reads ?sort=<id>&dir=asc|desc. Anything unknown, half-given or not a visible column means default order (null), never
+// an error.
 export function parseSort(
   sort: string | null | undefined,
   dir: string | null | undefined,
@@ -39,7 +42,8 @@ export function withSort(search: string, sort: Sort | null): string {
 }
 
 // The comparable value of one cell, or null for blank (empty text, no value, a deleted option).
-// Checkbox is never blank: unchecked (0) sorts before checked (1). Select sorts by the option's position, not its label.
+// Checkbox is never blank: unchecked (0) sorts before checked (1). Select sorts by the option's position, not its
+// label.
 function sortValue(col: ColumnItem | undefined, row: ApplicationRow): string | number | null {
   if (!col) return row.title; // Title
   const v = row.values[col.id];

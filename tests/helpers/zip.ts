@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
 
-// Minimal zip reader for tests (central directory, stored/deflated entries): name -> content. Enough to read back what archiver writes.
+// Minimal zip reader for tests (central directory, stored/deflated entries): name -> content. Enough to read back what
+// archiver writes.
 export function readZip(file: string): Map<string, Buffer> {
   const buf = readFileSync(file);
   let eocd = buf.length - 22;
@@ -49,8 +50,9 @@ const crc32 = (b: Buffer) => {
   return (c ^ 0xffffffff) >>> 0;
 };
 
-// Writes a zip with exactly the entries given (stored, no compression), so tests can make ones no honest tool would: "../x" names,
-// symlinks (mode 0o120777), duplicates, lying sizes. `host` 3 = Unix, so `mode` is read from the attributes.
+// Writes a zip with exactly the entries given (stored, no compression), so tests can make ones no honest tool would:
+// "../x" names, symlinks (mode 0o120777), duplicates, lying sizes. `host` 3 = Unix, so `mode` is read from the
+// attributes.
 export function writeZip(file: string, entries: ZipSpec[]): void {
   const parts: Buffer[] = [];
   const central: Buffer[] = [];

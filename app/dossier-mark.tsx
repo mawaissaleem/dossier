@@ -1,5 +1,6 @@
-// The Dossier logo glyph: a folder (the dossier) with a sheet rising out of its back and a check on the front (files kept, application tracked).
-// Drawn like Lucide's icons (24 grid, 2px round stroke, no fill) so it sits in the same tile; app/icon.svg is the static copy for the browser tab.
+// The Dossier logo glyph: a folder (the dossier) with a sheet rising out of its back and a check on the front (files
+// kept, application tracked). Drawn like Lucide's icons (24 grid, 2px round stroke, no fill) so it sits in the same
+// tile; app/icon.svg is the static copy for the browser tab.
 export function DossierMark({ className }: { className?: string }) {
   return (
     <svg

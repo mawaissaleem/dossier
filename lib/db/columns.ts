@@ -14,7 +14,8 @@ export type ColumnItem = {
   type: ColumnType;
   hidden: boolean;
   isStatus: boolean;
-  defaultValue: string | null; // raw text, see encodeDefault/decodeDefault in lib/cells.ts (may be invalid or dangle, readers must check)
+  // raw text, see encodeDefault/decodeDefault in lib/cells.ts (may be invalid or dangle, readers must check)
+  defaultValue: string | null;
   options: OptionItem[]; // empty unless single_select
 };
 
@@ -60,7 +61,8 @@ export async function listColumns(trackId: number): Promise<ColumnItem[]> {
 }
 
 export const MAX_COLUMN_NAME = 100;
-// The add form sends one entry per column, and createApplication accepts at most this many, so a track never outgrows its own form.
+// The add form sends one entry per column, and createApplication accepts at most this many, so a track never outgrows
+// its own form.
 export const MAX_COLUMNS = 200;
 export type AddColumnResult = { ok: true; id: number } | { ok: false; error: string };
 export type ColumnResult = { ok: true } | { ok: false; error: string };
@@ -75,9 +77,10 @@ function checkName(name: unknown): { name: string } | { error: string } {
   return { name: n };
 }
 
-// Appends a column after the last one (hidden=false, no default, no options). Inserts no cell rows: a missing row is blank (FR-2.1).
-// Validates here too so the data layer is safe on its own; the unique index is case-sensitive, so the case-insensitive check is in code.
-// No await between the checks and the insert, and better-sqlite3 is sync, so nothing can interleave.
+// Appends a column after the last one (hidden=false, no default, no options). Inserts no cell rows: a missing row is
+// blank (FR-2.1). Validates here too so the data layer is safe on its own; the unique index is case-sensitive, so the
+// case-insensitive check is in code. No await between the checks and the insert, and better-sqlite3 is sync, so nothing
+// can interleave.
 export async function addColumn({
   trackId,
   name,
@@ -132,7 +135,8 @@ function trackColumns(trackId: number, columnId: number) {
 
 const NOT_FOUND = { ok: false, error: "Column not found." } as const;
 
-// Only the name changes: values hang off the column id (FR-2.4). Renaming to the same name in a different case is allowed.
+// Only the name changes: values hang off the column id (FR-2.4). Renaming to the same name in a different case is
+// allowed.
 export async function renameColumn(trackId: number, columnId: number, name: string): Promise<ColumnResult> {
   const checked = checkName(name);
   if ("error" in checked) return { ok: false, error: checked.error };
@@ -164,9 +168,9 @@ export async function setColumnHidden(trackId: number, columnId: number, hidden:
   return { ok: true };
 }
 
-// Swaps with the nearest *visible* neighbour in that direction, so one click always moves the column one step on screen;
-// hidden columns keep their relative slot. At an edge it is a no-op (ok). Positions are then renumbered 0..n-1 in one
-// transaction, so they stay unique and gap-free whatever state they were in.
+// Swaps with the nearest *visible* neighbour in that direction, so one click always moves the column one step on
+// screen; hidden columns keep their relative slot. At an edge it is a no-op (ok). Positions are then renumbered 0..n-1
+// in one transaction, so they stay unique and gap-free whatever state they were in.
 export async function moveColumn(
   trackId: number,
   columnId: number,
@@ -197,8 +201,8 @@ export async function moveColumn(
 
 export type ColumnDeleteImpact = { name: string; valueCount: number; archivedCount: number };
 
-// What deleting would lose: stored cell rows of the column (a blank cell has no row), of which archived applications' are
-// archivedCount (included in valueCount). Null if missing or not the current user's.
+// What deleting would lose: stored cell rows of the column (a blank cell has no row), of which archived applications'
+// are archivedCount (included in valueCount). Null if missing or not the current user's.
 export async function getColumnDeleteImpact(columnId: number): Promise<ColumnDeleteImpact | null> {
   const db = getDb();
   const userId = getUserId();
@@ -222,10 +226,11 @@ export async function getColumnDeleteImpact(columnId: number): Promise<ColumnDel
   };
 }
 
-// Cell values and options go with the column via ON DELETE CASCADE. Positions are left as they are: the order is preserved,
-// and addColumn/moveColumn already cope with a gap. The status column is refused (FR-3.1; 2.9 manages it).
-// Callers must have confirmed with the user, and `expectedValueCount` is the valueCount they were shown: if it no longer matches,
-// nothing is deleted (values added meanwhile are never lost unannounced, NFR-4).
+// Cell values and options go with the column via ON DELETE CASCADE. Positions are left as they are: the order is
+// preserved, and addColumn/moveColumn already cope with a gap. The status column is refused (FR-3.1; it is changed
+// through the status-column setting). Callers must have confirmed with the user, and `expectedValueCount` is the
+// valueCount they were shown: if it no longer matches, nothing is deleted (values added meanwhile are never lost
+// unannounced, NFR-4).
 export async function deleteColumn(columnId: number, expectedValueCount: number): Promise<ColumnResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
@@ -250,9 +255,10 @@ export async function deleteColumn(columnId: number, expectedValueCount: number)
   });
 }
 
-// Moves the Status flag to this single-select column in one transaction. The old flag is cleared first because the partial unique
-// index is checked per statement. Default values stay with their columns (the Status default is an ordinary column default).
-// The new column needs an option, like the Status column's option delete rule. Already Status is a no-op (ok).
+// Moves the Status flag to this single-select column in one transaction. The old flag is cleared first because the
+// partial unique index is checked per statement. Default values stay with their columns (the Status default is an
+// ordinary column default). The new column needs an option, like the Status column's option delete rule. Already Status
+// is a no-op (ok).
 export async function setStatusColumn(trackId: number, columnId: number): Promise<ColumnResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {
@@ -284,9 +290,9 @@ export async function setStatusColumn(trackId: number, columnId: number): Promis
   });
 }
 
-// Sets (or, for blank/null, clears) the column's default value; it applies to applications created afterwards, never to existing rows
-// (FR-2.1). One mechanism for every column type, the Status column included. Validated by parseCell for the column's type; a
-// single_select default must be one of that column's own options. Stored via encodeDefault.
+// Sets (or, for blank/null, clears) the column's default value; it applies to applications created afterwards, never to
+// existing rows (FR-2.1). One mechanism for every column type, the Status column included. Validated by parseCell for
+// the column's type; a single_select default must be one of that column's own options. Stored via encodeDefault.
 export async function setColumnDefault(columnId: number, raw: unknown): Promise<ColumnResult> {
   const userId = getUserId();
   return getDb().transaction((tx) => {

@@ -11,8 +11,9 @@ import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
-// Task 12.3: AT-1 and AT-2 as the SRS words them, on the real seeded Job track, through the same calls the track page and the add form make.
-// (The pieces are also tested one by one in create-defaults, board and columns-action; these two encode the whole sentence.)
+// AT-1 and AT-2 as the spec words them, on the real seeded Job track, through the same calls the track page and the add
+// form make. (The pieces are also tested one by one in create-defaults, board and columns-action; these two encode the
+// whole sentence.)
 let trackId: number;
 
 beforeEach(async () => {
@@ -25,7 +26,8 @@ afterEach(dropTestDb);
 describe("AT-1: add an application with only a title", () => {
   it("saves, and appears in the table rows and on the board", async () => {
     const cols = await listColumns(trackId);
-    const r = await createApplication("Only a title", trackId, buildCreateValues(cols, {})); // what the form sends with nothing else typed
+    // what the form sends with nothing else typed
+    const r = await createApplication("Only a title", trackId, buildCreateValues(cols, {}));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
 

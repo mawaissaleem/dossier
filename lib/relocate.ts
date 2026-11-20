@@ -1,4 +1,4 @@
-// Pure rules for relocating the files root (8.10, FR-13.1, NFR-6). No DB, no file system: the callers pass real paths in.
+// Pure rules for relocating the files root (FR-13.1, NFR-6). No DB, no file system: the callers pass real paths in.
 import { isInside } from "./files/root";
 
 export type LiveFile = { id: number; relativePath: string; sha256: string; sizeBytes: number };
@@ -15,7 +15,8 @@ export function targetRefusal(current: string, target: string, backup: string | 
 
 export const sumBytes = (rows: { sizeBytes: number }[]) => rows.reduce((s, r) => s + r.sizeBytes, 0);
 
-// Same rows (id, path, hash, size), whatever the order: the set the user confirmed or that was copied is still the live set.
+// Same rows (id, path, hash, size), whatever the order: the set the user confirmed or that was copied is still the live
+// set.
 export function sameFiles(a: LiveFile[], b: LiveFile[]): boolean {
   if (a.length !== b.length) return false;
   const key = (f: LiveFile) => `${f.id}\0${f.relativePath}\0${f.sha256}\0${f.sizeBytes}`;

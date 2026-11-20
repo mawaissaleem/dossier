@@ -2,9 +2,11 @@ import Link from "next/link";
 import { splitValue } from "@/lib/dashboard";
 import { cn } from "@/lib/utils";
 
-// One stat tile of the dashboard's top row (DESIGN.md "Dashboard"): a muted label, a big value (`text-4xl`, its unit muted and smaller: "3" + " days", "1" + " of 4") and one muted hint line, the whole tile one link.
-// The link's name is its text ("Overdue 2 PhD · X, 2 days late"). `lead` is an optional figure beside the label and value (the week's ring, which carries its own label).
-// `alert` = the destructive token on the border and the value (Overdue, when there is any). The hint keeps 3 lines and then clamps, with its full text in `title`.
+// One stat tile of the dashboard's top row: a muted label, a big value (`text-4xl`, its unit muted and smaller: "3" + "
+// days", "1" + " of 4") and one muted hint line, the whole tile one link. The link's name is its text ("Overdue 2 PhD ·
+// X, 2 days late"). `lead` is an optional figure beside the label and value (the week's ring, which carries its own
+// label). `alert` = the destructive token on the border and the value (Overdue, when there is any). The hint keeps 3
+// lines and then clamps, with its full text in `title`.
 export function StatTile({
   href,
   label,

@@ -8,9 +8,10 @@ import { getUserId } from "./user";
 
 export type ExportRow = { id: number; title: string; archived: boolean; values: Record<number, CellScalar | null> };
 
-// Everything the CSV export needs for one track of the current user: every column (hidden too, display order) and every application,
-// archived included, newest first (the table's default order). Null if the track is missing or not the user's.
-// Separate from listApplicationRows, which skips archived applications on purpose (the table), so its callers stay unchanged.
+// Everything the CSV export needs for one track of the current user: every column (hidden too, display order) and every
+// application, archived included, newest first (the table's default order). Null if the track is missing or not the
+// user's. Separate from listApplicationRows, which skips archived applications on purpose (the table), so its callers
+// stay unchanged.
 export async function getTrackExport(
   trackId: number,
 ): Promise<{ trackName: string; columns: ColumnItem[]; rows: ExportRow[] } | null> {

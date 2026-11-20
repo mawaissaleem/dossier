@@ -62,7 +62,8 @@ describe("createTrackFromTemplate", () => {
   it("npm run db:seed makes the same tracks as adding the templates", async () => {
     runSeed();
     expect(JSON.parse(JSON.stringify(trackSnapshot()))).toEqual(seeded);
-    expect((await listTracks()).map((t) => t.color)).toEqual([PALETTE[0], PALETTE[1]]); // what the dialog would pick for the first two
+    // what the dialog would pick for the first two
+    expect((await listTracks()).map((t) => t.color)).toEqual([PALETTE[0], PALETTE[1]]);
   });
 
   it("Blank has one Status column with five options, and the default settings", async () => {
@@ -184,7 +185,8 @@ describe("deleting a track", () => {
   });
   afterEach(() => rmSync(base, { recursive: true, force: true }));
 
-  // One application with a value, a note, a submission listing a stored file, plus a second file and an archived application; files really exist on disk.
+  // One application with a value, a note, a submission listing a stored file, plus a second file and an archived
+  // application; files really exist on disk.
   async function fill(trackId: number, tag: string) {
     const r = await createApplication({ title: `Acme ${tag}`, trackId, values: [] });
     if (!r.ok) throw new Error(r.error);

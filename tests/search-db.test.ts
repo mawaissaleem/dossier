@@ -58,7 +58,8 @@ describe("searchApplications", () => {
       matched: { kind: "cell", column: "Lab", snippet: "Northvale robotics lab" },
     });
     expect((await searchApplications("careers.acme"))[0].matched).toMatchObject({ column: "Site" });
-    expect(Object.keys(hits[0]).sort()).toEqual(["archived", "id", "matched", "title", "track"]); // no internal tier leaks
+    // no internal tier leaks
+    expect(Object.keys(hits[0]).sort()).toEqual(["archived", "id", "matched", "title", "track"]);
   });
 
   it("ignores number cells, and a deleted column's values", async () => {
@@ -144,8 +145,10 @@ describe("searchApplications", () => {
     cell(viaCell, city, "Zürich");
     app("Zürich Labs");
     const hits = await searchApplications("zurich");
-    expect(hits.map((h) => h.title)).toEqual(["Zürich Labs", "Other", "Zed"]); // title, cell, note; Zed once despite two notes
-    expect(hits[2].matched).toEqual({ kind: "note", column: null, snippet: "Zürich again, newer note" }); // equal match: newest note
+    // title, cell, note; Zed once despite two notes
+    expect(hits.map((h) => h.title)).toEqual(["Zürich Labs", "Other", "Zed"]);
+    // equal match: newest note
+    expect(hits[2].matched).toEqual({ kind: "note", column: null, snippet: "Zürich again, newer note" });
     expect(await titles("relocation")).toEqual(["Zed"]);
     expect(await titles("zed relocation")).toEqual(["Zed"]); // split across title and note
     expect(await titles("relocation paris")).toEqual([]);
@@ -204,7 +207,8 @@ describe("searchApplications", () => {
     const started = performance.now();
     const hits = await searchApplications("zurich company 1999");
     const ms = performance.now() - started;
-    expect(hits.map((h) => h.title)).toEqual(["Company 1999", "Company 1998"]); // the title hit, then the app whose city cell says 1999
+    // the title hit, then the app whose city cell says 1999
+    expect(hits.map((h) => h.title)).toEqual(["Company 1999", "Company 1998"]);
     expect(prepare).toHaveBeenCalledTimes(3);
     expect(ms).toBeLessThan(500); // about 20 ms on the dev machine; NFR-1 allows 500
   });

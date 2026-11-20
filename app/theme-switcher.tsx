@@ -13,7 +13,8 @@ import { cn } from "@/lib/utils";
 import { DEFAULT_THEME, THEMES, type Theme, THEME_LABELS, THEME_STORAGE_KEY, parseTheme } from "@/lib/theme";
 import { RAIL_ITEM, RailLabel, RailTip } from "./rail";
 
-// The <html data-theme> attribute is the source of truth (set before paint by THEME_INIT_SCRIPT), so several switchers stay in sync.
+// The <html data-theme> attribute is the source of truth (set before paint by THEME_INIT_SCRIPT), so several switchers
+// stay in sync.
 const subscribe = (cb: () => void) => {
   const o = new MutationObserver(cb);
   o.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -33,7 +34,8 @@ function useTheme() {
     () => parseTheme(document.documentElement.dataset.theme),
     () => DEFAULT_THEME,
   );
-  // React's dev-mode remount can clear attributes set by the inline script; re-apply the stored choice (no-op in production).
+  // React's dev-mode remount can clear attributes set by the inline script; re-apply the stored choice (no-op in
+  // production).
   useLayoutEffect(() => {
     document.documentElement.setAttribute("data-theme", readStored());
   }, []);
@@ -49,7 +51,8 @@ function useTheme() {
   return [theme, set] as const;
 }
 
-// A small preview of one theme: data-theme on the element makes it resolve that theme's tokens (every token is a scoped custom property), so no colour is written here.
+// A small preview of one theme: data-theme on the element makes it resolve that theme's tokens (every token is a scoped
+// custom property), so no colour is written here.
 const ThemeDot = ({ theme }: { theme: Theme }) => (
   <span
     data-theme={theme}
@@ -60,7 +63,8 @@ const ThemeDot = ({ theme }: { theme: Theme }) => (
   </span>
 );
 
-// The Settings picker: native radios in one group (one tab stop, arrow keys move and select), each a card that previews the theme (canvas, a card strip, the accent gradient).
+// The Settings picker: native radios in one group (one tab stop, arrow keys move and select), each a card that previews
+// the theme (canvas, a card strip, the accent gradient).
 export function ThemeSwitcher({ className }: { className?: string }) {
   const name = useId();
   const [theme, setTheme] = useTheme();
@@ -95,7 +99,8 @@ export function ThemeSwitcher({ className }: { className?: string }) {
   );
 }
 
-// The sidebar's theme item: an icon (and, expanded, the word Theme) that opens a menu of the themes, each with a swatch (the current one checked).
+// The sidebar's theme item: an icon (and, expanded, the word Theme) that opens a menu of the themes, each with a swatch
+// (the current one checked).
 export function ThemeMenu({ className }: { className?: string }) {
   const [theme, setTheme] = useTheme();
   return (

@@ -17,7 +17,8 @@ import { SearchHeaderButton } from "./search-trigger";
 import { AllTracksTile, TrackCard } from "./track-card";
 import { WinsCard } from "./wins-card";
 
-// One sentence about today from numbers the cards show anyway (React `cache` in lib/db/planner.ts makes the second read free). Nothing before the first track exists.
+// One sentence about today from numbers the cards show anyway (React `cache` in lib/db/planner.ts makes the second read
+// free). Nothing before the first track exists.
 async function Summary() {
   await connection();
   const today = localToday();
@@ -30,14 +31,18 @@ async function Summary() {
   return summaryLine(today, { overdue: overdue.length, nextDays: upcoming[0]?.days ?? null, count, capacity });
 }
 
-// Column spans that keep the last row of the track row full: the cards and the All tracks tile are three per row at xl (12 columns, so 4, 6 or 12 wide) and two per row from sm to xl.
+// Column spans that keep the last row of the track row full: the cards and the All tracks tile are three per row at xl
+// (12 columns, so 4, 6 or 12 wide) and two per row from sm to xl.
 const XL_SPAN: Record<number, string> = { 1: "xl:col-span-12", 2: "xl:col-span-6", 3: "xl:col-span-4" };
 const SM_SPAN: Record<number, string> = { 1: "sm:max-xl:col-span-2", 2: "sm:max-xl:col-span-1" };
 const spans = (i: number, n: number) => `${XL_SPAN[itemsInRow(i, n, 3)]} ${SM_SPAN[itemsInRow(i, n, 2)]}`;
 
-// The bento (DESIGN.md "Dashboard"): one 12-column grid at xl, two columns from sm, one on a phone. Reading order = tab order = DOM order: the four tiles (Overdue, Next deadline, This week, Wins), the plan,
-// the rail (Overdue list when any, Follow-ups, Recent wins), then one card per track and the All tracks tile (context, not a to-do). The plan (8 columns) and the rail (4) are one row at xl; the rail's cards
-// share its height and the plan stretches to it, so there is no empty cell whatever the rail holds. Below xl the plan and the rail take the full width (the rail two-up from md, an odd last card full row).
+// The bento: one 12-column grid at xl, two columns from sm, one on a phone. Reading order = tab order = DOM order: the
+// four tiles (Overdue, Next deadline, This week, Wins), the plan, the rail (Overdue list when any, Follow-ups, Recent
+// wins), then one card per track and the All tracks tile (context, not a to-do). The plan (8 columns) and the rail (4)
+// are one row at xl; the rail's cards share its height and the plan stretches to it, so there is no empty cell whatever
+// the rail holds. Below xl the plan and the rail take the full width (the rail two-up from md, an odd last card full
+// row).
 async function Cards() {
   await connection();
   const today = localToday();

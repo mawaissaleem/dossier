@@ -13,7 +13,8 @@ import {
 import { lockedBy, MOVING_MESSAGE, tryLock } from "@/lib/files/lock";
 import type { Counts } from "@/lib/restore";
 
-// Validate (the same checks as the backup itself), then save; nothing is saved on error. Runs on any POST, so it takes unknown.
+// Validate (the same checks as the backup itself), then save; nothing is saved on error. Runs on any POST, so it takes
+// unknown.
 export async function saveBackupDestination(
   input: unknown,
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
@@ -41,7 +42,8 @@ export async function saveReminderDays(
   }
 }
 
-// One backup, restore or files-root change at a time (a double click, a second tab): the shared lock in lib/files/lock.ts.
+// One backup, restore or files-root change at a time (a double click, a second tab): the shared lock in
+// lib/files/lock.ts.
 
 // "Back up now" (FR-12.1): backs up to the saved destination. refresh() re-renders the "Last backup" line.
 export async function backUpNow(): Promise<BackupResult> {
@@ -60,8 +62,8 @@ export async function backUpNow(): Promise<BackupResult> {
   }
 }
 
-// FR-12.3, step 1: read and validate a backup zip and say what it holds. Changes nothing. Refused while a backup or restore runs (a restore
-// closes the database mid-way).
+// FR-12.3, step 1: read and validate a backup zip and say what it holds. Changes nothing. Refused while a backup or
+// restore runs (a restore closes the database mid-way).
 export async function checkBackup(input: unknown): Promise<CheckResult> {
   const busy = lockedBy();
   if (busy)
@@ -76,7 +78,8 @@ export async function checkBackup(input: unknown): Promise<CheckResult> {
   }
 }
 
-// The confirm dialog's impact: what is in Dossier now (counted fresh on every open, DESIGN.md) and where the safety backup will go.
+// The confirm dialog's impact: what is in Dossier now (counted fresh on every open) and where the safety backup will
+// go.
 export async function fetchRestoreImpact(): Promise<
   { ok: true; counts: Counts; destination: string | null } | { ok: false; error: string }
 > {
@@ -87,8 +90,8 @@ export async function fetchRestoreImpact(): Promise<
   }
 }
 
-// FR-12.3, step 2, after the confirmation. `expected` = the backup's date and the current counts the dialog showed; the restore refuses
-// if either changed. Every page is revalidated (the whole database changed), and the banner with it.
+// FR-12.3, step 2, after the confirmation. `expected` = the backup's date and the current counts the dialog showed; the
+// restore refuses if either changed. Every page is revalidated (the whole database changed), and the banner with it.
 export async function restoreBackup(input: unknown, expected: unknown): Promise<RestoreResult> {
   const lock = tryLock("restore");
   if (!lock.ok) return lock;

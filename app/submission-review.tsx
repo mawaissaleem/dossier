@@ -20,8 +20,9 @@ import { useReturnFocus } from "@/components/use-return-focus";
 import { submissionWarnings } from "@/lib/expected-labels";
 import { todayLocal } from "@/lib/filename";
 
-// What a status change hands to the review (FR-7.2). Every place that changes a status (table select, detail form, later the board in
-// phase 9) opens it through useSubmissionReview when the server answers `needsReview`; nothing is saved until the user confirms.
+// What a status change hands to the review (FR-7.2). Every place that changes a status (table select, detail form, and
+// the board) opens it through useSubmissionReview when the server answers `needsReview`; nothing is saved until the
+// user confirms.
 export type ReviewRequest = {
   applicationId: number;
   columnId: number; // the status column
@@ -31,10 +32,12 @@ export type ReviewRequest = {
   onCancel?: () => void; // closed without saving: put the control back to the old value
 };
 
-// One hook for every status-change surface. Render `dialog` once next to the control (outside any <form>: React events bubble through portals).
-// `fallback` gets focus on close when nothing usable had it (the detail form's Save button is disabled while it checks with the server).
+// One hook for every status-change surface. Render `dialog` once next to the control (outside any <form>: React events
+// bubble through portals). `fallback` gets focus on close when nothing usable had it (the detail form's Save button is
+// disabled while it checks with the server).
 export function useSubmissionReview(fallback?: RefObject<HTMLElement | null>) {
-  const [request, setRequest] = useState<ReviewRequest | null>(null); // kept after close, so the exit animation still has its text
+  // kept after close, so the exit animation still has its text
+  const [request, setRequest] = useState<ReviewRequest | null>(null);
   const [open, setOpen] = useState(false);
   const focus = useReturnFocus(fallback);
   return {
@@ -66,7 +69,8 @@ function SubmissionReviewDialog({
   onCloseAutoFocus: (e: Event) => void;
 }) {
   const [busy, setBusy] = useState(false);
-  // Escape and Cancel are ignored while saving, so a late result never lands on a closed dialog. Closing without saving = cancel.
+  // Escape and Cancel are ignored while saving, so a late result never lands on a closed dialog. Closing without saving
+  // = cancel.
   function close(saved: boolean) {
     if (busy) return;
     if (!saved) request.onCancel?.();
@@ -101,9 +105,11 @@ function ReviewForm({
   const uid = useId();
   const [files, setFiles] = useState<ReviewFile[] | null>(null); // null = loading
   const [expected, setExpected] = useState<string[]>([]); // the track's expected labels (FR-7.3)
-  const [ackedFor, setAckedFor] = useState<string | null>(null); // the warnings the user agreed to; any change in them asks again
+  // the warnings the user agreed to; any change in them asks again
+  const [ackedFor, setAckedFor] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<number>>(new Set());
-  const [date, setDate] = useState(() => todayLocal()); // this component mounts only after a click, so the browser's local date is safe here
+  // this component mounts only after a click, so the browser's local date is safe here
+  const [date, setDate] = useState(() => todayLocal());
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -125,7 +131,8 @@ function ReviewForm({
     };
   }, [request.applicationId]);
 
-  // Warnings follow the ticked files, so unticking the CV warns at once. With warnings, Confirm needs the "Submit anyway" tick.
+  // Warnings follow the ticked files, so unticking the CV warns at once. With warnings, Confirm needs the "Submit
+  // anyway" tick.
   const warnings =
     files === null
       ? []
@@ -195,7 +202,8 @@ function ReviewForm({
         <Label htmlFor={`${uid}-note`}>Note (optional)</Label>
         <Textarea id={`${uid}-note`} value={note} onChange={(e) => setNote(e.target.value)} disabled={busy} rows={2} />
       </div>
-      {/* Files come after Date and Note so Tab runs date, note, files, Confirm (the date takes the initial focus before the files load). */}
+      {/* Files come after Date and Note so Tab runs date, note, files, Confirm (the date takes the initial focus
+          before the files load). */}
       <fieldset className="flex min-w-0 flex-col gap-1.5">
         <legend className="mb-1.5 text-sm font-medium">Files</legend>
         {files === null && !error && (

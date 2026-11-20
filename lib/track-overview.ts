@@ -1,4 +1,5 @@
-// Pure: everything a track card (dashboard) and a track tile (/tracks) show, shaped from rows the loader (lib/db/track-overview.ts) already read. No DB or UI imports.
+// Pure: everything a track card (dashboard) and a track tile (/tracks) show, shaped from rows the loader
+// (lib/db/track-overview.ts) already read. No DB or UI imports.
 import { dayNumber } from "./deadline";
 import type { TrackPipeline } from "./pipeline";
 
@@ -8,7 +9,8 @@ export const ACTIVE_DAYS = 30; // "Most active" counts the applications touched 
 
 const DAY = 86_400_000;
 
-// `touchedMs` = last touched (the planner's meaning: the application's own update or its newest note or event). `deadline` only matters for still-to-do applications.
+// `touchedMs` = last touched (the planner's meaning: the application's own update or its newest note or event).
+// `deadline` only matters for still-to-do applications.
 export type OverviewApp = {
   id: number;
   title: string;
@@ -24,7 +26,8 @@ export type OverviewInput = {
   apps: OverviewApp[];
 };
 
-// tone: "overdue" = destructive, "warning" = due today or tomorrow, "muted" = the rest. `kind` + `when` always say it in words ("Deadline · 2 days late").
+// tone: "overdue" = destructive, "warning" = due today or tomorrow, "muted" = the rest. `kind` + `when` always say it
+// in words ("Deadline · 2 days late").
 export type AttentionItem = {
   id: number;
   title: string;
@@ -46,13 +49,15 @@ export type TrackOverview = {
   updated: string | null;
   attention: AttentionItem[];
   overdue: number; // still-to-do applications whose deadline has passed (the destructive part of the attention line)
-  nextDeadlineDays: number | null; // days to the nearest deadline of a still-to-do application that is not past (0 = today); null when there is none
+  // days to the nearest deadline of a still-to-do application that is not past (0 = today); null when there is none
+  nextDeadlineDays: number | null;
   activeCount: number; // applications touched in the last ACTIVE_DAYS days (the "Most active" sort)
 };
 
 export const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
 
-// "just now", "5 minutes ago", "3 hours ago", "yesterday", "4 days ago", "2 weeks ago", "3 months ago". A time in the future (clock change) reads "just now".
+// "just now", "5 minutes ago", "3 hours ago", "yesterday", "4 days ago", "2 weeks ago", "3 months ago". A time in the
+// future (clock change) reads "just now".
 export function relativeTime(thenMs: number, nowMs: number): string {
   const s = Math.max(0, nowMs - thenMs) / 1000;
   if (s < 60) return "just now";
@@ -124,8 +129,10 @@ export function trackOverview(input: OverviewInput, today: string, nowMs: number
   };
 }
 
-// The attention line of a track tile and the sentence under it. `alert` = the destructive part ("1 overdue"), `text` the muted rest; always words, colour only adds to it.
-// "1 overdue · 2 more need attention" / "1 overdue · next deadline in 11 days" / "Next deadline in 6 days" / "Nothing needs attention" / "Add the first application to start this track".
+// The attention line of a track tile and the sentence under it. `alert` = the destructive part ("1 overdue"), `text`
+// the muted rest; always words, colour only adds to it. "1 overdue · 2 more need attention" / "1 overdue · next
+// deadline in 11 days" / "Next deadline in 6 days" / "Nothing needs attention" / "Add the first application to start
+// this track".
 export function attentionLine(o: Pick<TrackOverview, "total" | "attention" | "overdue" | "nextDeadlineDays">): {
   alert: string | null;
   text: string;
@@ -149,8 +156,9 @@ export const TRACK_SORT_LABELS: Record<TrackSort, string> = { recent: "Recent", 
 export const parseTrackSort = (v: unknown): TrackSort =>
   (TRACK_SORTS as readonly unknown[]).includes(v) ? (v as TrackSort) : "recent";
 
-// A new array. recent = last updated first, tracks with no applications last; name = A to Z ignoring case; active = most applications touched in the last 30 days first, then recent.
-// Ties keep the incoming (position) order, so the result never jumps around.
+// A new array. recent = last updated first, tracks with no applications last; name = A to Z ignoring case; active =
+// most applications touched in the last 30 days first, then recent. Ties keep the incoming (position) order, so the
+// result never jumps around.
 export function sortTracks<T extends Pick<TrackOverview, "name" | "updatedMs" | "activeCount">>(
   os: readonly T[],
   sort: TrackSort,

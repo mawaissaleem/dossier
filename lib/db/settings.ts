@@ -45,7 +45,8 @@ export async function getFilesRoot(): Promise<string | null> {
 
 export const setFilesRoot = (path: string) => setSetting(FILES_ROOT_KEY, path);
 
-// The label choices (FR-5.3): the `file_labels` setting, or the default list when it is unset or not a list of short strings.
+// The label choices (FR-5.3): the `file_labels` setting, or the default list when it is unset or not a list of short
+// strings.
 export async function getFileLabels(): Promise<string[]> {
   const v = await getSetting("file_labels");
   const list = Array.isArray(v)

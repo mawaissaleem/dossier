@@ -14,15 +14,17 @@ export type CreateApplicationResult = { ok: true; id: number } | { ok: false; er
 
 const MAX_TITLE = 300;
 
-// Payload shape bounds, never tighter than what the form can hold: one entry per column (addColumn caps the count), and strings well
-// above parseCell's MAX_TEXT so an over-long field gets parseCell's error naming the column, not "Invalid form data.".
+// Payload shape bounds, never tighter than what the form can hold: one entry per column (addColumn caps the count), and
+// strings well above parseCell's MAX_TEXT so an over-long field gets parseCell's error naming the column, not "Invalid
+// form data.".
 const MAX_VALUES = MAX_COLUMNS;
 const MAX_VALUE_TEXT = 10 * MAX_TEXT;
 
-// `values` is the form's payload: [{ columnId, value }], value a string, number, boolean or null (blank). A column listed there is
-// the user's choice, blank included; a column left out gets its default. Omit `values` for a title-only application.
-// Plain args (not FormData): the form calls this from a client handler and shows result.error inline.
-// refresh() (not revalidatePath): the track page reads the DB at request time, nothing is cached, so only the client router's payload is stale.
+// `values` is the form's payload: [{ columnId, value }], value a string, number, boolean or null (blank). A column
+// listed there is the user's choice, blank included; a column left out gets its default. Omit `values` for a title-only
+// application. Plain args (not FormData): the form calls this from a client handler and shows result.error inline.
+// refresh() (not revalidatePath): the track page reads the DB at request time, nothing is cached, so only the client
+// router's payload is stale.
 export async function createApplication(
   title: string,
   trackId: number,
@@ -39,9 +41,10 @@ export async function createApplication(
   return r;
 }
 
-// Edit form save (same limits as create). `values` is required and holds only the fields the user changed, blank (null) included.
-// refresh() only on success: nothing changed otherwise, and the form keeps what was typed.
-// A save that moves an application with no submission to a submitted status returns { needsReview: true } and saves nothing (see UpdateResult).
+// Edit form save (same limits as create). `values` is required and holds only the fields the user changed, blank (null)
+// included. refresh() only on success: nothing changed otherwise, and the form keeps what was typed.
+// A save that moves an application with no submission to a submitted status returns { needsReview: true } and saves
+// nothing (see UpdateResult).
 export async function updateApplication(
   id: number,
   title: string,

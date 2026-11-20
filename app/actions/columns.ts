@@ -87,7 +87,8 @@ export async function setStatusColumn(trackId: number, columnId: number): Promis
   return r;
 }
 
-// value null or "" = no default. Only the shape is checked here; the type rules (parseCell) and ownership are in the data layer.
+// value null or "" = no default. Only the shape is checked here; the type rules (parseCell) and ownership are in the
+// data layer.
 export async function setColumnDefault(
   columnId: number,
   value: string | number | boolean | null,

@@ -1,12 +1,12 @@
-// Pure (no fs, no DB, no UI). The CSV export of a track's table (8.5, FR-12.4).
-// Format: RFC 4180 (fields with a comma, quote, CR or LF are quoted, quotes doubled), CRLF line ends including the last, and a UTF-8 BOM
-// so Excel reads non-ASCII ("Zürich") as UTF-8 instead of the system code page.
-// Formula injection: a spreadsheet runs a text cell that starts with = + - @ tab or CR as a formula. Every STRING cell like that is
-// written with a leading ' (the OWASP rule), so it shows as text. Number cells are written as plain numbers and never prefixed, so -5
-// stays numeric; a text column holding "-5" does get the ' (it is text, we cannot know it is safe). Limit: the ' is visible when the
-// file is read by a program, so a re-import must strip it.
+// Pure (no fs, no DB, no UI). The CSV export of a track's table (FR-12.4).
+// Format: RFC 4180 (fields with a comma, quote, CR or LF are quoted, quotes doubled), CRLF line ends including the
+// last, and a UTF-8 BOM so Excel reads non-ASCII ("Zürich") as UTF-8 instead of the system code page.
 export type CsvCell = string | number | null;
 
+// Formula injection: a spreadsheet runs a text cell that starts with = + - @ tab or CR as a formula. Every STRING cell
+// like that is written with a leading ' (the OWASP rule), so it shows as text. Number cells are written as plain
+// numbers and never prefixed, so -5 stays numeric; a text column holding "-5" does get the ' (it is text, we cannot
+// know it is safe). Limit: the ' is visible when the file is read by a program, so a re-import must strip it.
 const FORMULA_START = /^[=+\-@\t\r]/;
 const NEEDS_QUOTES = /[",\r\n]/;
 
@@ -22,9 +22,10 @@ export const toCsv = (rows: CsvCell[][]): string => "﻿" + rows.map((r) => r.ma
 type Col = { id: number; name: string; type: string; options: { id: number; label: string }[] };
 type Row = { title: string; archived: boolean; values: Record<number, string | number | boolean | null> };
 
-// Header "Title", then every column in the order given (hidden ones too), then "Archived". One line per application in the order
-// given. Values as the table shows them: a select shows its option label (an id with no option is blank), a checkbox Yes/No (blank
-// stays blank), a date its stored YYYY-MM-DD, blank empty. Filters and sort are not applied: the caller passes every row.
+// Header "Title", then every column in the order given (hidden ones too), then "Archived". One line per application in
+// the order given. Values as the table shows them: a select shows its option label (an id with no option is blank), a
+// checkbox Yes/No (blank stays blank), a date its stored YYYY-MM-DD, blank empty. Filters and sort are not applied: the
+// caller passes every row.
 export function trackCsv(cols: Col[], rows: Row[]): string {
   const cell = (c: Col, v: Row["values"][number] | undefined): CsvCell => {
     if (v === null || v === undefined) return null;

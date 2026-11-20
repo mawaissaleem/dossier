@@ -5,17 +5,19 @@ import { databaseUpdateResponse } from "@/lib/db/migrations";
 import { isLocalHost, isSameOrigin } from "@/lib/local-request";
 import { MAX_UPLOAD_BYTES as MAX_BYTES, parseUploadFields } from "@/lib/upload-form";
 
-// POST /api/applications/:id/files  multipart: files (one or more), label, uploadDate (YYYY-MM-DD, default today, server local time).
-// 201 { files: [{ id, storedName, relativePath, sizeBytes, sha256 }], duplicates: [{ originalName, id, storedName }] } when at least one file
-// was stored; 200 with the same body (files: []) when every file was a duplicate (a warning, not an error); 400 { errors } for bad fields; 403 not local or not same-origin;
-// 404 unknown application; 409 files folder unset or unusable (Settings); 413 over the size limit; 500 { error, files, duplicates } if a file
+// POST /api/applications/:id/files multipart: files (one or more), label, uploadDate (YYYY-MM-DD, default today, server
+// local time). 201 { files: [{ id, storedName, relativePath, sizeBytes, sha256 }], duplicates: [{ originalName, id,
+// storedName }] } when at least one file was stored; 200 with the same body (files: []) when every file was a duplicate
+// (a warning, not an error); 400 { errors } for bad fields; 403 not local or not same-origin; 404 unknown application;
+// 409 files folder unset or unusable (Settings); 413 over the size limit; 500 { error, files, duplicates } if a file
 // fails (files stored before it stay stored: each is complete).
-// Duplicates (FR-5.7, AT-7): a file whose SHA-256 matches one already stored for THIS application is not stored; it is listed in `duplicates`
-// with the upload's own name and the existing file's id and stored name. Name and label do not matter. Identical files in one request: the
-// first is stored, the others are duplicates of it. The same bytes in another application are stored normally. There is no override. A Route Handler, not a server action: actions cap the body at 1 MB.
-// Next.js route handlers have no body limit of their own, so the limit is enforced here: the whole request may be at most 50 MB
-// (Content-Length checked first, then the bytes actually received, since the header can be missing or false). formData() holds the
-// request in memory, which is fine at this size for a local single-user app.
+// Duplicates (FR-5.7, AT-7): a file whose SHA-256 matches one already stored for THIS application is not stored; it is
+// listed in `duplicates` with the upload's own name and the existing file's id and stored name. Name and label do not
+// matter. Identical files in one request: the first is stored, the others are duplicates of it. The same bytes in
+// another application are stored normally. There is no override. A Route Handler, not a server action: actions cap the
+// body at 1 MB. Next.js route handlers have no body limit of their own, so the limit is enforced here: the whole
+// request may be at most 50 MB (Content-Length checked first, then the bytes actually received, since the header can be
+// missing or false). formData() holds the request in memory, which is fine at this size for a local single-user app.
 const NO_STORE = { "Cache-Control": "no-store" };
 const json = (body: unknown, status: number) => NextResponse.json(body, { status, headers: NO_STORE });
 

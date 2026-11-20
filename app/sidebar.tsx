@@ -11,10 +11,14 @@ import { NavItems } from "./nav-items";
 import { RailTip } from "./rail";
 import { useIsMac } from "./search-trigger";
 
-// The sidebar's top and its behaviour (DASH.4). The state lives on <html data-sidebar="open"> (set before first paint from the cookie by SIDEBAR_INIT_SCRIPT) and CSS lays everything out from it (`wide:`,
-// globals.css), so the toggle is one attribute and one cookie write; React only mirrors it for aria-expanded. Same source-of-truth idea as the theme (app/theme-switcher.tsx).
-const DESKTOP = "(min-width: 48rem)"; // Tailwind `md`: below it the navigation is a top bar and the logo opens the phone panel instead
-// The layers an open dialog, alert dialog or menu already own the keyboard in (the search palette's chord leaves them alone the same way). `data-state="open"` only: a closing one lingers in the DOM.
+// The sidebar's top and its behaviour. The state lives on <html data-sidebar="open"> (set before first paint from the
+// cookie by SIDEBAR_INIT_SCRIPT) and CSS lays everything out from it (`wide:`, globals.css), so the toggle is one
+// attribute and one cookie write; React only mirrors it for aria-expanded. Same source-of-truth idea as the theme
+// (app/theme-switcher.tsx).
+// Tailwind `md`: below it the navigation is a top bar and the logo opens the phone panel instead
+const DESKTOP = "(min-width: 48rem)";
+// The layers an open dialog, alert dialog or menu already own the keyboard in (the search palette's chord leaves them
+// alone the same way). `data-state="open"` only: a closing one lingers in the DOM.
 const BUSY_LAYER =
   '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], [role="menu"][data-state="open"]';
 
@@ -30,8 +34,9 @@ const subscribeDesktop = (cb: () => void) => {
 };
 const isOpen = () => document.documentElement.dataset.sidebar === "open";
 
-// Expands or collapses, remembers it, and keeps keyboard focus on a visible control: if the change hides the focused nav item (display: none: the toggle itself, or a track link when collapsing),
-// focus goes to the toggle that is now shown instead of falling back to <body>.
+// Expands or collapses, remembers it, and keeps keyboard focus on a visible control: if the change hides the focused
+// nav item (display: none: the toggle itself, or a track link when collapsing), focus goes to the toggle that is now
+// shown instead of falling back to <body>.
 function setSidebar(open: boolean, logo: HTMLElement | null, collapse: HTMLElement | null) {
   const focused =
     document.activeElement instanceof HTMLElement && document.activeElement.closest("#main-nav")
@@ -59,7 +64,8 @@ const Mark = ({ className }: { className?: string }) => (
 const ICON_BUTTON =
   "grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-[18px]";
 
-// `tracks` = the track links (a request-time Suspense hole from the layout), shown in the phone panel as in the expanded sidebar.
+// `tracks` = the track links (a request-time Suspense hole from the layout), shown in the phone panel as in the
+// expanded sidebar.
 export function SidebarHeader({ tracks }: { tracks: React.ReactNode }) {
   const mac = useIsMac();
   const desktop = useSyncExternalStore(
@@ -113,7 +119,8 @@ export function SidebarHeader({ tracks }: { tracks: React.ReactNode }) {
     };
   }, []);
 
-  // Browser back/forward (the phone's back gesture) navigates behind the open panel without a click inside it: close it then too (focus goes back to the logo via onCloseAutoFocus).
+  // Browser back/forward (the phone's back gesture) navigates behind the open panel without a click inside it: close it
+  // then too (focus goes back to the logo via onCloseAutoFocus).
   useEffect(() => {
     if (!sheet) return;
     const close = () => setSheet(false);
@@ -131,7 +138,8 @@ export function SidebarHeader({ tracks }: { tracks: React.ReactNode }) {
 
   return (
     <div className="flex shrink-0 items-center max-md:mr-1 md:mb-2 wide:w-full wide:justify-between wide:px-1">
-      {/* The logo mark is the way in: a real button (hidden while the desktop sidebar is expanded, where the collapse button takes over). On hover or focus the logo becomes the sidebar icon. */}
+      {/* The logo mark is the way in: a real button (hidden while the desktop sidebar is expanded, where the
+          collapse button takes over). On hover or focus the logo becomes the sidebar icon. */}
       <button
         ref={logo}
         type="button"
@@ -166,7 +174,8 @@ export function SidebarHeader({ tracks }: { tracks: React.ReactNode }) {
         <PanelLeftCloseIcon aria-hidden />
       </button>
 
-      {/* Phone: the same navigation as a panel from the left. Backdrop, Escape and any link inside close it; focus is trapped while it is open and goes back to the logo. */}
+      {/* Phone: the same navigation as a panel from the left. Backdrop, Escape and any link inside close it; focus
+          is trapped while it is open and goes back to the logo. */}
       <Sheet open={sheet && !desktop} onOpenChange={setSheet}>
         <SheetContent
           data-wide

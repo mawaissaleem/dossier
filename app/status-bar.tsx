@@ -4,10 +4,13 @@ import { cn } from "@/lib/utils";
 
 const swatch = (color: string | null) => (color === null ? "bg-muted" : chipClasses(color));
 
-// FR-9.6 (DESIGN.md "Dashboard"): one stacked bar of statuses, each in the option's own chip colour. The bar and the legend swatches carry a `border-input` outline (3:1 on the card in all themes,
-// tests/theme-contrast.test.ts) and the bar's 1px gaps show `bg-input`, so the pale Paper chips and the "No status" segment (`bg-muted`) stay visible and separate from each other and from the card.
-// The bar is one image with the counts as its label (`label`, which lists every count) and is not focusable. `legend` adds a plain "Label N" list under it (not links: on the all-tracks bar a status belongs to several tracks).
-// `thin` = 8px (the /tracks tiles) instead of 12px (the dashboard). An empty pipeline is one muted bar.
+// FR-9.6: one stacked bar of statuses, each in the option's own chip colour. The bar and the legend swatches carry a
+// `border-input` outline (3:1 on the card in all themes, tests/theme-contrast.test.ts) and the bar's 1px gaps show
+// `bg-input`, so the pale Paper chips and the "No status" segment (`bg-muted`) stay visible and separate from each
+// other and from the card. The bar is one image with the counts as its label (`label`, which lists every count) and is
+// not focusable. `legend` adds a plain "Label N" list under it (not links: on the all-tracks bar a status belongs to
+// several tracks). `thin` = 8px (the /tracks tiles) instead of 12px (the dashboard). An empty pipeline is one muted
+// bar.
 export function StatusBar({
   segments,
   label,

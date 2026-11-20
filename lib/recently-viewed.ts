@@ -7,7 +7,8 @@ export const TRACK_VIEW_LABELS: Record<TrackView, string> = { table: "Table", bo
 
 export type ViewedTrack = { trackId: number; view: TrackView; at: number }; // at = ms since epoch
 
-// The stored setting to a clean list: entries of the right shape only, newest first, one per track and view, at most MAX_RECENTLY_VIEWED. Anything else (hand-edited, a newer version) is dropped.
+// The stored setting to a clean list: entries of the right shape only, newest first, one per track and view, at most
+// MAX_RECENTLY_VIEWED. Anything else (hand-edited, a newer version) is dropped.
 export function parseViewed(stored: unknown): ViewedTrack[] {
   if (!Array.isArray(stored)) return [];
   const ok = stored.filter(
@@ -25,7 +26,8 @@ export function parseViewed(stored: unknown): ViewedTrack[] {
 const dedupe = (sorted: ViewedTrack[]) =>
   sorted.filter((e, i) => sorted.findIndex((o) => o.trackId === e.trackId && o.view === e.view) === i);
 
-// Opening a track page: this view of this track goes first (its older entry is replaced), the list stays capped. A new array.
+// Opening a track page: this view of this track goes first (its older entry is replaced), the list stays capped. A new
+// array.
 export function recordViewed(list: readonly ViewedTrack[], entry: ViewedTrack): ViewedTrack[] {
   return [entry, ...list.filter((e) => !(e.trackId === entry.trackId && e.view === entry.view))].slice(
     0,

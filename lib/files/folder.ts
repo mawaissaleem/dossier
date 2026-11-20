@@ -1,8 +1,5 @@
-// Server-only. Creates an application's folder under the files root on its first upload (5.7 calls this; nothing else does).
-// Stable: an application that already has files keeps its folder (read from the stored paths), so renaming the company moves nothing.
-// Otherwise the name comes from the pure rule in lib/folder-name.ts, made unique against other applications' folders (DB) and against
-// whatever already sits in the root (a manually dropped folder, FR-5.11). Limit: only top-level root entries are compared, because
-// our folders are always one segment deep.
+// Server-only. Creates an application's folder under the files root on its first upload (only the upload path calls
+// this).
 import { mkdir, readdir, stat } from "node:fs/promises";
 import { folderBaseName, uniqueFolderName } from "../folder-name";
 import { getFolderNameData, getApplicationFolder, getUsedFolders } from "../db/files";
@@ -13,7 +10,11 @@ export type FolderResult = { ok: true; relativePath: string; absolutePath: strin
 const fail = (error: string): FolderResult => ({ ok: false, error });
 const MAX_TRIES = 1000;
 
-// uploadDate (YYYY-MM-DD) is only used when the application has no folder yet.
+// Stable: an application that already has files keeps its folder (read from the stored paths), so renaming the company
+// moves nothing. Otherwise the name comes from the pure rule in lib/folder-name.ts, made unique against other
+// applications' folders (DB) and against whatever already sits in the root (a manually dropped folder, FR-5.11). Limit:
+// only top-level root entries are compared, because our folders are always one segment deep. uploadDate (YYYY-MM-DD) is
+// only used when the application has no folder yet.
 export async function ensureApplicationFolder(applicationId: number, uploadDate: string): Promise<FolderResult> {
   const root = await getFilesRoot();
   if (!root) return fail("Choose the files folder in Settings before uploading.");

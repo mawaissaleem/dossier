@@ -5,8 +5,9 @@ import type { getFollowUpsDue } from "@/lib/db/planner";
 
 export type FollowUps = Awaited<ReturnType<typeof getFollowUpsDue>>;
 
-// The "Follow-ups due" list (FR-8.10). Plain muted text, never destructive: a follow-up is a reminder, not a deadline. Shared by /planner and the dashboard.
-// `compact` = rows without their own card, divided by hairlines, for use inside a card.
+// The "Follow-ups due" list (FR-8.10). Plain muted text, never destructive: a follow-up is a reminder, not a deadline.
+// Shared by /planner and the dashboard. `compact` = rows without their own card, divided by hairlines, for use inside a
+// card.
 export function FollowUpsList({ items, compact }: { items: FollowUps; compact?: boolean }) {
   if (!items.length) return <p className="text-sm text-muted-foreground">No follow-ups due.</p>;
   return (

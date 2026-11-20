@@ -14,7 +14,8 @@ import { EditableCell } from "./editable-cell";
 import { RowPinContext } from "./row-pins";
 import { SelectCell } from "./select-cell";
 
-// 40px rows (h-10: a 32px control plus 4px padding, so entering edit mode never moves a row). Grid lines are border-b/border-r on each cell (border-separate keeps them on sticky cells).
+// 40px rows (h-10: a 32px control plus 4px padding, so entering edit mode never moves a row). Grid lines are
+// border-b/border-r on each cell (border-separate keeps them on sticky cells).
 const cell = "h-10 border-b border-r border-border px-2 py-1 align-middle";
 const HEAD_H = 36; // h-9 header, sticky above the body
 const ROW_H = 41; // measured: the h-10 cell plus its 1px line
@@ -82,10 +83,11 @@ const Row = memo(function Row({
   );
 });
 
-// The table body (task 4.5): only the rows near the viewport are mounted (TanStack Virtual), padded by empty rows so the scrollbar and the
-// sticky header and Title column behave as with every row. Sorting and filtering still run on all rows (the parent). Rows that hold
-// focus or an open editor stay mounted, keyed by application id, so scrolling never throws away what the user is doing.
-// `box` is the scroll area as state, not a ref object: a child's layout effect runs before its ancestor's ref is attached, so a ref would still be null when the virtualizer first looks for it.
+// The table body: only the rows near the viewport are mounted (TanStack Virtual), padded by empty rows so the scrollbar
+// and the sticky header and Title column behave as with every row. Sorting and filtering still run on all rows (the
+// parent). Rows that hold focus or an open editor stay mounted, keyed by application id, so scrolling never throws away
+// what the user is doing. `box` is the scroll area as state, not a ref object: a child's layout effect runs before its
+// ancestor's ref is attached, so a ref would still be null when the virtualizer first looks for it.
 export function VirtualRows({
   box,
   rows,
@@ -96,8 +98,10 @@ export function VirtualRows({
   columns: ColumnItem[];
 }) {
   const [focusId, setFocusId] = useState<number | null>(null);
-  const [editIds, setEditIds] = useState<number[]>([]); // ids with an open editor (EditableCell registers through RowPinContext)
-  const [want, setWant] = useState<{ index: number; last: boolean } | null>(null); // Tab target outside the window, focused once it mounts
+  // ids with an open editor (EditableCell registers through RowPinContext)
+  const [editIds, setEditIds] = useState<number[]>([]);
+  // Tab target outside the window, focused once it mounts
+  const [want, setWant] = useState<{ index: number; last: boolean } | null>(null);
   const pin = useCallback((id: number) => {
     setEditIds((p) => [...p, id]);
     return () =>
@@ -134,7 +138,8 @@ export function VirtualRows({
     setWant(null);
   }, [want, rows.length, items, box]);
 
-  // Tab past the last control of the last mounted row (or Shift+Tab before the first) would leave the table: go to the neighbouring row instead.
+  // Tab past the last control of the last mounted row (or Shift+Tab before the first) would leave the table: go to the
+  // neighbouring row instead.
   function onKeyDown(e: KeyboardEvent<HTMLTableSectionElement>) {
     if (e.key !== "Tab" || e.altKey || e.ctrlKey || e.metaKey) return;
     const tr = rowOf(e.target);

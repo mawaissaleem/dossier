@@ -1,8 +1,4 @@
-// Server-only. Opens a stored file for reading (5.10) and verifies it (8.6, FR-5.5): the row is looked up by id and user, its relative path
-// goes through resolveInRoot, the file is opened ONCE and read whole into memory, and the SHA-256 is taken of those same bytes. What is
-// checked is exactly what is served (no swap or in-place edit between check and serve). Memory is bounded because uploads are capped at
-// MAX_UPLOAD_BYTES; a file on disk larger than that is a mismatch without being read. This is the one read of stored bytes.
-// verifyStoredFile is also the "verify one file" step for 8.7's on-demand check: it records the result in files.integrity.
+// Server-only. Opens a stored file for reading and verifies it (FR-5.5). This is the one read of stored bytes.
 import { createHash } from "node:crypto";
 import { open } from "node:fs/promises";
 import { getFileForOpen, recordIntegrity } from "../db/files";
@@ -11,7 +7,8 @@ import { MAX_UPLOAD_BYTES } from "../upload-form";
 import { ROOT_MISSING, resolveInRoot } from "./resolve";
 
 type Failure = "not-found" | "deleted" | "setup" | "refused" | "missing" | "error";
-// ok/mismatch: the file exists; bytes are null only when it is too large to read (never for ok). found is null in that case too.
+// ok/mismatch: the file exists; bytes are null only when it is too large to read (never for ok). found is null in that
+// case too.
 export type VerifyResult =
   | {
       ok: true;
@@ -22,11 +19,18 @@ export type VerifyResult =
       found: string | null;
       bytes: Buffer | null;
     }
-  | { ok: false; kind: Failure; error: string; applicationId?: number }; // applicationId: set for "setup", "missing" and "error", so the route's problem page can link back
+  // applicationId: set for "setup", "missing" and "error", so the route's problem page can link back
+  | { ok: false; kind: Failure; error: string; applicationId?: number };
 
 const fail = (kind: Failure, error: string, applicationId?: number) =>
   ({ ok: false, kind, error, applicationId }) as const;
 
+// Opens and verifies one stored file: the row is looked up by id and user, its relative path goes through
+// resolveInRoot, the file is opened ONCE and read whole into memory, and the SHA-256 is taken of those same bytes. What
+// is checked is exactly what is served (no swap or in-place edit between check and serve). Memory is bounded because
+// uploads are capped at MAX_UPLOAD_BYTES; a file on disk larger than that is a mismatch without being read. This is the
+// one read of stored bytes. verifyStoredFile is also the "verify one file" step for the on-demand Check files: it
+// records the result in files.integrity.
 export async function verifyStoredFile(id: number): Promise<VerifyResult> {
   const row = await getFileForOpen(id);
   if (!row) return fail("not-found", "File not found.");
@@ -59,7 +63,8 @@ export async function verifyStoredFile(id: number): Promise<VerifyResult> {
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code;
     if (code === "ENOENT" || code === "ENOTDIR") {
-      // The answer is true whether or not it could be recorded (e.g. database locked): never turn it into an unhandled 500.
+      // The answer is true whether or not it could be recorded (e.g. database locked): never turn it into an unhandled
+      // 500.
       await recordIntegrity(id, "missing").catch((err) => console.error("Could not record missing state", err));
       return fail(
         "missing",

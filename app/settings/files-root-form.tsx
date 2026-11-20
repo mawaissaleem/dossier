@@ -21,8 +21,9 @@ const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 type Impact = { ok: true; fileCount: number; totalBytes: number; from: string | null } | { ok: false; error: string };
 
-// No stored files yet: one Save, as before. Once files exist, a different folder is either Moved (Dossier moves the files, after a confirm that says
-// how many) or Re-pointed (you already moved the folder yourself; Dossier checks every file is there first). Nothing here saves a path blindly.
+// No stored files yet: one Save, as before. Once files exist, a different folder is either Moved (Dossier moves the
+// files, after a confirm that says how many) or Re-pointed (you already moved the folder yourself; Dossier checks every
+// file is there first). Nothing here saves a path blindly.
 export function FilesRootForm({ current, liveFiles }: { current: string | null; liveFiles: number }) {
   const [value, setValue] = useState(current ?? "");
   const [error, setError] = useState<string | null>(null);

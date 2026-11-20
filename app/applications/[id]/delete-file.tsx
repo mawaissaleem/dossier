@@ -13,8 +13,8 @@ import { formatBytes } from "@/lib/upload-client";
 
 type Impact = Awaited<ReturnType<typeof fetchFileDeleteImpact>>;
 
-// "Delete…" on a file row (FR-5.8): confirm, then (only when a submission lists the file) a second deliberate step, the "I understand" tick,
-// then remove. The impact is fetched each time the dialog opens (DESIGN.md "One rule for every destructive confirm").
+// "Delete…" on a file row (FR-5.8): confirm, then (only when a submission lists the file) a second deliberate step, the
+// "I understand" tick, then remove. The impact is fetched each time the dialog opens.
 export function DeleteFile({ id, name }: { id: number; name: string }) {
   const uid = useId();
   const [open, setOpen] = useState(false);
@@ -22,7 +22,8 @@ export function DeleteFile({ id, name }: { id: number; name: string }) {
   const [understood, setUnderstood] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [latest] = useState(createLatest);
-  const gone = useRef(false); // deleted: Cancel and Escape still return focus to the Delete button, a finished delete must not
+  // deleted: Cancel and Escape still return focus to the Delete button, a finished delete must not
+  const gone = useRef(false);
   const [pending, startTransition] = useTransition();
 
   function load() {

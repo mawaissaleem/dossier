@@ -1,11 +1,13 @@
-// Schema for tracks, columns, column_options, applications, cell_values, files, submissions, submission_files, notes, activity_events and settings. Stay on plain columns/FKs/indexes so v2 can move to Postgres (NFR-6).
+// Schema for tracks, columns, column_options, applications, cell_values, files, submissions, submission_files, notes,
+// activity_events and settings. Stay on plain columns/FKs/indexes so v2 can move to Postgres (NFR-6).
 import { sql } from "drizzle-orm";
 import { check, index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const COLUMN_TYPES = ["text", "number", "date", "link", "checkbox", "single_select"] as const;
 export type ColumnType = (typeof COLUMN_TYPES)[number];
 
-// Add a kind here and run db:generate: SQLite rebuilds the table to widen the CHECK, existing rows are copied unchanged.
+// Add a kind here and run db:generate: SQLite rebuilds the table to widen the CHECK, existing rows are copied
+// unchanged.
 export const ACTIVITY_KINDS = ["status_changed", "file_uploaded", "submission_created", "file_deleted"] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
@@ -31,7 +33,8 @@ export const tracks = sqliteTable(
     ...base,
     name: text("name").notNull(),
     position: integer("position").notNull(),
-    // A palette token (lib/colors.ts); null for tracks made before colours existed, which resolve to one from their id (colorOrFallback).
+    // A palette token (lib/colors.ts); null for tracks made before colours existed, which resolve to one from their id
+    // (colorOrFallback).
     color: text("color"),
   },
   (t) => [index("tracks_user_id_position_idx").on(t.userId, t.position)],
@@ -127,9 +130,10 @@ export const cellValues = sqliteTable(
   ],
 );
 
-// One row per stored file. relative_path is relative to the files root, forward slashes (FR-5.6); the file bytes are on disk.
-// Deleting the application removes its rows (the bytes are removed by later phase 5 code, not by the database).
-// base_name + extension + seq make the FR-6.2 counter: the next seq for (application, date, base name, extension) is one indexed query.
+// One row per stored file. relative_path is relative to the files root, forward slashes (FR-5.6); the file bytes are on
+// disk. Deleting the application removes its rows (the bytes on disk are removed by lib/files, not by the database).
+// base_name + extension + seq make the FR-6.2 counter: the next seq for (application, date, base name, extension) is
+// one indexed query.
 export const files = sqliteTable(
   "files",
   {
@@ -147,11 +151,13 @@ export const files = sqliteTable(
     baseName: text("base_name").notNull(),
     extension: text("extension").notNull(),
     seq: integer("seq").notNull(),
-    // Result of the last hash check (8.6, FR-5.5); an upload is ok by definition. checked_at is null until a check re-reads the file.
+    // Result of the last hash check (FR-5.5); an upload is ok by definition. checked_at is null until a check re-reads
+    // the file.
     integrity: text("integrity", { enum: INTEGRITY_STATES }).notNull().default("ok"),
     checkedAt: integer("checked_at", { mode: "timestamp_ms" }),
-    // Set when the file was deleted (8.8, FR-5.8). A file that no submission lists loses its row; a submitted one keeps it as a record (name, label,
-    // size, hash) with the bytes gone. Every reader of live files must filter deleted_at IS NULL.
+    // Set when the file was deleted (FR-5.8). A file that no submission lists loses its row; a submitted one keeps it
+    // as a record (name, label, size, hash) with the bytes gone. Every reader of live files must filter deleted_at IS
+    // NULL.
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
   },
   (t) => [
@@ -183,10 +189,10 @@ export const submissions = sqliteTable(
   ],
 );
 
-// Many to many (FR-7.5). Deleting a submission removes its links. file_id is NO ACTION (the default, like cell_values.value_option_id):
-// deleting the row of a file that is still in a submission fails, so deleting such a file (8.8, FR-5.8) only sets files.deleted_at and the
-// submission keeps its record. Deleting the application works because the check runs at end of statement, after the cascades have
-// removed its submissions and links.
+// Many to many (FR-7.5). Deleting a submission removes its links. file_id is NO ACTION (the default, like
+// cell_values.value_option_id): deleting the row of a file that is still in a submission fails, so deleting such a file
+// (FR-5.8) only sets files.deleted_at and the submission keeps its record. Deleting the application works because the
+// check runs at end of statement, after the cascades have removed its submissions and links.
 export const submissionFiles = sqliteTable(
   "submission_files",
   {
@@ -205,7 +211,8 @@ export const submissionFiles = sqliteTable(
   ],
 );
 
-// FR-11.1 free-text notes. The length limit is 7.2's validation; the database only refuses a blank body.
+// FR-11.1 free-text notes. The length limit is checked by the notes validation (lib/notes.ts); the database only
+// refuses a blank body.
 export const notes = sqliteTable(
   "notes",
   {
@@ -222,11 +229,12 @@ export const notes = sqliteTable(
   ],
 );
 
-// FR-11.2 automatic log. History must stay readable after what it mentions changes or is deleted, so `details` holds JSON text
-// snapshots (e.g. status from/to ids and labels, file original/stored name and id, submission id/date/file count); the line is
-// rendered from it alone. file_id/submission_id are optional links (ON DELETE SET NULL): deleting a file or submission never fails
-// because of, and never erases, its event. Deleting the application cascades its events away (they are its history).
-// occurred_at is when the thing happened (a manual submission can be backdated); created_at is when the row was written.
+// FR-11.2 automatic log. History must stay readable after what it mentions changes or is deleted, so `details` holds
+// JSON text snapshots (e.g. status from/to ids and labels, file original/stored name and id, submission id/date/file
+// count); the line is rendered from it alone. file_id/submission_id are optional links (ON DELETE SET NULL): deleting a
+// file or submission never fails because of, and never erases, its event. Deleting the application cascades its events
+// away (they are its history). occurred_at is when the thing happened (a manual submission can be backdated);
+// created_at is when the row was written.
 export const activityEvents = sqliteTable(
   "activity_events",
   {
@@ -238,7 +246,8 @@ export const activityEvents = sqliteTable(
     occurredAt: integer("occurred_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
-    details: text("details").notNull().default("{}"), // JSON; shape per kind is written and validated by 7.3
+    // JSON; shape per kind is written and validated in lib/db/activity.ts
+    details: text("details").notNull().default("{}"),
     fileId: integer("file_id").references(() => files.id, { onDelete: "set null" }),
     submissionId: integer("submission_id").references(() => submissions.id, { onDelete: "set null" }),
   },

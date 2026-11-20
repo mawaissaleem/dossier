@@ -1,7 +1,8 @@
 // Pure: shared option helpers, no DB or UI imports.
 export const MAX_OPTION_LABEL = 100;
 
-// The one id -> option lookup used by the table formatter, the dropdown cell and the detail page, so a rename/recolour shows the same everywhere (FR-3.3).
+// The one id -> option lookup used by the table formatter, the dropdown cell and the detail page, so a rename/recolour
+// shows the same everywhere (FR-3.3).
 export const findOption = <T extends { id: number }>(options: T[], id: unknown): T | undefined =>
   options.find((o) => o.id === id);
 

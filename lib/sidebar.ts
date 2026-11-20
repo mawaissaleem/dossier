@@ -1,4 +1,4 @@
-// Pure: the sidebar's cookie, its pre-paint script and the Ctrl/Cmd+B shortcut rules (DASH.4). No DOM, React or DB imports.
+// Pure: the sidebar's cookie, its pre-paint script and the Ctrl/Cmd+B shortcut rules. No DOM, React or DB imports.
 export const SIDEBAR_COOKIE = "sidebar";
 export type SidebarState = "open" | "closed";
 
@@ -14,11 +14,13 @@ export function readSidebar(cookies: string): SidebarState {
   return "closed";
 }
 
-// The `document.cookie` assignment: the whole site, one year, never sent cross-site. Not HttpOnly on purpose: only the page's own script reads it.
+// The `document.cookie` assignment: the whole site, one year, never sent cross-site. Not HttpOnly on purpose: only the
+// page's own script reads it.
 export const sidebarCookie = (open: boolean) =>
   `${SIDEBAR_COOKIE}=${open ? "open" : "closed"}; Path=/; Max-Age=31536000; SameSite=Lax`;
 
-// Inline script for <head> (like the theme's): copies the cookie to <html data-sidebar="open"> while the HTML is parsed, before first paint, so the layout stays static and the first paint has the right width.
+// Inline script for <head> (like the theme's): copies the cookie to <html data-sidebar="open"> while the HTML is
+// parsed, before first paint, so the layout stays static and the first paint has the right width.
 export const SIDEBAR_INIT_SCRIPT = `(function(){try{if(/(?:^|; )${SIDEBAR_COOKIE}=open(?:;|$)/.test(document.cookie))document.documentElement.setAttribute("data-sidebar","open")}catch(e){}})()`;
 
 // How the shortcut is shown to the user.
@@ -41,7 +43,8 @@ export function isTypingTarget(t: { tagName?: string; type?: string; isContentEd
   return tag === "TEXTAREA" || tag === "SELECT" || (tag === "INPUT" && !NO_TEXT.has((t.type ?? "text").toLowerCase()));
 }
 
-// Whether a keydown toggles the sidebar: the chord, not held down, not mid-composition, not while typing, not while a dialog or menu is open.
+// Whether a keydown toggles the sidebar: the chord, not held down, not mid-composition, not while typing, not while a
+// dialog or menu is open.
 export function toggles(
   e: Keys & { repeat?: boolean; isComposing?: boolean },
   mac: boolean,

@@ -24,7 +24,8 @@ const row = (
   p: ApplicationRow["values"][number],
   s: ApplicationRow["values"][number] = null,
 ): ApplicationRow => ({ id, title: `t${id}`, values: { 1: p, 2: s } });
-const rows = [row(1, 10, 20), row(2, 11, 21), row(3, 12, 20), row(4, null, 21), row(5, 99, 20), row(6, 10, 21)]; // 99 = deleted option
+// 99 = deleted option
+const rows = [row(1, 10, 20), row(2, 11, 21), row(3, 12, 20), row(4, null, 21), row(5, 99, 20), row(6, 10, 21)];
 const ids = (rs: ApplicationRow[]) => rs.map((r) => r.id);
 const f = (id: number, options: number[], blank = false): Filter => ({ id, options, blank });
 

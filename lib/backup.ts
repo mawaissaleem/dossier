@@ -1,12 +1,14 @@
-// Pure rules for the backup zip (no fs, no DB): its file name and its manifest. Task 8.4 (restore) reads the zip with parseManifest.
-//
+// Pure rules for the backup zip (no fs, no DB): its file name and its manifest. Restore reads the zip with
+// parseManifest.
+
 // Zip layout, format version 1:
 //   manifest.json          JSON, see BackupManifest
 //   database/dossier.db    a consistent SQLite copy (online backup), a complete database on its own
-//   files/<relative path>  every regular file under the files root, same relative path (forward slashes) as stored in the database;
-//                          symlinks are not followed and not included; empty folders are omitted; absent when no files root was set
-//                          regular file entries only (restore should still reject any other entry type); entries keep the
-//                          source mode, so stored files arrive as 0444 and restore must set permissions itself
+//   files/<relative path>  every regular file under the files root, same relative path (forward slashes) as stored
+//                          in the database; symlinks are not followed and not included; empty folders are omitted;
+//                          absent when no files root was set. Regular file entries only (restore should still reject
+//                          any other entry type); entries keep the source mode, so stored files arrive as 0444 and
+//                          restore must set permissions itself
 export const BACKUP_FORMAT = "dossier-backup";
 export const BACKUP_FORMAT_VERSION = 1;
 export const MANIFEST_NAME = "manifest.json";
@@ -17,7 +19,8 @@ export type BackupManifest = {
   format: typeof BACKUP_FORMAT;
   formatVersion: number;
   createdAt: string; // ISO 8601, UTC
-  schema: { migrations: number; latest: number | null }; // applied drizzle migrations: how many, and the newest one's timestamp
+  // applied drizzle migrations: how many, and the newest one's timestamp
+  schema: { migrations: number; latest: number | null };
   databaseEntry: string;
   filesRoot: string | null; // the files root path when the backup was made; null = none was configured (database only)
   fileCount: number; // files under files/ in the zip

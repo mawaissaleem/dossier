@@ -11,9 +11,9 @@ import { buildValues, changedState, errorField, initialState, type FormState } f
 import type { CellScalar } from "@/lib/cells";
 import type { ColumnItem } from "@/lib/db/columns";
 
-// View / Edit toggle: `children` is the server-rendered read-only view (clickable links, coloured chips), shown until "Edit".
-// The page header lives here so "Edit" can sit in its actions. The form is the same ApplicationFields as the add form.
-// Archived applications are editable too and stay archived (shown as a muted badge).
+// View / Edit toggle: `children` is the server-rendered read-only view (clickable links, coloured chips), shown until
+// "Edit". The page header lives here so "Edit" can sit in its actions. The form is the same ApplicationFields as the
+// add form. Archived applications are editable too and stay archived (shown as a muted badge).
 export function EditApplication({
   id,
   title,
@@ -32,7 +32,8 @@ export function EditApplication({
   children: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
-  // The Edit button unmounts while editing, so focus would fall to <body>: the form takes it on open, the button gets it back on close.
+  // The Edit button unmounts while editing, so focus would fall to <body>: the form takes it on open, the button gets
+  // it back on close.
   const editButton = useRef<HTMLButtonElement>(null);
   const wasEditing = useRef(false);
   useEffect(() => {
@@ -76,9 +77,10 @@ export function EditApplication({
   );
 }
 
-// Mounted fresh on each "Edit", so it starts from the values the page has now. All columns start filled in from the loaded values
-// (no defaults); only the fields that differ from them are sent (see changedState), so a cell edited in the table in another tab
-// and not touched here is left alone. The title is always sent (required), trimmed on the server.
+// Mounted fresh on each "Edit", so it starts from the values the page has now. All columns start filled in from the
+// loaded values (no defaults); only the fields that differ from them are sent (see changedState), so a cell edited in
+// the table in another tab and not touched here is left alone. The title is always sent (required), trimmed on the
+// server.
 function EditForm({
   id,
   title: loadedTitle,
@@ -121,9 +123,10 @@ function EditForm({
     });
   }
 
-  // The save moved the application to a submitted status that needs the submission review (FR-7.2); the server saved nothing.
-  // Confirm saves status + first submission together, then the other changes (title, cells) in a second save: if that one fails the
-  // status and submission stay saved and the form stays open with the error. Cancel puts the status field back to the loaded value.
+  // The save moved the application to a submitted status that needs the submission review (FR-7.2); the server saved
+  // nothing. Confirm saves status + first submission together, then the other changes (title, cells) in a second save:
+  // if that one fails the status and submission stay saved and the form stays open with the error. Cancel puts the
+  // status field back to the loaded value.
   function openReview(changed: ReturnType<typeof buildValues>) {
     const status = columns.find((c) => c.isStatus);
     const picked = changed.find((v) => v.columnId === status?.id);

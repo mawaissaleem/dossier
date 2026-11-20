@@ -8,7 +8,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // The accent gradient (accent to accent-to); hover flattens it to accent-to. The label is measured on both stops.
+        // The accent gradient (accent to accent-to); hover flattens it to accent-to. The label is measured on both
+        // stops.
         default: "bg-primary bg-linear-to-b from-primary to-primary-to text-primary-foreground hover:from-primary-to",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",

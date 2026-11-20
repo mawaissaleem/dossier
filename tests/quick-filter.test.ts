@@ -60,7 +60,8 @@ describe("optionCounts", () => {
     p: ApplicationRow["values"][number],
     s: ApplicationRow["values"][number],
   ): ApplicationRow => ({ id, title: `t${id}`, values: { 1: p, 2: s } });
-  const rows = [row(1, 10, 20), row(2, 11, 20), row(3, 10, 21), row(4, null, 21), row(5, 99, 20)]; // 99 = deleted option
+  // 99 = deleted option
+  const rows = [row(1, 10, 20), row(2, 11, 20), row(3, 10, 21), row(4, null, 21), row(5, 99, 20)];
   const f = (id: number, options: number[], blank = false): Filter => ({ id, options, blank });
   const obj = (m: Map<number, number>) => Object.fromEntries(m);
 

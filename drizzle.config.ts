@@ -8,7 +8,7 @@ if (!process.env.DATABASE_PATH) {
 
 export default defineConfig({
   dialect: "sqlite",
-  schema: "./lib/db/schema.ts", // created in task 0.3
+  schema: "./lib/db/schema.ts",
   out: "./drizzle",
   dbCredentials: { url: process.env.DATABASE_PATH },
 });

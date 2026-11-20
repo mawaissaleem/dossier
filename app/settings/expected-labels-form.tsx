@@ -34,7 +34,8 @@ export function ExpectedLabelsForm({
 
   function add() {
     if (draft.trim() === "") return;
-    const r = checkExpectedLabels([...labels, draft]); // same rules as the server, so the message appears before a round trip
+    // same rules as the server, so the message appears before a round trip
+    const r = checkExpectedLabels([...labels, draft]);
     if ("error" in r) return setError(r.error);
     change(r.labels);
     setDraft("");

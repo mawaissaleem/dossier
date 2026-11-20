@@ -33,7 +33,8 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-// A copy of ./drizzle holding only the first `keep` migrations (the app as an older version shipped it), optionally plus one that fails.
+// A copy of ./drizzle holding only the first `keep` migrations (the app as an older version shipped it), optionally
+// plus one that fails.
 function folder(keep: number, bad = false) {
   const out = join(dir, `migrations-${keep}${bad ? "-bad" : ""}`);
   mkdirSync(join(out, "meta"), { recursive: true });
@@ -156,7 +157,8 @@ describe("Back up and update", () => {
     expect(r.error).toContain("Your data was not changed");
     expect(r.error).toContain(backup);
     expect(existsSync(backup)).toBe(true);
-    expect(snapshot()).toBe(before); // all-or-nothing: the migrations before the bad one were rolled back too, no half_done table
+    // all-or-nothing: the migrations before the bad one were rolled back too, no half_done table
+    expect(snapshot()).toBe(before);
     expect(getDb().$client.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'half_done'").get()).toEqual({
       n: 0,
     });
@@ -208,7 +210,8 @@ describe("a brand-new database", () => {
     expect(getDb().$client.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get()).toEqual({
       n: MIGRATION_COUNT,
     });
-    expect(getDb().$client.prepare("SELECT count(*) AS n FROM tracks").get()).toEqual({ n: 0 }); // empty install: no tracks, no seed
+    // empty install: no tracks, no seed
+    expect(getDb().$client.prepare("SELECT count(*) AS n FROM tracks").get()).toEqual({ n: 0 });
   });
   it("an empty file (no tables) is migrated too", () => {
     writeFileSync(dbFile(), "");

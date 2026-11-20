@@ -1,4 +1,5 @@
-// Pure: WCAG 2.x contrast ratio of two #rrggbb colours (used by tests/theme-contrast.test.ts and when tuning DESIGN.md numbers).
+// Pure: WCAG 2.x contrast ratio of two #rrggbb colours (used by tests/theme-contrast.test.ts and when tuning theme
+// colours).
 const channel = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
 
 export function luminance(hex: string): number {

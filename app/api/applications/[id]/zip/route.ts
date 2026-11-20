@@ -8,12 +8,13 @@ import { isCrossSiteFetch, isLocalHost } from "@/lib/local-request";
 import { esc, problemPage, setupPage } from "@/lib/problem-page";
 import { applicationZipName } from "@/lib/zip-name";
 
-// GET /api/applications/:id/zip  downloads every live file of the application as one zip (lib/files/zip.ts: flat, stored names, streamed).
-// 200 application/zip attachment <folder>-files-YYYYMMDD.zip (no-store, nosniff, CORP same-origin); 403 not local or Sec-Fetch-Site
-// cross-site/same-site; 404 unknown or another user's application, or no files; 409 files folder unset or gone (an HTML page with a Settings link), or no file could be read (never an
-// empty zip), or (without ?anyway=1) a small HTML page listing the changed, missing, unreadable or too-large files with a "Download anyway"
-// link when at least one file would be included (?anyway=1: changed files are included as they are on disk, the others skipped). Hashes are
-// verified and recorded before anything is sent and again as each file is added (FR-5.5).
+// GET /api/applications/:id/zip downloads every live file of the application as one zip (lib/files/zip.ts: flat, stored
+// names, streamed). 200 application/zip attachment <folder>-files-YYYYMMDD.zip (no-store, nosniff, CORP same-origin);
+// 403 not local or Sec-Fetch-Site cross-site/same-site; 404 unknown or another user's application, or no files; 409
+// files folder unset or gone (an HTML page with a Settings link), or no file could be read (never an empty zip), or
+// (without ?anyway=1) a small HTML page listing the changed, missing, unreadable or too-large files with a "Download
+// anyway" link when at least one file would be included (?anyway=1: changed files are included as they are on disk, the
+// others skipped). Hashes are verified and recorded before anything is sent and again as each file is added (FR-5.5).
 const NO_STORE = { "Cache-Control": "no-store", "Cross-Origin-Resource-Policy": "same-origin" };
 const json = (error: string, status: number) => NextResponse.json({ error }, { status, headers: NO_STORE });
 

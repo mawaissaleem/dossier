@@ -15,9 +15,11 @@ function Figure({ label, value }: { label: string; value: number }) {
   );
 }
 
-// One track on /tracks (DASH.3, DESIGN.md "Tracks page"): a flat `bg-card` tile, the whole tile one link to the track. The name is the link and a stretched `::after` makes the tile its target, with the focus ring
-// drawn on the tile; the star and the options menu sit above it (`z-10`) as separate buttons, so there is no interactive element inside the link. `figures` (Starred) adds To apply / Submitted / Wins.
-// The attention line is always words ("1 overdue · 2 more need attention", "Next deadline in 6 days"); the red and the icon only add to them.
+// One track on /tracks: a flat `bg-card` tile, the whole tile one link to the track. The name is the link and a
+// stretched `::after` makes the tile its target, with the focus ring drawn on the tile; the star and the options menu
+// sit above it (`z-10`) as separate buttons, so there is no interactive element inside the link. `figures` (Starred)
+// adds To apply / Submitted / Wins. The attention line is always words ("1 overdue · 2 more need attention", "Next
+// deadline in 6 days"); the red and the icon only add to them.
 export function TrackTile({
   track: t,
   starred,

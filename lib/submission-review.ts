@@ -1,7 +1,7 @@
 // Pure: does a status change need the submission review first (FR-7.2)? No DB or UI imports.
-// Yes only when the column is the status column, the NEW option counts as submitted (6.1), it differs from the current one, and the
-// application has no submission yet. Anything else saves directly: a further submission is a manual one (6.6), and moving backward
-// never touches submissions (FR-7.8).
+// Yes only when the column is the status column, the NEW option counts as submitted, it differs from the current one,
+// and the application has no submission yet. Anything else saves directly: a further submission is a manual one, and
+// moving backward never touches submissions (FR-7.8).
 export function needsSubmissionReview(o: {
   isStatus: boolean;
   optionId: number | null;

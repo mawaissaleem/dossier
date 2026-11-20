@@ -7,7 +7,8 @@ import { noWinsText, winAge, type Win } from "@/lib/wins";
 import { OptionChip } from "./option-chip";
 import { ACCENT_LINK, DashboardCard, ROW_LINK } from "./dashboard-card";
 
-const SHOWN = 3; // the rail shares the plan's height at xl, so each card shows a few rows and keeps the rest one click away
+// the rail shares the plan's height at xl, so each card shows a few rows and keeps the rest one click away
+const SHOWN = 3;
 
 function Rows({ items, today }: { items: Win[]; today: string }) {
   return (
@@ -41,8 +42,8 @@ function Rows({ items, today }: { items: Win[]; today: string }) {
   );
 }
 
-// FR-9.7: the good news (interviews, offers), the dashboard rail's "Recent wins" (the Wins tile holds the count and links here by #wins). Not rendered until a win status is
-// configured; with none reached yet it is one calm line.
+// FR-9.7: the good news (interviews, offers), the dashboard rail's "Recent wins" (the Wins tile holds the count and
+// links here by #wins). Not rendered until a win status is configured; with none reached yet it is one calm line.
 export async function WinsCard({ className }: { className?: string }) {
   await connection();
   const { labels, wins } = await getWins();

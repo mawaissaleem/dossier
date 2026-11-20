@@ -6,9 +6,11 @@ import { firstN, type OverdueAlert } from "@/lib/dashboard";
 import { getOverdueAlerts } from "@/lib/db/planner";
 import { ACCENT_LINK, DashboardCard, ROW_LINK as LINK } from "./dashboard-card";
 
-const SHOWN = 3; // the rail shares the plan's height at xl, so each card shows a few rows and keeps the rest one click away
+// the rail shares the plan's height at xl, so each card shows a few rows and keeps the rest one click away
+const SHOWN = 3;
 
-// FR-9.5: red rows that open the application, the top card of the dashboard rail. Nothing overdue renders nothing at all (no empty red card; the Overdue tile says "0").
+// FR-9.5: red rows that open the application, the top card of the dashboard rail. Nothing overdue renders nothing at
+// all (no empty red card; the Overdue tile says "0").
 function Rows({ items }: { items: OverdueAlert[] }) {
   return (
     <ul className="flex flex-col">
@@ -42,7 +44,8 @@ export async function OverdueCard({ className }: { className?: string }) {
   return (
     <DashboardCard title="Overdue" count={items.length} className={className}>
       <Rows items={shown} />
-      {/* No link target lists them all (the planner hides overdue under its "hide" rule), so the rest opens in place. */}
+      {/* No link target lists them all (the planner hides overdue under its "hide" rule), so the rest opens in
+          place. */}
       {more > 0 && (
         <details className="mt-3 border-t border-border pt-3 text-sm">
           <summary className={`w-fit cursor-pointer ${ACCENT_LINK}`}>{more} more</summary>

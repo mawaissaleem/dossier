@@ -14,12 +14,14 @@ import { fileCountLabel } from "@/lib/submission-timeline";
 import { formatBytes } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
-// Submissions, newest first (FR-7.9). A PDF or image in a submission has Preview (13.4): one dialog per submission, Previous / Next across that submission's files. The latest starts expanded; the page keys this component by the latest id, so a new submission
-// remounts it expanded. Open is the 5.10 route in a new tab. Download is the same route with the `download` attribute: the server's safe
-// headers (nosniff, CSP, sanitised filename) are unchanged, and the attribute only makes the browser save instead of render.
-// A file deleted after it was submitted (8.8) is shown as a record only: name, label, size, checksum and the date, no Open or Download.
-// A file flagged changed or missing (8.7) gets a Download link without the attribute, in a new tab: the 409 mismatch page (or the 404 error) is
-// shown instead of being saved as the file. A file edited since its last check still gets `download`; the browser then shows a failed download.
+// Submissions, newest first (FR-7.9). A PDF or image in a submission has Preview: one dialog per submission, Previous /
+// Next across that submission's files. The latest starts expanded; the page keys this component by the latest id, so a
+// new submission remounts it expanded. Open is the file route in a new tab. Download is the same route with the
+// `download` attribute: the server's safe headers (nosniff, CSP, sanitised filename) are unchanged, and the attribute
+// only makes the browser save instead of render. A file deleted after it was submitted is shown as a record only: name,
+// label, size, checksum and the date, no Open or Download. A file flagged changed or missing gets a Download link
+// without the attribute, in a new tab: the 409 mismatch page (or the 404 error) is shown instead of being saved as the
+// file. A file edited since its last check still gets `download`; the browser then shows a failed download.
 export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
   const uid = useId();
   const [open, setOpen] = useState<Set<number>>(() => new Set(items.length ? [items[0].id] : []));
@@ -120,7 +122,8 @@ export function SubmissionTimeline({ items }: { items: SubmissionItem[] }) {
                                 </a>
                               </Button>
                               <Button asChild variant="ghost" size="sm">
-                                {/* A flagged file: no `download`, so the 409 "file changed" page opens (with "Open anyway") instead of being saved as the file. */}
+                                {/* A flagged file: no `download`, so the 409 "file changed" page opens (with "Open
+                                    anyway") instead of being saved as the file. */}
                                 <a
                                   href={`/api/files/${f.id}`}
                                   {...(f.integrity === "ok"

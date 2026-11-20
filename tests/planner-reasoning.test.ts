@@ -127,7 +127,8 @@ describe("reasoning through the database (AT-11)", () => {
     );
   });
 
-  // Every edit counts as touched: a table/board cell write and an edit-form save of a plain field both reset days untouched.
+  // Every edit counts as touched: a table/board cell write and an edit-form save of a plain field both reset days
+  // untouched.
   it.each([
     ["a table/board cell write", (id: number, col: number) => setCellValue(id, col, "Berlin")],
     [

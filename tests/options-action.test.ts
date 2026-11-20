@@ -113,7 +113,8 @@ describe("addOption", () => {
     expect(r.ok).toBe(true);
     const opts = (await listColumns(trackId))[0].options;
     expect(opts.map((o) => o.label)).toEqual(["Applied", "Offer", "Interview"]);
-    expect(opts[2]).toMatchObject({ color: "red", position: 2 }); // red is the first palette token not used (blue, green are)
+    // red is the first palette token not used (blue, green are)
+    expect(opts[2]).toMatchObject({ color: "red", position: 2 });
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 });

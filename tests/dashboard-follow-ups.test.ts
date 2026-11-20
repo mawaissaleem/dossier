@@ -14,7 +14,8 @@ describe("firstN (pure)", () => {
   });
 });
 
-// 11.2: the card is getFollowUpsDue(today) cut by firstN, so the shown rows are the first of /planner's list, oldest first.
+// The follow-ups card is getFollowUpsDue(today) cut by firstN, so the shown rows are the first of /planner's list,
+// oldest first.
 describe("dashboard follow-ups card data", () => {
   const TODAY = "2026-11-12";
   let db: ReturnType<typeof useTestDb>;

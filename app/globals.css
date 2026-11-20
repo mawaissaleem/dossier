@@ -46,15 +46,15 @@
 }
 
 /*
-  Design tokens (see DESIGN.md). Every colour is a #rrggbb value so tests/theme-contrast.test.ts can
+  Design tokens. Every colour is a #rrggbb value so tests/theme-contrast.test.ts can
   measure WCAG contrast straight from this file. Themes are selected by <html data-theme="...">; the
   :root block is Graphite, so a page with no stored choice renders Graphite. Keep the theme blocks in
   this order (graphite, ember, amethyst, glacier, rosewood, paper, sand): later blocks override earlier ones,
   and the chip blocks below must stay after every theme block.
   Surfaces layer background < card < popover. `accent-to` is the second stop of the accent gradients
   (primary button, active nav bar, logo mark); `wash` is the top stop of the faint canvas
-  wash. `elevation` is the neutral shadow of floating layers (menus, dialogs). Any hue may be a theme accent
-  (user ruling 2026-11-17); no blur, no glow or coloured shadows.
+  wash. `elevation` is the neutral shadow of floating layers (menus, dialogs). Any hue may be a theme accent;
+  no blur, no glow or coloured shadows.
 */
 :root,
 [data-theme="graphite"] {

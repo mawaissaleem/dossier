@@ -1,16 +1,19 @@
-// Pure (no DB, no UI). Merges an application's notes and automatic log events into one history (FR-11.3). Each line is built from the
-// event's stored snapshot only, so nothing is looked up and a renamed status or file never rewrites the past.
+// Pure (no DB, no UI). Merges an application's notes and automatic log events into one history (FR-11.3). Each line is
+// built from the event's stored snapshot only, so nothing is looked up and a renamed status or file never rewrites the
+// past.
 import type { ActivityDetails } from "./activity";
 
 export type HistoryType = "note" | "status" | "upload" | "delete" | "submission" | "other";
-// `text` is the note body (type "note") or the one-line summary of an event. `future` marks an event dated after `now` (a scheduled submission).
+// `text` is the note body (type "note") or the one-line summary of an event. `future` marks an event dated after `now`
+// (a scheduled submission).
 export type HistoryItem = { key: string; type: HistoryType; at: Date; text: string; future: boolean };
 
 type NoteIn = { id: number; body: string; createdAt: Date };
 type EventIn = { id: number; kind: string; occurredAt: Date; details: ActivityDetails };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-// "2026-11-10" -> "10 Nov 2026" (fixed English, no locale or zone, so the line is the same everywhere); anything else is shown as stored.
+// "2026-11-10" -> "10 Nov 2026" (fixed English, no locale or zone, so the line is the same everywhere); anything else
+// is shown as stored.
 export function formatYmd(s: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   return m && Number(m[2]) >= 1 && Number(m[2]) <= 12 ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : s;
@@ -47,8 +50,8 @@ export function eventLine(kind: string, d: ActivityDetails): string {
   }
 }
 
-// Newest first by when it happened (note created_at, event occurred_at). Equal instants: notes before events, then the higher id first
-// (the later write), so the order never depends on the input order.
+// Newest first by when it happened (note created_at, event occurred_at). Equal instants: notes before events, then the
+// higher id first (the later write), so the order never depends on the input order.
 export function buildHistory(notes: NoteIn[], events: EventIn[], now: Date): HistoryItem[] {
   const all = [
     ...notes.map((n) => ({

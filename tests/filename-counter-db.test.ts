@@ -17,7 +17,7 @@ async function mkApp() {
   if (!r.ok) throw new Error(r.error);
   return r.id;
 }
-// What 5.7 will do: load the entries, build the name, insert the row.
+// What the upload path does: load the entries, build the name, insert the row.
 async function upload(applicationId: number, name: string, date = "2026-11-08") {
   const r = buildStoredName(name, date, await getCounterEntries(applicationId));
   db.insert(files)

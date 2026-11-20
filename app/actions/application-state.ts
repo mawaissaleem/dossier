@@ -26,8 +26,8 @@ export async function fetchDeleteImpact(
 
 const count = (n: unknown) => Number.isSafeInteger(n) && (n as number) >= 0;
 
-// `confirm` must be literally true: the UI sets it only after the user saw what will be lost (FR-1.9, NFR-4). `expected` is the impact
-// the dialog showed; the data layer refuses if it changed since.
+// `confirm` must be literally true: the UI sets it only after the user saw what will be lost (FR-1.9, NFR-4).
+// `expected` is the impact the dialog showed; the data layer refuses if it changed since.
 // The application's files are removed from disk too; a leftover is returned as `warning` (lib/files/remove.ts).
 // No refresh(): the detail page would re-render as a 404 before the client navigates to the track page (trackId).
 export async function deleteApplication(

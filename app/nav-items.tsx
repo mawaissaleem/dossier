@@ -4,8 +4,10 @@ import { NavLink } from "./nav-link";
 import { SearchRailButton } from "./search-trigger";
 import { ThemeMenu } from "./theme-switcher";
 
-// The items of the navigation, in order: Dashboard, Tracks (its track links, `tracks`, follow it when expanded), Planner, Search, a spacer, Settings, Theme. The side bar / top bar (app/layout.tsx) and the phone panel
-// (app/sidebar.tsx) both render them; below `md` they are a row of icons, so Settings keeps `ml-auto` there, and as a column (expanded, phone panel) the spacer is `mt-auto`.
+// The items of the navigation, in order: Dashboard, Tracks (its track links, `tracks`, follow it when expanded),
+// Planner, Search, a spacer, Settings, Theme. The side bar / top bar (app/layout.tsx) and the phone panel
+// (app/sidebar.tsx) both render them; below `md` they are a row of icons, so Settings keeps `ml-auto` there, and as a
+// column (expanded, phone panel) the spacer is `mt-auto`.
 export function NavItems({ tracks, onSearch }: { tracks: React.ReactNode; onSearch?: () => void }) {
   return (
     <>

@@ -23,7 +23,8 @@ const chipText = (col: ColumnItem, f: Filter) =>
     ", ",
   );
 
-// The ticks for one column: its options, then "(Blank)". onSelect keeps the menu open so several can be ticked in a row.
+// The ticks for one column: its options, then "(Blank)". onSelect keeps the menu open so several can be ticked in a
+// row.
 function OptionChecks({
   col,
   filter,
@@ -57,8 +58,9 @@ function OptionChecks({
   );
 }
 
-// "Filter" menu (one submenu per single-select column, hidden ones marked), the active filters as chips, "Clear all" and the count.
-// Chips: the label opens the same ticks to edit; the x removes. `trailing` is the hidden-columns control, kept on the right.
+// "Filter" menu (one submenu per single-select column, hidden ones marked), the active filters as chips, "Clear all"
+// and the count. Chips: the label opens the same ticks to edit; the x removes. `trailing` is the hidden-columns
+// control, kept on the right.
 export function FilterBar({
   columns,
   filters,
@@ -76,8 +78,9 @@ export function FilterBar({
 }) {
   const bar = useRef<HTMLDivElement>(null);
 
-  // Before a chip goes away, move focus to a neighbour that stays mounted: the next chip, else the previous one, else the Filter button (index 0).
-  // `later`: the chip's own menu is closing with it, and Radix hands focus back to the removed trigger on a 0ms timeout, so wait that out.
+  // Before a chip goes away, move focus to a neighbour that stays mounted: the next chip, else the previous one, else
+  // the Filter button (index 0). `later`: the chip's own menu is closing with it, and Radix hands focus back to the
+  // removed trigger on a 0ms timeout, so wait that out.
   const focusAround = (id: number | null, later = false) => {
     const stops = [...(bar.current?.querySelectorAll<HTMLElement>("[data-filter-stop]") ?? [])];
     const i = id === null ? -1 : stops.findIndex((e) => e.dataset.filterStop === String(id));

@@ -94,7 +94,8 @@ describe("addSubmission", () => {
     });
     expect(statusOf()).toBe(toApply);
     expect(refresh).toHaveBeenCalledTimes(1);
-    expect((await updateCell(appId, statusCol, applied)).ok).toBe(true); // a submission exists, so the 6.4 review is not triggered
+    // a submission exists, so the submission review is not triggered
+    expect((await updateCell(appId, statusCol, applied)).ok).toBe(true);
   });
 
   it("adds a further submission when others exist, keeping the earlier ones", async () => {

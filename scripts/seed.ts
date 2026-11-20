@@ -1,4 +1,5 @@
-// Optional: adds the Job and PhD tracks from the same templates as the Add track dialog (lib/track-templates.ts). Idempotent: does nothing if the user already has a track.
+// Optional: adds the Job and PhD tracks from the same templates as the Add track dialog (lib/track-templates.ts).
+// Idempotent: does nothing if the user already has a track.
 import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(process.cwd());
@@ -20,7 +21,8 @@ async function main() {
     tx.insert(settings)
       .values({ userId, key: "file_labels", value: JSON.stringify(DEFAULT_FILE_LABELS) })
       .run();
-    // The same code as the Add track dialog; colours in palette order, which is what defaultTrackColor picks for the first two tracks.
+    // The same code as the Add track dialog; colours in palette order, which is what defaultTrackColor picks for the
+    // first two tracks.
     [TEMPLATES.job, TEMPLATES.phd].forEach((t, i) => insertTrackFromTemplate(t.defaultName, t, PALETTE[i]));
     return true;
   });

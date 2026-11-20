@@ -16,10 +16,12 @@ import {
 } from "@/lib/application-form";
 import type { ColumnItem } from "@/lib/db/columns";
 
-// Essentials first (see splitEssentials), every other column in a closed <details> that stays mounted, so nothing typed is lost
-// by collapsing. `error` is the submit error: if it names a field inside the section, the section opens (parents clear it at the start of a submit so a repeat reopens it).
-// An error that names a field (errorField) is shown under that field and marks it aria-invalid; any other error is the parent's form-level alert.
-// State is controlled by the parent (values in, onChange out), so the same component serves the add form and the detail-page edit form. The title input is part of it. A column absent from `state` shows blank.
+// Essentials first (see splitEssentials), every other column in a closed <details> that stays mounted, so nothing typed
+// is lost by collapsing. `error` is the submit error: if it names a field inside the section, the section opens
+// (parents clear it at the start of a submit so a repeat reopens it). An error that names a field (errorField) is shown
+// under that field and marks it aria-invalid; any other error is the parent's form-level alert. State is controlled by
+// the parent (values in, onChange out), so the same component serves the add form and the detail-page edit form. The
+// title input is part of it. A column absent from `state` shows blank.
 export function ApplicationFields({
   title,
   onTitleChange,
@@ -99,9 +101,10 @@ export function ApplicationFields({
                 type={kind === "date" ? "date" : "text"}
                 inputMode={kind === "number" ? "decimal" : c.type === "link" ? "url" : undefined}
                 value={typeof v === "string" && !(kind === "date" && v === BAD_DATE) ? v : ""}
-                // A half-typed or impossible date reads as "" (validity.badInput), which would save as blank and silently clear a
-                // stored date; record it as BAD_DATE so the save is refused. Read while typing, not at submit: Firefox resets the input on
-                // blur. On keyup too: Firefox fires no input event when only badInput changes (e.g. the last segment cleared = blank).
+                // A half-typed or impossible date reads as "" (validity.badInput), which would save as blank and
+                // silently clear a stored date; record it as BAD_DATE so the save is refused. Read while typing, not at
+                // submit: Firefox resets the input on blur. On keyup too: Firefox fires no input event when only
+                // badInput changes (e.g. the last segment cleared = blank).
                 onChange={(e) => read(e.target)}
                 onKeyUp={kind === "date" ? (e) => read(e.currentTarget) : undefined}
                 {...invalid(c.id, id)}

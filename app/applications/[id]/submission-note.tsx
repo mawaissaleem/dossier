@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-// The note of one submission with the inline "Edit note" (FR-7.6: the note is the only thing that can change after creation).
-// Focus: opening goes to the field; Save or Cancel puts it back on "Edit note" (that button unmounts while editing).
+// The note of one submission with the inline "Edit note" (FR-7.6: the note is the only thing that can change after
+// creation). Focus: opening goes to the field; Save or Cancel puts it back on "Edit note" (that button unmounts while
+// editing).
 export function SubmissionNote({ id, date, note }: { id: number; date: string; note: string | null }) {
   const uid = useId();
   const [editing, setEditing] = useState(false);

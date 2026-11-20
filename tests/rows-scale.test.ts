@@ -3,7 +3,7 @@ import { listApplicationRows } from "@/lib/db/applications";
 import { applications, cellValues, columnOptions, columns, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
-// Regression guard for NFR-1 (task 4.5): the track page must not get an N+1 or a slow read as the table grows.
+// Regression guard for NFR-1: the track page must not get an N+1 or a slow read as the table grows.
 let db: ReturnType<typeof useTestDb>;
 beforeEach(() => {
   db = useTestDb();

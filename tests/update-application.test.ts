@@ -134,7 +134,8 @@ describe("updateApplication", () => {
     "rejects an invalid %s value, naming the column, and changes nothing (title and other values included)",
     async (type, value, error) => {
       const before = await valuesOf();
-      const good = type === "text" ? { columnId: ids.number, value: "7" } : { columnId: ids.text, value: "valid" }; // a valid entry before it: must not be kept
+      // a valid entry before it: must not be kept
+      const good = type === "text" ? { columnId: ids.number, value: "7" } : { columnId: ids.text, value: "valid" };
       const r = await updateApplication(appId, "Changed", [good, { columnId: ids[type], value } as never]);
       expect(r).toEqual({ ok: false, error });
       expect(await valuesOf()).toEqual(before);

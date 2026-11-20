@@ -162,7 +162,8 @@ describe("status_changed", () => {
     expect(kinds().sort()).toEqual(["file_uploaded", "status_changed", "submission_created"]);
     await createManualSubmission(appId, [f], "2026-11-10", null, { columnId: statusCol, optionId: opts[a] });
     expect(kinds().filter((k) => k === "status_changed")).toHaveLength(2);
-    await createManualSubmission(appId, [f], "2026-11-10", null, { columnId: statusCol, optionId: opts[a] }); // same status: only the submission
+    // same status: only the submission
+    await createManualSubmission(appId, [f], "2026-11-10", null, { columnId: statusCol, optionId: opts[a] });
     expect(kinds().filter((k) => k === "status_changed")).toHaveLength(2);
     expect(kinds().filter((k) => k === "submission_created")).toHaveLength(3);
   });

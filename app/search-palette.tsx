@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { highlightSegments, isSearchChord, wrapIndex } from "@/lib/search-palette";
 import { OPEN_SEARCH_EVENT, useIsMac } from "./search-trigger";
 
-// Shape of GET /api/search (task 4.6).
+// Shape of GET /api/search.
 type Hit = {
   id: number;
   title: string;
@@ -21,8 +21,9 @@ type Hit = {
 type Answer = { query: string; hits: Hit[]; error?: string };
 
 const DEBOUNCE_MS = 150;
-// An open dialog, alert dialog or menu already has the user's attention; the chord leaves it alone.
-// Only data-state="open" counts: a Radix layer (the palette's own included) stays in the DOM as "closed" during its exit animation.
+// An open dialog, alert dialog or menu already has the user's attention; the chord leaves it alone. Only
+// data-state="open" counts: a Radix layer (the palette's own included) stays in the DOM as "closed" during its exit
+// animation.
 const BUSY_LAYER =
   '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], [role="menu"][data-state="open"]';
 
@@ -42,7 +43,8 @@ function Highlight({ text, query }: { text: string; query: string }) {
   );
 }
 
-// The Ctrl/Cmd+K palette, mounted once in the app frame. It opens from the chord or from any search button (app/search-trigger.tsx) and returns focus to whatever had it.
+// The Ctrl/Cmd+K palette, mounted once in the app frame. It opens from the chord or from any search button
+// (app/search-trigger.tsx) and returns focus to whatever had it.
 export function SearchPalette() {
   const router = useRouter();
   const id = useId();
@@ -58,7 +60,8 @@ export function SearchPalette() {
   const q = query.trim();
 
   function openPalette() {
-    // Reopened during its own close animation: focus is still in the old input, and the target remembered last time still holds.
+    // Reopened during its own close animation: focus is still in the old input, and the target remembered last time
+    // still holds.
     if (!content.current?.contains(document.activeElement)) returnFocus.remember();
     navigated.current = false;
     openWhenReady.current = false;

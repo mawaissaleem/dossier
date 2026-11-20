@@ -1,11 +1,13 @@
-// Server-only. See lib/db/tracks.ts for the convention. The one server-side "needs review" rule (FR-7.2), shared by every way a status can change.
+// Server-only. See lib/db/tracks.ts for the convention. The one server-side "needs review" rule (FR-7.2), shared by
+// every way a status can change.
 import { and, count, eq } from "drizzle-orm";
 import { needsSubmissionReview } from "../submission-review";
 import type { getDb } from "./client";
 import { cellValues, submissions } from "./schema";
 import { submittedStatusIds } from "./track-settings";
 
-// Synchronous, so a caller can check and write with nothing in between. Reads current state through `db` (the connection or a transaction).
+// Synchronous, so a caller can check and write with nothing in between. Reads current state through `db` (the
+// connection or a transaction).
 export function statusNeedsReview(
   db: Pick<ReturnType<typeof getDb>, "select">,
   userId: string,

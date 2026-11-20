@@ -30,8 +30,9 @@ import { MAX_TRACK_NAME } from "@/lib/track-templates";
 type Impact = Awaited<ReturnType<typeof fetchTrackDeleteImpact>>;
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-// "Track options" on a /tracks tile and the track page header: Rename / colour (a dialog) and Delete track… (a confirm that states the counts and asks for the name).
-// An item's action waits until the menu has closed and focus is back on the trigger (as in the column menu), so the dialog returns focus to the trigger.
+// "Track options" on a /tracks tile and the track page header: Rename / colour (a dialog) and Delete track… (a confirm
+// that states the counts and asks for the name). An item's action waits until the menu has closed and focus is back on
+// the trigger (as in the column menu), so the dialog returns focus to the trigger.
 export function TrackMenu({ id, name, color }: { id: number; name: string; color: string }) {
   const uid = useId();
   const router = useRouter();
@@ -98,7 +99,8 @@ export function TrackMenu({ id, name, color }: { id: number; name: string; color
         const r = await deleteTrack(id, true, typed, { applications, columns, submissions, notes, files });
         if (r.ok) {
           setDelOpen(false);
-          // refresh() after the push, so no cached copy of /tracks or the dashboard (which list tracks) can show the deleted one.
+          // refresh() after the push, so no cached copy of /tracks or the dashboard (which list tracks) can show the
+          // deleted one.
           router.push("/tracks");
           router.refresh();
         } else {

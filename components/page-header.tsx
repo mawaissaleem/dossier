@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ChevronLeftIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Content width rule (DESIGN.md): `narrow` pages (detail, settings, lists) are capped at max-w-3xl and left-aligned; the track page is full width.
+// Content width rule: `narrow` pages (detail, settings, lists) are capped at max-w-3xl and left-aligned; the track page
+// is full width.
 export function Page({ narrow, children }: { narrow?: boolean; children: React.ReactNode }) {
   return <div className={cn(narrow && "max-w-3xl")}>{children}</div>;
 }

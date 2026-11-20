@@ -324,7 +324,8 @@ describe("AT-13: back up, wipe, restore", () => {
           "INSERT INTO applications (user_id, track_id, title, created_at, updated_at) VALUES ('local', 1, 'Old app', 1, 1)",
         )
         .run();
-      // Three file rows, all recorded with the hash of "original": the first is intact in the backup, the second was edited, the third is not in it.
+      // Three file rows, all recorded with the hash of "original": the first is intact in the backup, the second was
+      // edited, the third is not in it.
       const hash = createHash("sha256").update("original").digest("hex");
       ["ok", "changed", "gone"].forEach((n, i) =>
         old
@@ -503,7 +504,8 @@ describe("validation refuses before anything is changed", () => {
     await refused(withBackupEntries([{ name: "files/link", data: "/etc/passwd", mode: 0o120777 }]), /link or special/);
     await refused(withBackupEntries([{ name: "files/dir/", data: "x", mode: 0o040755 }]), /folder entry with data/);
     await refused(withBackupEntries([{ name: "run.sh", data: "x" }]), /unexpected entry/);
-    await refused(withBackupEntries([{ name: "files/enc.bin", data: "x", flags: 0x801 }]), /readable zip|encrypted/); // yauzl itself refuses an encrypted entry
+    // yauzl itself refuses an encrypted entry
+    await refused(withBackupEntries([{ name: "files/enc.bin", data: "x", flags: 0x801 }]), /readable zip|encrypted/);
   });
 
   it("refuses oversized and bomb-like entries by their declared sizes", async () => {

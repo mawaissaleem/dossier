@@ -1,4 +1,5 @@
-// Server-only. FR-9.7: applications whose current status is one of their track's win statuses (`track.<id>.win_statuses`, lib/db/track-settings.ts).
+// Server-only. FR-9.7: applications whose current status is one of their track's win statuses
+// (`track.<id>.win_statuses`, lib/db/track-settings.ts).
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { cache } from "react";
 import { orderWins, type Win } from "../wins";
@@ -8,9 +9,10 @@ import { statusOptions, winStatusIds } from "./track-settings";
 import { listTracks } from "./tracks";
 import { getUserId } from "./user";
 
-// `labels` = every configured win status label in track and option order (the card is shown, with an empty state, as long as there is one);
-// `wins` = most recently reached first, archived ones included. `since` = the newest status change into the current status, else the application's created_at (an edit must not move a win up).
-// React `cache` = once per request: the Wins tile and the Recent wins card share one read.
+// `labels` = every configured win status label in track and option order (the card is shown, with an empty state, as
+// long as there is one); `wins` = most recently reached first, archived ones included. `since` = the newest status
+// change into the current status, else the application's created_at (an edit must not move a win up). React `cache` =
+// once per request: the Wins tile and the Recent wins card share one read.
 export const getWins = cache(async (): Promise<{ labels: string[]; wins: Win[] }> => {
   const db = getDb();
   const userId = getUserId();

@@ -5,8 +5,9 @@ import { useState, useTransition } from "react";
 import { checkFiles } from "@/app/actions/files";
 import { Button } from "@/components/ui/button";
 
-// "Check files" (FR-5.5): re-verifies every file of this application and refreshes the badges. The result is one status line
-// (a live region that is always mounted, so a screen reader announces the text when it appears); a failure is a role="alert" line.
+// "Check files" (FR-5.5): re-verifies every file of this application and refreshes the badges. The result is one status
+// line (a live region that is always mounted, so a screen reader announces the text when it appears); a failure is a
+// role="alert" line.
 export function CheckFiles({ applicationId }: { applicationId: number }) {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);

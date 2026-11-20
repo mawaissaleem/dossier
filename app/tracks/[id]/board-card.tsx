@@ -11,8 +11,9 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { OptionChip } from "@/app/option-chip";
 
 const subscribe = () => () => {};
-// The visitor's local day. The server cannot know it, so the server snapshot is null (date only, no hint) and the browser fills the hint in
-// after hydration: no mismatch and no UTC-day drift. It is read once per mount, so a tab left open past midnight updates on the next render.
+// The visitor's local day. The server cannot know it, so the server snapshot is null (date only, no hint) and the
+// browser fills the hint in after hydration: no mismatch and no UTC-day drift. It is read once per mount, so a tab left
+// open past midnight updates on the next render.
 const useToday = () =>
   useSyncExternalStore(
     subscribe,
@@ -23,9 +24,10 @@ const useToday = () =>
 export const CARD_BOX =
   "flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground";
 
-// What a card shows: title (2 lines at most), then Priority as its option chip and the Deadline with a relative hint. A missing column or a blank
-// value leaves that line out. Overdue is by date only (any status) and shown with an icon, the word "Overdue" and the destructive token.
-// Used by the card in its column and by the drag overlay, so they look the same.
+// What a card shows: title (2 lines at most), then Priority as its option chip and the Deadline with a relative hint. A
+// missing column or a blank value leaves that line out. Overdue is by date only (any status) and shown with an icon,
+// the word "Overdue" and the destructive token. Used by the card in its column and by the drag overlay, so they look
+// the same.
 export function CardFace({
   row,
   priority,
@@ -74,9 +76,10 @@ export function CardFace({
   );
 }
 
-// One card: a link to the detail page that is also the drag handle (mouse after 6px, touch after a 250 ms hold, keyboard Space; Enter still opens the
-// card), plus a "Move to" select, the non-drag way to change the status (WCAG 2.5.7). The select is a sibling of the link, never inside it.
-// `current` is the option id of the column the card is in (null = No status).
+// One card: a link to the detail page that is also the drag handle (mouse after 6px, touch after a 250 ms hold,
+// keyboard Space; Enter still opens the card), plus a "Move to" select, the non-drag way to change the status (WCAG
+// 2.5.7). The select is a sibling of the link, never inside it. `current` is the option id of the column the card is in
+// (null = No status).
 export function BoardCard({
   row,
   priority,

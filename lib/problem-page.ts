@@ -1,5 +1,6 @@
-// The small HTML pages the file routes answer with (409 "file changed", zip "files need attention", "files folder not available"). They open in a tab outside the app shell, so
-// they carry their own inline CSS, with the DESIGN.md token values: Graphite by default, Paper when the system prefers light. No external assets.
+// The small HTML pages the file routes answer with (409 "file changed", zip "files need attention", "files folder not
+// available"). They open in a tab outside the app shell, so they carry their own inline CSS, with the theme token
+// values: Graphite by default, Paper when the system prefers light. No external assets.
 export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const CSS =
@@ -9,7 +10,8 @@ const CSS =
   `h1{font-size:1.25rem;margin:0 0 1rem}p,ul{margin:0 0 1rem}li{margin:.25rem 0}a{color:var(--link)}` +
   `.back{border-top:1px solid var(--border);padding-top:1rem;color:var(--muted)}`;
 
-// `bodyHtml` is trusted markup built by the caller (names escaped with `esc`); applicationId comes from a database row, never the request.
+// `bodyHtml` is trusted markup built by the caller (names escaped with `esc`); applicationId comes from a database row,
+// never the request.
 export function problemPage(
   status: number,
   title: string,
@@ -28,12 +30,14 @@ export function problemPage(
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'",
       },
-    }, // frame-ancestors: the Preview dialog (13.3) shows these in its frame. no sandbox: a sandboxed page's link click would reach the guard as cross-site
+      // frame-ancestors: the Preview dialog shows these in its frame. no sandbox: a sandboxed page's link click would
+      // reach the guard as cross-site
+    },
   );
 }
 
-// The files folder is unset or gone (the Open link and the zip link open in a tab, so a JSON body would be a bare error). `error` is a fixed
-// message from lib/files, not user input, but it is escaped anyway.
+// The files folder is unset or gone (the Open link and the zip link open in a tab, so a JSON body would be a bare
+// error). `error` is a fixed message from lib/files, not user input, but it is escaped anyway.
 export const setupPage = (error: string, applicationId: number, headers: Record<string, string>): Response =>
   problemPage(
     409,

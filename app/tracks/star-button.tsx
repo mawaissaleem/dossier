@@ -6,8 +6,9 @@ import { setStarred } from "@/app/actions/tracks";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// The star toggle of a /tracks tile. A real button (`aria-pressed`, "Star Job" / "Unstar Job"); the new state shows at once and the action's refresh() brings the server's.
-// If the save fails the prop never changes, so the star falls back by itself when the transition ends.
+// The star toggle of a /tracks tile. A real button (`aria-pressed`, "Star Job" / "Unstar Job"); the new state shows at
+// once and the action's refresh() brings the server's. If the save fails the prop never changes, so the star falls back
+// by itself when the transition ends.
 export function StarButton({ id, name, starred }: { id: number; name: string; starred: boolean }) {
   const [shown, setShown] = useOptimistic(starred);
   const [, startTransition] = useTransition();

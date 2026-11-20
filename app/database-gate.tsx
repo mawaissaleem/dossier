@@ -5,10 +5,11 @@ import { UPDATE_STEPS, UPDATE_TITLE, pendingMigrations, updateIntro } from "@/li
 import { plannedBackupFolder } from "@/lib/files/update";
 import { UpdateDatabaseForm } from "./update-database-form";
 
-// Wraps every page (app/layout.tsx). A database behind the app's migrations would crash the page with "no such table", so when updates are
-// pending the page is not rendered at all and this calm message stands in its place, still inside the app frame, with the one-click "Back up
-// and update". Request-time (it reads the database), so the layout puts it inside a Suspense boundary. Existing data is only migrated when
-// the user presses that button; a brand-new database is created by pendingMigrations() itself and never gets here.
+// Wraps every page (app/layout.tsx). A database behind the app's migrations would crash the page with "no such table",
+// so when updates are pending the page is not rendered at all and this calm message stands in its place, still inside
+// the app frame, with the one-click "Back up and update". Request-time (it reads the database), so the layout puts it
+// inside a Suspense boundary. Existing data is only migrated when the user presses that button; a brand-new database is
+// created by pendingMigrations() itself and never gets here.
 export async function DatabaseGate({ children }: { children: React.ReactNode }) {
   await connection();
   const pending = pendingMigrations();

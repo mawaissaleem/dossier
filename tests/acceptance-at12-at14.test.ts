@@ -39,10 +39,11 @@ import { runTsx } from "./helpers/tsx";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
 
-// Task 12.4: the parts of AT-12, AT-13 and AT-14 that no single earlier test encodes as the SRS words them. Everything lives in OS temp dirs.
-//   AT-12: the data path (500 fake applications, search by company, the latest submission). The 30 s wall time is a manual measurement.
-//   AT-13: the wipe is an empty install (no tracks, no columns), not just deleted applications, so columns and cell values must come from the zip.
-//   AT-14: both ways in a row (Move, then Re-point), then Open and the per-application zip after each.
+// The parts of AT-12, AT-13 and AT-14 that no single other test covers as the spec words them. Everything lives in OS
+// temp dirs. AT-12: the data path (500 fake applications, search by company, the latest submission). The 30 s wall time
+// is a manual measurement. AT-13: the wipe is an empty install (no tracks, no columns), not just deleted applications,
+// so columns and cell values must come from the zip. AT-14: both ways in a row (Move, then Re-point), then Open and the
+// per-application zip after each.
 const SLOW = 60_000; // each test spawns tsx scripts and writes files; the default 5 s is too tight on a loaded machine
 let work: string;
 let db: ReturnType<typeof useTestDb>;
@@ -89,7 +90,8 @@ describe("AT-12: search a company name with 500 applications loaded", () => {
 
       const started = performance.now();
       const hits = await searchApplications("Hooli Cloud");
-      const searchMs = performance.now() - started; // only the search is timed: the file writes and route calls below depend on disk and machine load
+      // only the search is timed: the file writes and route calls below depend on disk and machine load
+      const searchMs = performance.now() - started;
       expect(hits).toHaveLength(1); // exactly one Job application at that company
       const target = hits[0];
       expect(target).toMatchObject({ track: { name: "Job" }, matched: { kind: "title" } });
@@ -111,7 +113,8 @@ describe("AT-12: search a company name with 500 applications loaded", () => {
       const detail = await getApplicationDetail(target.id);
       expect(detail?.title).toBe(target.title);
       const subs = await listSubmissions(target.id);
-      expect(subs.map((s) => s.date)).toEqual(["2026-11-10", "2026-11-08"]); // newest first, so subs[0] is the "Latest" item
+      // newest first, so subs[0] is the "Latest" item
+      expect(subs.map((s) => s.date)).toEqual(["2026-11-10", "2026-11-08"]);
       expect(subs[0].files.map((f) => f.originalName)).toEqual(["Letter.pdf"]);
       expect(
         (
@@ -120,7 +123,8 @@ describe("AT-12: search a company name with 500 applications loaded", () => {
           } as never)
         ).status,
       ).toBe(200); // one more click: the file opens
-      expect(searchMs).toBeLessThan(5000); // the SRS bound is 30 s for a person; this only guards the code path of the search itself
+      // the SRS bound is 30 s for a person; this only guards the code path of the search itself
+      expect(searchMs).toBeLessThan(5000);
     },
     SLOW,
   );
@@ -203,7 +207,8 @@ describe("AT-13: back up, delete the app data, restore (into an empty install)",
       const zip = join(work, "keep.zip");
       writeFileSync(zip, readFileSync(made.path));
 
-      // delete the app data: the database file and the files folder are gone, and the install starts empty (migrated, not seeded)
+      // delete the app data: the database file and the files folder are gone, and the install starts empty (migrated,
+      // not seeded)
       db = useTestDb();
       rmSync(root, { recursive: true, force: true });
       mkdirSync(root);
@@ -222,7 +227,8 @@ describe("AT-13: back up, delete the app data, restore (into an empty install)",
 
       const after = { tables: tables(), files: hashes(root), counts: currentCounts() };
       expect(after.counts).toEqual(before.counts);
-      expect(after.tables).toEqual(before.tables); // columns, options, cell values, files rows (hashes), submissions, notes: row for row
+      // columns, options, cell values, files rows (hashes), submissions, notes: row for row
+      expect(after.tables).toEqual(before.tables);
       expect(after.files).toEqual(before.files); // the same paths with the same bytes
       for (const row of getDb().$client.prepare("SELECT relative_path, sha256 FROM files").all() as {
         relative_path: string;

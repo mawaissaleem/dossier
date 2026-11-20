@@ -55,7 +55,8 @@ describe.each(THEMES)("%s theme contrast (WCAG AA)", (theme) => {
       expect(contrast(t["--muted-foreground"], t[s]), `muted-foreground on ${s}`).toBeGreaterThanOrEqual(4.5);
       expect(contrast(t["--accent"], t[s]), `accent text on ${s}`).toBeGreaterThanOrEqual(4.5);
       expect(contrast(t["--destructive"], t[s]), `destructive text on ${s}`).toBeGreaterThanOrEqual(4.5);
-      expect(contrast(t["--warning"], t[s]), `warning icon and border on ${s}`).toBeGreaterThanOrEqual(4.5); // text-warning, and the border needs only 3
+      // text-warning, and the border needs only 3
+      expect(contrast(t["--warning"], t[s]), `warning icon and border on ${s}`).toBeGreaterThanOrEqual(4.5);
     }
   });
   it("primary (gradient) and destructive buttons have readable text on every stop", () => {

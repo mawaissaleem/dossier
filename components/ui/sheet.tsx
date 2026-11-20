@@ -6,8 +6,9 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import { DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-// A panel that slides in from the left (the phone navigation, DASH.4): a Radix Dialog, so focus is trapped, Escape closes it and focus goes back. Unlike DialogContent a click on the backdrop closes it
-// (it holds no typed input to lose). Callers give it a DialogTitle (SheetTitle) for its accessible name.
+// A panel that slides in from the left (the phone navigation): a Radix Dialog, so focus is trapped, Escape closes it
+// and focus goes back. Unlike DialogContent a click on the backdrop closes it (it holds no typed input to lose).
+// Callers give it a DialogTitle (SheetTitle) for its accessible name.
 const Sheet = DialogPrimitive.Root;
 const SheetClose = DialogPrimitive.Close;
 const SheetTitle = DialogPrimitive.Title;

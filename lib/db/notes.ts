@@ -1,5 +1,5 @@
-// Server-only. See lib/db/tracks.ts for the convention. Free-text notes on an application (FR-11.1). Add and list only: editing or
-// deleting a note is not asked for (deleting would need an NFR-4 confirmation).
+// Server-only. See lib/db/tracks.ts for the convention. Free-text notes on an application (FR-11.1). Add and list only:
+// editing or deleting a note is not asked for (deleting would need an NFR-4 confirmation).
 import { and, desc, eq } from "drizzle-orm";
 import { checkNoteBody } from "../notes";
 import { getDb } from "./client";

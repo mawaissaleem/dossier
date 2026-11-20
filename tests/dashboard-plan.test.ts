@@ -3,7 +3,7 @@ import { getPlannerList, getWeeksPlan, setCapacity } from "@/lib/db/planner";
 import { applications, cellValues, columnOptions, columns, tracks } from "@/lib/db/schema";
 import { dropTestDb, useTestDb } from "./helpers/db";
 
-// 11.1: the dashboard card is getWeeksPlan(today) drawn by RankingList, so it must be the same top N as /planner.
+// The dashboard plan card is getWeeksPlan(today) drawn by RankingList, so it must be the same top N as /planner.
 describe("dashboard plan card data", () => {
   const TODAY = "2026-11-12";
   let db: ReturnType<typeof useTestDb>;

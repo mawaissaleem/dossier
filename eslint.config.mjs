@@ -7,6 +7,12 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   prettier, // turns off ESLint rules that would fight Prettier's formatting
+  {
+    // Prettier wraps code but never comments: keep comment lines within the same 120 columns.
+    rules: {
+      "max-len": ["error", { code: 10000, comments: 120, ignorePattern: "^\\s*// eslint-disable", ignoreUrls: true }],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

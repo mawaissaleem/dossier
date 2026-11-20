@@ -26,7 +26,8 @@ vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
 let db: ReturnType<typeof useTestDb>;
 let base: string, root: string, appId: number;
-const canBlockUnlink = process.platform !== "win32" && process.getuid?.() !== 0; // a read-only folder blocks unlink, except for root
+// a read-only folder blocks unlink, except for root
+const canBlockUnlink = process.platform !== "win32" && process.getuid?.() !== 0;
 const canSymlink = process.platform !== "win32"; // Windows needs a privilege to create symlinks
 const posix = process.platform !== "win32"; // Windows leaves hard-linked files (cannot unlink read-only without chmod)
 const mode = (p: string) => statSync(p).mode & 0o777;

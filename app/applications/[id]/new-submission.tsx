@@ -28,9 +28,10 @@ export type StatusChoice = {
   options: { id: number; label: string }[];
 };
 
-// Manual "New submission" (FR-7.4): files, date, note and an optional status change, saved together. At least one file is required
-// (no files = nothing to record). Missing expected labels (FR-7.3) are shown as information only: an extra transcript is not a full set.
-// The trigger opens a dialog whose body mounts only while open, so each open starts clean and loads the current files.
+// Manual "New submission" (FR-7.4): files, date, note and an optional status change, saved together. At least one file
+// is required (no files = nothing to record). Missing expected labels (FR-7.3) are shown as information only: an extra
+// transcript is not a full set. The trigger opens a dialog whose body mounts only while open, so each open starts clean
+// and loads the current files.
 export function NewSubmission({ applicationId, status }: { applicationId: number; status: StatusChoice | null }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -86,8 +87,10 @@ function SubmissionForm({
   const uid = useId();
   const [files, setFiles] = useState<ReviewFile[] | null>(null); // null = loading
   const [expected, setExpected] = useState<string[]>([]);
-  const [picked, setPicked] = useState<Set<number>>(new Set()); // none preselected: a new submission is usually a subset
-  const [date, setDate] = useState(() => todayLocal()); // mounts only after a click, so the browser's local date is safe here
+  // none preselected: a new submission is usually a subset
+  const [picked, setPicked] = useState<Set<number>>(new Set());
+  // mounts only after a click, so the browser's local date is safe here
+  const [date, setDate] = useState(() => todayLocal());
   const [note, setNote] = useState("");
   const [newStatus, setNewStatus] = useState(""); // "" = keep current
   const [error, setError] = useState<string | null>(null);

@@ -8,7 +8,8 @@ import { saveSubmittedStatuses, saveWinStatuses } from "@/app/actions/settings";
 
 type Choice = { id: number; label: string; color: string; on: boolean };
 
-// One checkbox per status option; also used for the dashboard "win" statuses (`kind="win"`, FR-9.7), which are saved the same way.
+// One checkbox per status option; also used for the dashboard "win" statuses (`kind="win"`, FR-9.7), which are saved
+// the same way.
 export function SubmittedForm({
   trackId,
   trackName,

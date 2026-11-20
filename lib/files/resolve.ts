@@ -1,5 +1,7 @@
-// Server-only. The one place that turns (files root, stored relative path) into an absolute path. Nothing else joins under the root.
-// Limit: the check and the later open are separate steps, so a symlink swapped in between is not caught (single-user, local app).
+// Server-only. The one place that turns (files root, stored relative path) into an absolute path. Nothing else joins
+// under the root.
+// Limit: the check and the later open are separate steps, so a symlink swapped in between is not caught (single-user,
+// local app).
 import { lstat, realpath } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { appDirs, isInside } from "./root";
@@ -16,9 +18,10 @@ async function realTarget(abs: string): Promise<string | null> {
     try {
       return join(await realpath(p), ...tail);
     } catch {
-      // realpath failed. A symlink here is dangling or looping: writing through it could land anywhere, so refuse (as for an entry
-      // that cannot be checked). A plain entry is fine: its real path is its parent's plus its name. It shows up when it was created
-      // between the two calls (a concurrent upload taking the same name), or when Windows briefly fails realpath on a busy file.
+      // realpath failed. A symlink here is dangling or looping: writing through it could land anywhere, so refuse (as
+      // for an entry that cannot be checked). A plain entry is fine: its real path is its parent's plus its name. It
+      // shows up when it was created between the two calls (a concurrent upload taking the same name), or when Windows
+      // briefly fails realpath on a busy file.
       const kind = await lstat(p).then(
         (s) => (s.isSymbolicLink() ? "link" : "plain"),
         (e: NodeJS.ErrnoException) => (e.code === "ENOENT" || e.code === "ENOTDIR" ? "missing" : "unknown"),
@@ -42,7 +45,8 @@ export async function resolveInRoot(root: string, stored: unknown): Promise<Path
       await realpath(rootAbs).catch((e: NodeJS.ErrnoException) => (e.code === "ENOENT" ? ("missing" as const) : null)),
       await realTarget(abs),
     ];
-    if (rReal === "missing") return fail(ROOT_MISSING); // the lexical checks above already refused anything that escapes the root
+    // the lexical checks above already refused anything that escapes the root
+    if (rReal === "missing") return fail(ROOT_MISSING);
     if (!rReal || !tReal || tReal === rReal || !isInside(tReal, rReal)) return refused; // symlink out of the root
     // A root that contains the app (e.g. home) must still not reach the project folder or the database folder.
     if ((await appDirs()).some((d) => isInside(tReal, d))) return refused;

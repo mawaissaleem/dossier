@@ -1,4 +1,4 @@
-// Server-only. Planner settings (FR-8) stored in the settings table; 10.1: the engine slot mapping per track.
+// Server-only. Planner settings (FR-8) stored in the settings table, including the engine slot mapping per track.
 import { cache } from "react";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { checkSubmittedIds } from "../submitted-statuses";
@@ -73,7 +73,8 @@ function trackColumns(trackId: number): SlotColumn[] {
     .all();
 }
 
-// The slot mapping in force for a track (saved, else the defaults), with each slot's column choices (the settings page).
+// The slot mapping in force for a track (saved, else the defaults), with each slot's column choices (the settings
+// page).
 export async function getPlannerSlots(
   trackId: number,
 ): Promise<{ slots: SlotMapping; choices: Record<Slot, SlotColumn[]> }> {
@@ -108,7 +109,8 @@ export type BufferOption = { id: number; label: string; color: string; bufferDay
 export type BufferSlot = "priority" | "effort";
 export type PlannerBuffers = Record<BufferSlot, { column: string; options: BufferOption[] } | null>;
 
-// The options (in order) of the track's current Priority and Effort columns, with their buffers; null for an empty slot.
+// The options (in order) of the track's current Priority and Effort columns, with their buffers; null for an empty
+// slot.
 export async function getPlannerBuffers(trackId: number): Promise<PlannerBuffers> {
   const { slots, choices } = await getPlannerSlots(trackId);
   const one = (slot: BufferSlot) => {
@@ -130,7 +132,8 @@ export async function getPlannerBuffers(trackId: number): Promise<PlannerBuffers
   return { priority: one("priority"), effort: one("effort") };
 }
 
-// Sets one option's buffer (whole days 0..365, null = blank). Only options of the column now in the track's Priority or Effort slot.
+// Sets one option's buffer (whole days 0..365, null = blank). Only options of the column now in the track's Priority or
+// Effort slot.
 export async function setOptionBuffer(
   optionId: unknown,
   input: unknown,
@@ -162,7 +165,8 @@ export async function setOptionBuffer(
 
 export const stillToDoKey = (trackId: number) => `track.${trackId}.still_to_do`;
 
-// Status option ids that are "still to do" for a track (FR-8.4): saved list (deleted ids dropped), else the options before the first submitted status.
+// Status option ids that are "still to do" for a track (FR-8.4): saved list (deleted ids dropped), else the options
+// before the first submitted status.
 export function stillToDoIds(trackId: number): number[] {
   return resolveStillToDo(readSetting(stillToDoKey(trackId)), statusOptions(trackId), submittedStatusIds(trackId));
 }
@@ -173,7 +177,8 @@ export async function getStillToDoChoices(trackId: number) {
   return statusOptions(trackId).map((o) => ({ ...o, stillToDo: on.has(o.id) }));
 }
 
-// Replaces the set. Refuses ids that are not options of this track's status column; an empty list is allowed (nothing is ranked).
+// Replaces the set. Refuses ids that are not options of this track's status column; an empty list is allowed (nothing
+// is ranked).
 export async function setStillToDo(
   trackId: number,
   ids: unknown,
@@ -212,13 +217,17 @@ export async function setRankingRules(
 
 export type PlannerItem = { id: number; title: string; trackId: number; trackName: string };
 // `reasoning` = the FR-8.9 line ("Priority (+3), Heavy effort (+2), due in 5 days").
-// `status` = the application's current status option (its label and chip colour), for the dashboard plan's chip; never null for a still-to-do application.
+// `status` = the application's current status option (its label and chip colour), for the dashboard plan's chip; never
+// null for a still-to-do application.
 export type PlanStatus = { label: string; color: string };
-export type RankedItem = Scored & PlannerItem & { overdue: boolean; reasoning: string; status: PlanStatus | null }; // score parts (score, daysLeft, priority, effort) + who it is; overdue = pinned and flagged
-export type UndatedItem = PlannerItem & UndatedScore & { reasoning: string; status: PlanStatus | null }; // buffer and daysUntouched
+// score parts (score, daysLeft, priority, effort) + who it is; overdue = pinned and flagged
+export type RankedItem = Scored & PlannerItem & { overdue: boolean; reasoning: string; status: PlanStatus | null };
+// buffer and daysUntouched
+export type UndatedItem = PlannerItem & UndatedScore & { reasoning: string; status: PlanStatus | null };
 
-// "Last touched" (FR-8.6) = the later of the application's own updated_at and its newest note or activity event (when it was written, so a
-// backdated manual submission does not count as the past). Every edit counts: form saves, archive/restore and table/board cell writes all bump updated_at. Ms per application id.
+// "Last touched" (FR-8.6) = the later of the application's own updated_at and its newest note or activity event (when
+// it was written, so a backdated manual submission does not count as the past). Every edit counts: form saves,
+// archive/restore and table/board cell writes all bump updated_at. Ms per application id.
 export function lastTouchedMs(): Map<number, number> {
   const db = getDb();
   const userId = getUserId();
@@ -274,8 +283,9 @@ type TodoTrack = {
   statuses: Map<number, PlanStatus>;
 };
 
-// The gathering below the policy step, shared by the ranking and the overdue alerts: per track, its non-archived applications in a
-// still-to-do status (no status = never), with each one's slot values (FR-8.7). No overdue or no-deadline rule is applied here.
+// The gathering below the policy step, shared by the ranking and the overdue alerts: per track, its non-archived
+// applications in a still-to-do status (no status = never), with each one's slot values (FR-8.7). No overdue or
+// no-deadline rule is applied here.
 function gatherStillToDo(): TodoTrack[] {
   const db = getDb();
   const userId = getUserId();
@@ -298,7 +308,8 @@ function gatherStillToDo(): TodoTrack[] {
       statusCol,
       ...[slots.priority, slots.deadline, slots.effort].filter((c): c is number => c !== null),
     ];
-    const cells = new Map<number, Map<number, { option: number | null; date: string | null }>>(); // application -> column -> value
+    // application -> column -> value
+    const cells = new Map<number, Map<number, { option: number | null; date: string | null }>>();
     for (const c of db
       .select({
         a: cellValues.applicationId,
@@ -342,8 +353,8 @@ function gatherStillToDo(): TodoTrack[] {
   return out;
 }
 
-// FR-8: the still-to-do applications of every track, scored per track with that track's own Priority/Effort options (FR-8.7 fallback),
-// then merged and ordered by the overdue and no-deadline rules (FR-8.5, FR-8.6).
+// FR-8: the still-to-do applications of every track, scored per track with that track's own Priority/Effort options
+// (FR-8.7 fallback), then merged and ordered by the overdue and no-deadline rules (FR-8.5, FR-8.6).
 // `undated` = no usable deadline, after every dated one, or empty when the rule says to leave them out.
 export async function getPlannerRanking(today: string): Promise<{ ranked: RankedItem[]; undated: UndatedItem[] }> {
   const touched = lastTouchedMs();
@@ -384,8 +395,9 @@ export async function getPlannerRanking(today: string): Promise<{ ranked: Ranked
   return orderRanking(ranked, undated, rules.overdue, rules.noDeadline);
 }
 
-// The still-to-do applications of every track with their Deadline slot value, from the ranking's own gathering (below its policy step, so the
-// overdue and no-deadline rules never change it). React `cache` = once per request: the cards and the summary line share one pass, not one each.
+// The still-to-do applications of every track with their Deadline slot value, from the ranking's own gathering (below
+// its policy step, so the overdue and no-deadline rules never change it). React `cache` = once per request: the cards
+// and the summary line share one pass, not one each.
 export const datedStillToDo = cache(() =>
   gatherStillToDo().flatMap((t) =>
     t.apps.map((a) => ({
@@ -398,19 +410,22 @@ export const datedStillToDo = cache(() =>
   ),
 );
 
-// FR-9.5: those whose deadline is before today, most overdue first. The planner's overdue rule (pin, hide or normal) never changes it.
+// FR-9.5: those whose deadline is before today, most overdue first. The planner's overdue rule (pin, hide or normal)
+// never changes it.
 export const getOverdueAlerts = cache(async (today: string): Promise<OverdueAlert[]> =>
   overdueAlerts(datedStillToDo(), today),
 );
 
-// FR-9.3: the nearest deadlines (today or later) across every track, from the same gathering as /planner (still-to-do, non-archived, each
-// track's Deadline slot), so it can never disagree with it. No ranking is computed. Overdue is never in it.
+// FR-9.3: the nearest deadlines (today or later) across every track, from the same gathering as /planner (still-to-do,
+// non-archived, each track's Deadline slot), so it can never disagree with it. No ranking is computed. Overdue is never
+// in it.
 export const getUpcomingDeadlines = cache(async (today: string, limit: number): Promise<UpcomingDeadline[]> =>
   upcomingDeadlines(datedStillToDo(), today, limit),
 );
 
 // FR-9.4: submitted this week against capacity. The first-submission date of each non-archived application (one grouped
-// query, MIN(date)) gives both this week's count and the streak (FR-9.4, `streak` in lib/dashboard.ts). Deleted files do not matter; the submission row stays.
+// query, MIN(date)) gives both this week's count and the streak (FR-9.4, `streak` in lib/dashboard.ts). Deleted files
+// do not matter; the submission row stays.
 export const getWeeklyProgress = cache(async (today: string): Promise<WeeklyProgress & { streak: number }> => {
   const userId = getUserId();
   const firstDates = getDb()
@@ -440,7 +455,8 @@ export async function setCapacity(input: unknown): Promise<{ ok: true } | { ok: 
   return { ok: true };
 }
 
-// The whole ranking as one list: dated items, then the no-deadline ones placed by the rule. Shared by /planner, the settings preview and the plan.
+// The whole ranking as one list: dated items, then the no-deadline ones placed by the rule. Shared by /planner, the
+// settings preview and the plan.
 export async function getPlannerList(today: string) {
   const { ranked, undated } = await getPlannerRanking(today);
   return [...ranked, ...undated.map((u) => ({ ...u, overdue: false }))];
@@ -454,9 +470,10 @@ export async function getWeeksPlan(today: string) {
 
 export type FollowUpItem = PlannerItem & { followUp: string; daysAgo: number; text: string };
 
-// FR-8.10 / FR-9.2: submitted, non-archived applications of every track whose follow-up date (that track's Follow-up slot; no slot = nothing)
-// is today or earlier, oldest first. Submitted = at least one submission row (a deleted file does not remove it) or a submitted current status.
-// Independent of the ranking: no priority, deadline or still-to-do setting is read. The dashboard calls this too.
+// FR-8.10 / FR-9.2: submitted, non-archived applications of every track whose follow-up date (that track's Follow-up
+// slot; no slot = nothing) is today or earlier, oldest first. Submitted = at least one submission row (a deleted file
+// does not remove it) or a submitted current status. Independent of the ranking: no priority, deadline or still-to-do
+// setting is read. The dashboard calls this too.
 export async function getFollowUpsDue(today: string): Promise<FollowUpItem[]> {
   const db = getDb();
   const userId = getUserId();
@@ -529,9 +546,10 @@ export async function getFollowUpsDue(today: string): Promise<FollowUpItem[]> {
   }));
 }
 
-// FR-8.11: back to the shipped planner settings, in one transaction. Deletes the saved slots and still-to-do list of every track and the three
-// global keys (so the pure defaults apply), then sets the buffers on the options of the Priority and Effort columns those defaults now pick.
-// Nothing else is touched (submitted statuses, labels, files and backup settings, options' labels/colours/order, cells, applications).
+// FR-8.11: back to the shipped planner settings, in one transaction. Deletes the saved slots and still-to-do list of
+// every track and the three global keys (so the pure defaults apply), then sets the buffers on the options of the
+// Priority and Effort columns those defaults now pick. Nothing else is touched (submitted statuses, labels, files and
+// backup settings, options' labels/colours/order, cells, applications).
 export async function resetPlannerSettings(): Promise<void> {
   const db = getDb();
   const userId = getUserId();

@@ -293,7 +293,8 @@ describe("errorField", () => {
     const withTitle = [...cols, { id: 11, name: "Title" }];
     expect(errorField("Title: Enter a valid date as YYYY-MM-DD.", withTitle)).toBe(11);
     expect(errorField("Title is required.", withTitle)).toBe("title");
-    expect(errorField("Salary: Title is required.", withTitle)).toBe(9); // a column error is never taken for the title error
+    // a column error is never taken for the title error
+    expect(errorField("Salary: Title is required.", withTitle)).toBe(9);
   });
   it("is null for form-level or no errors", () => {
     expect(errorField("Could not save. Try again.", cols)).toBeNull();

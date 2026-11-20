@@ -17,5 +17,6 @@ export const THEME_STORAGE_KEY = "dossier-theme";
 export const parseTheme = (v: unknown): Theme =>
   (THEMES as readonly unknown[]).includes(v) ? (v as Theme) : DEFAULT_THEME;
 
-// Inline script for <head>: runs while the HTML is parsed, before first paint. It validates the stored value like parseTheme does.
+// Inline script for <head>: runs while the HTML is parsed, before first paint. It validates the stored value like
+// parseTheme does.
 export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});document.documentElement.setAttribute("data-theme",${JSON.stringify(THEMES)}.indexOf(t)>-1?t:${JSON.stringify(DEFAULT_THEME)})}catch(e){}})()`;

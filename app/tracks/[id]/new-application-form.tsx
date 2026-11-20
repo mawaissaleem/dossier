@@ -7,11 +7,13 @@ import { ApplicationFields } from "@/app/application-fields";
 import { buildCreateValues, defaultState, errorField, type FormState } from "@/lib/application-form";
 import type { ColumnItem } from "@/lib/db/columns";
 
-// Hidden columns are shown too (marked), so no column is unreachable. `columns` comes from the page, so a column added through
-// the header "+" appears here after the router refresh, and the state (keyed by column id) keeps what was typed in the others.
+// Hidden columns are shown too (marked), so no column is unreachable. `columns` comes from the page, so a column added
+// through the header "+" appears here after the router refresh, and the state (keyed by column id) keeps what was typed
+// in the others.
 export function NewApplicationForm({ trackId, columns }: { trackId: number; columns: ColumnItem[] }) {
   const [title, setTitle] = useState("");
-  const [fields, setFields] = useState<FormState>({}); // only what the user touched; the rest shows the column default (defaultState)
+  // only what the user touched; the rest shows the column default (defaultState)
+  const [fields, setFields] = useState<FormState>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 

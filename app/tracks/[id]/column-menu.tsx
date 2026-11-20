@@ -41,9 +41,10 @@ type Result = { ok: true } | { ok: false; error: string };
 type Impact = { ok: true; name: string; valueCount: number; archivedCount: number } | { ok: false; error: string };
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-// Radix dropdown, portalled to <body> so the table's scroll area cannot clip it. Keyboard: Enter/Space/arrows open, arrows move, Escape closes.
-// `act(fn)` defers an item's action until the menu has closed and focus is back on the trigger, so a disabled-while-saving item never strands
-// focus and a modal dialog opened by fn returns focus to the trigger when it closes.
+// Radix dropdown, portalled to <body> so the table's scroll area cannot clip it. Keyboard: Enter/Space/arrows open,
+// arrows move, Escape closes. `act(fn)` defers an item's action until the menu has closed and focus is back on the
+// trigger, so a disabled-while-saving item never strands focus and a modal dialog opened by fn returns focus to the
+// trigger when it closes.
 // `error` renders outside the menu so a failed action's message is visible after the menu has closed.
 function Dropdown({
   label,
@@ -101,8 +102,9 @@ function Dropdown({
   );
 }
 
-// Header menu for one track column: Rename, Edit options (single-select), Use as status column, Default value, Hide, Move left, Move right, Delete (not on Status). No type change (FR-2.5).
-// first/last are among the *visible* columns, matching what the move actions do.
+// Header menu for one track column: Rename, Edit options (single-select), Use as status column, Default value, Hide,
+// Move left, Move right, Delete (not on Status). No type change (FR-2.5). first/last are among the *visible* columns,
+// matching what the move actions do.
 export function ColumnMenu({
   column,
   first,
@@ -144,7 +146,8 @@ export function ColumnMenu({
   const back = useReturnFocus();
   const [name, setName] = useState(column.name);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState(""); // default-value form: text of the input, "true"/"false" for a checkbox, option id for a select
+  // default-value form: text of the input, "true"/"false" for a checkbox, option id for a select
+  const [draft, setDraft] = useState("");
   const [defError, setDefError] = useState<string | null>(null);
   const [menuError, setMenuError] = useState<string | null>(null);
   const [impact, setImpact] = useState<Impact | null>(null); // null while loading
@@ -184,7 +187,8 @@ export function ColumnMenu({
     setDefOpen(true);
   }
 
-  // Blank = no default. The server validates by column type; the select/checkbox drafts are converted to what it expects.
+  // Blank = no default. The server validates by column type; the select/checkbox drafts are converted to what it
+  // expects.
   const draftValue = () =>
     draft === ""
       ? null

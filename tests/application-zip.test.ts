@@ -189,7 +189,8 @@ describe("GET /api/applications/:id/zip", () => {
     db.update(applications).set({ userId: "someone-else" }).where(eq(applications.id, appId)).run();
     expect((await get(appId)).status).toBe(404);
     db.update(applications).set({ userId: "local" }).where(eq(applications.id, appId)).run();
-    db.update(files).set({ userId: "someone-else" }).run(); // his application, but the files are another user's: nothing to zip
+    // his application, but the files are another user's: nothing to zip
+    db.update(files).set({ userId: "someone-else" }).run();
     expect((await get(appId)).status).toBe(404);
   });
   it("a files folder that no longer exists is a 409 message that points to Re-point, not a zip", async () => {
@@ -217,7 +218,7 @@ describe("GET /api/applications/:id/zip", () => {
     const r = await get(appId);
     expect(r.status).toBe(409);
     expect(r.headers.get("content-type")).toContain("text/html");
-    const any = await get(appId, "?anyway=1"); // round 1 streamed an empty zip here
+    const any = await get(appId, "?anyway=1"); // an earlier version streamed an empty zip here
     expect(any.status).toBe(409);
     expect(any.headers.get("content-type")).toContain("text/html");
     expect(readFileSync(join(root, (await db.select().from(files).all())[0].relativePath)).toString()).toBe("1");

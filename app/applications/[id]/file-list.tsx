@@ -8,7 +8,8 @@ import { previewItems } from "@/lib/preview-nav";
 import { formatBytes } from "@/lib/upload-client";
 import { PreviewButton, PreviewGroup } from "./preview-file";
 
-// The application's uploaded files (5.10). A PDF or an image also has Preview (13.3, 13.4): one dialog for the list, Previous / Next across its previewable files. Open is a plain link to the GET route in a new tab: the server decides inline or download.
+// The application's uploaded files. A PDF or an image also has Preview: one dialog for the list, Previous / Next across
+// its previewable files. Open is a plain link to the GET route in a new tab: the server decides inline or download.
 // min-w-0 + truncate keep a long name from widening the row; the full text is in the title.
 export function FileList({ files }: { files: FileListItem[] }) {
   if (files.length === 0)

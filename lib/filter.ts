@@ -1,11 +1,6 @@
-// Pure single-select filtering: no DB or React imports (type-only imports are erased). Runs client-side before the sort (filter, then sort),
-// on the rows the server page already sent. The state is a plain Filter[] so a quick-filter chip (4.3) only has to call toggleFilter.
-//
-// Semantics: options of one column are OR (a column's "(Blank)" is one more option); different columns are AND.
-// "Blank" = no value, or a value that is not an option of the column any more (deleted option). Hidden columns still filter (the chip stays visible).
-//
-// URL form, one repeated param per filtered column: ?f=<columnId>:<token>.<token>&f=<columnId>:<token>
-// where token is an option id or the word "blank", e.g. ?f=3:10.12.blank&f=5:blank (numeric column id, not "col-<n>").
+// Pure single-select filtering: no DB or React imports (type-only imports are erased). Runs client-side before the sort
+// (filter, then sort), on the rows the server page already sent. The state is a plain Filter[] so a quick-filter chip
+// only has to call toggleFilter.
 import type { ApplicationRow } from "./db/applications";
 import type { ColumnItem } from "./db/columns";
 
@@ -19,8 +14,11 @@ const ENTRY = /^(\d{1,15}):((?:\d{1,15}|blank)(?:\.(?:\d{1,15}|blank))*)$/;
 
 const selectCol = (columns: Col[], id: number) => columns.find((c) => c.id === id && c.type === "single_select");
 
-// Reads the `f` params against the current columns. Malformed, oversized, repeated, unknown-column and non-select entries are ignored, never an error.
-// Options that no longer exist are dropped; a filter left with nothing is dropped. Options come back in the column's own order (canonical).
+// URL form, one repeated param per filtered column: ?f=<columnId>:<token>.<token>&f=<columnId>:<token> where token is
+// an option id or the word "blank", e.g. ?f=3:10.12.blank&f=5:blank (numeric column id, not "col-<n>"). Reads the `f`
+// params against the current columns. Malformed, oversized, repeated, unknown-column and non-select entries are
+// ignored, never an error. Options that no longer exist are dropped; a filter left with nothing is dropped. Options
+// come back in the column's own order (canonical).
 export function parseFilters(raw: string[], columns: Col[]): Filter[] {
   const out: Filter[] = [];
   for (const s of raw.slice(0, MAX_PARAMS)) {
@@ -63,8 +61,11 @@ export function toggleFilter(filters: Filter[], id: number, token: Token): Filte
   return filters.some((f) => f.id === id) ? filters.map((f) => (f.id === id ? next : f)) : [...rest, next];
 }
 
-// Returns `rows` itself when nothing applies. A filter whose column is gone (or not a single-select) is skipped.
-// Each row is checked once per filter: a known option must be picked, anything else counts as blank.
+// Semantics: options of one column are OR (a column's "(Blank)" is one more option); different columns are AND. "Blank"
+// = no value, or a value that is not an option of the column any more (deleted option). Hidden columns still filter
+// (the chip stays visible). Returns `rows` itself when nothing applies. A filter whose column is gone (or not a
+// single-select) is skipped. Each row is checked once per filter: a known option must be picked, anything else counts
+// as blank.
 export function filterRows(rows: ApplicationRow[], columns: Col[], filters: Filter[]): ApplicationRow[] {
   const active = filters.flatMap((f) => {
     const col = selectCol(columns, f.id);

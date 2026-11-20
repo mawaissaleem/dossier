@@ -6,8 +6,8 @@ import { localToday } from "@/lib/deadline";
 import { getTrackOverviews } from "@/lib/db/track-overview";
 import { AddApplicationMenu } from "./add-application-menu";
 
-// The dashboard header's primary button. One track: a link to its add form. Several: a menu of tracks. None: nothing (the page shows the Add track empty state).
-// Shares the request's one getTrackOverviews read with the cards.
+// The dashboard header's primary button. One track: a link to its add form. Several: a menu of tracks. None: nothing
+// (the page shows the Add track empty state). Shares the request's one getTrackOverviews read with the cards.
 export async function AddApplication() {
   await connection();
   const tracks = await getTrackOverviews(localToday());

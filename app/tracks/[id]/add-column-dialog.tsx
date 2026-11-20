@@ -33,9 +33,11 @@ export function AddColumnDialog({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  // Reset on every close (Escape, Cancel, success) so reopening starts clean; a failed submit keeps the dialog open and the input.
+  // Reset on every close (Escape, Cancel, success) so reopening starts clean; a failed submit keeps the dialog open and
+  // the input.
   function change(next: boolean) {
-    if (!next && pending) return; // Escape and Cancel are ignored while saving (as in 1.6), so a late result can never land on a closed or reopened dialog
+    // Escape and Cancel are ignored while saving, so a late result can never land on a closed or reopened dialog
+    if (!next && pending) return;
     setOpen(next);
     if (!next) {
       setName("");

@@ -1,4 +1,5 @@
-// Pure cell-value rules: no DB or UI imports. Maps a column type to its typed cell_values field and validates raw input.
+// Pure cell-value rules: no DB or UI imports. Maps a column type to its typed cell_values field and validates raw
+// input.
 import type { ColumnType } from "./db/schema";
 
 export type CellField = "valueText" | "valueNumber" | "valueDate" | "valueBool" | "valueOptionId";
@@ -19,14 +20,16 @@ const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)$/;
 const bad = (error: string): ParsedCell => ({ ok: false, error });
 const good = (value: CellScalar | null): ParsedCell => ({ ok: true, value });
 
-// Longest stored text or link. One cap for cells, defaults and the add/edit form, so a value the app accepted (a default the add
-// form sends back as shown) is never refused later; an older over-long default fails decodeDefault and is skipped (blank).
+// Longest stored text or link. One cap for cells, defaults and the add/edit form, so a value the app accepted (a
+// default the add form sends back as shown) is never refused later; an older over-long default fails decodeDefault and
+// is skipped (blank).
 export const MAX_TEXT = 10_000;
 const tooLong = (what: string) => bad(`${what} must be at most ${MAX_TEXT.toLocaleString("en-US")} characters.`);
 
 // The only way a link value reaches an href: http(s) with a host and no whitespace/control characters, else null.
-// Returns the normalised URL (new URL().href), so "//example.com" and "https:////example.com" both become "https://example.com/".
-// The URL parser silently drops tabs and newlines, so they are rejected up front rather than stored.
+// Returns the normalised URL (new URL().href), so "//example.com" and "https:////example.com" both become
+// "https://example.com/". The URL parser silently drops tabs and newlines, so they are rejected up front rather than
+// stored.
 export function safeHref(value: string): string | null {
   if (/[\s\u0000-\u001f\u007f]/.test(value)) return null;
   try {
@@ -37,7 +40,8 @@ export function safeHref(value: string): string | null {
   }
 }
 
-// Short readable text for a link: host + path, no bare trailing slash, cut at `max` characters. Falls back to the input if it is not a URL.
+// Short readable text for a link: host + path, no bare trailing slash, cut at `max` characters. Falls back to the input
+// if it is not a URL.
 export function linkLabel(href: string, max = 40): string {
   let text = href;
   try {
@@ -54,7 +58,8 @@ export function parseCell(type: ColumnType, raw: unknown): ParsedCell {
       if (typeof raw !== "string") return bad("Text must be a string.");
       return raw.trim().length > MAX_TEXT ? tooLong("Text") : good(raw.trim());
     case "number": {
-      // Plain decimals only: Number() would also take "0x10" (16) and "1e3" (1000), which surprise someone typing into a cell.
+      // Plain decimals only: Number() would also take "0x10" (16) and "1e3" (1000), which surprise someone typing into
+      // a cell.
       const n =
         typeof raw === "number" ? raw : typeof raw === "string" && DECIMAL.test(raw.trim()) ? Number(raw.trim()) : NaN;
       return Number.isFinite(n) ? good(n) : bad("Enter a valid number.");
@@ -90,13 +95,15 @@ export function readCell(type: ColumnType, row: Partial<Record<CellField, CellSc
   return row[CELL_FIELD[type]] ?? null;
 }
 
-// Column default_value encoding: raw text in columns.default_value, one rule per type. A default is a typed value that parseCell
-// accepted, stored as String(value): text/link as given (link already normalised), number as its canonical decimal ("4.5"),
-// date as YYYY-MM-DD, checkbox as "true"/"false", single_select as the option id ("12"). null (no default) is the NULL column.
+// Column default_value encoding: raw text in columns.default_value, one rule per type. A default is a typed value that
+// parseCell accepted, stored as String(value): text/link as given (link already normalised), number as its canonical
+// decimal ("4.5"), date as YYYY-MM-DD, checkbox as "true"/"false", single_select as the option id ("12"). null (no
+// default) is the NULL column.
 export const encodeDefault = (value: CellScalar): string => String(value);
 
-// Typed default for `type`, or null (= no default) when the text is empty or invalid, e.g. hand-edited. Callers skip null, so a
-// bad default never blocks creating an application. A single_select result still has to be checked against the column's options.
+// Typed default for `type`, or null (= no default) when the text is empty or invalid, e.g. hand-edited. Callers skip
+// null, so a bad default never blocks creating an application. A single_select result still has to be checked against
+// the column's options.
 export function decodeDefault(type: ColumnType, text: string | null): CellScalar | null {
   if (text === null) return null;
   let raw: unknown = text;

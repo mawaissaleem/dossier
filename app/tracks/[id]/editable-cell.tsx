@@ -11,8 +11,10 @@ import type { EditorKind } from "@/lib/table";
 import { EDITOR_MIN_WIDTH } from "@/lib/virtual-rows";
 import { usePinRow } from "./row-pins";
 
-// Click-to-edit text/number/date/link cell. A link with a safe `href` shows as an anchor (new tab) plus an Edit button; an unsafe or blank one is plain text. Edit state is local to this component, and the table keys it by application id + column id.
-// Enter or blur saves, Escape cancels. The server validates (no rules here beyond the input type) and its error is shown with the typed text kept.
+// Click-to-edit text/number/date/link cell. A link with a safe `href` shows as an anchor (new tab) plus an Edit button;
+// an unsafe or blank one is plain text. Edit state is local to this component, and the table keys it by application id
+// + column id. Enter or blur saves, Escape cancels. The server validates (no rules here beyond the input type) and its
+// error is shown with the typed text kept.
 export function EditableCell({
   applicationId,
   columnId,
@@ -32,7 +34,8 @@ export function EditableCell({
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  // True while a save is in flight, and after Escape (so the blur that follows is ignored). Refs, because a blur can fire before state updates.
+  // True while a save is in flight, and after Escape (so the blur that follows is ignored). Refs, because a blur can
+  // fire before state updates.
   const locked = useRef(false);
   const refocus = useRef(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -41,7 +44,8 @@ export function EditableCell({
   usePinRow(applicationId, editing); // the virtualised table keeps this row mounted while the editor is open
 
   useEffect(() => {
-    // Only when focus was lost with the input (it is on body); if the user moved to another field or cell, leave it there.
+    // Only when focus was lost with the input (it is on body); if the user moved to another field or cell, leave it
+    // there.
     const lost = !document.activeElement || document.activeElement === document.body;
     if (!editing && refocus.current && lost) trigger.current?.focus();
     refocus.current = false;
@@ -158,7 +162,8 @@ export function EditableCell({
           if (e.key === "Enter") {
             refocus.current = true;
             commit();
-          } else if (e.key === "Escape" && !locked.current) cancel(); // ignored while saving, so a failed save's error is never hidden
+            // ignored while saving, so a failed save's error is never hidden
+          } else if (e.key === "Escape" && !locked.current) cancel();
         }}
         style={{ minWidth: EDITOR_MIN_WIDTH }}
         className={cn("px-1.5 text-sm", num)}

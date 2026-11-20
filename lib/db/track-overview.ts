@@ -1,4 +1,5 @@
-// Server-only. What the dashboard's track cards and the /tracks tiles show, for every track, in a fixed number of queries (none per application).
+// Server-only. What the dashboard's track cards and the /tracks tiles show, for every track, in a fixed number of
+// queries (none per application).
 import { and, eq } from "drizzle-orm";
 import { cache } from "react";
 import { trackOverview, type OverviewApp, type TrackOverview } from "../track-overview";
@@ -9,9 +10,10 @@ import { applications, cellValues, columns } from "./schema";
 import { submittedStatusIds, winStatusIds } from "./track-settings";
 import { getUserId } from "./user";
 
-// Non-archived applications only. Reads: the pipeline (counts, status column, track colour), one query for every application's status,
-// the planner's last-touched map and its still-to-do gathering (deadlines; both shared with the dashboard's other cards), plus three settings per track.
-// React `cache` = once per request (the headers, the cards and the tiles share it); `nowMs` is not part of the key.
+// Non-archived applications only. Reads: the pipeline (counts, status column, track colour), one query for every
+// application's status, the planner's last-touched map and its still-to-do gathering (deadlines; both shared with the
+// dashboard's other cards), plus three settings per track. React `cache` = once per request (the headers, the cards and
+// the tiles share it); `nowMs` is not part of the key.
 export const getTrackOverviews = cache(async (today: string, nowMs: number = Date.now()): Promise<TrackOverview[]> => {
   const db = getDb();
   const userId = getUserId();

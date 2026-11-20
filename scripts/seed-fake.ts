@@ -1,12 +1,13 @@
-// Fills a scratch database with fake applications for performance and search work (task 4.4). Run `npm run db:seed` first.
-//   npm run db:seed:fake -- [--count 500] [--mix Job=80,PhD=20] [--seed 1] [--base 2026-11-07] [--force]
-// Deterministic: the same --seed and --base give the same data. NOT idempotent: every run adds another batch (same seed = same
-// names again), so use a fresh database or a different --seed. Refuses the default real database (./data/dossier.db) without --force.
+// Fills a scratch database with fake applications for performance and search work. Run `npm run db:seed` first. npm run
+// db:seed:fake -- [--count 500] [--mix Job=80,PhD=20] [--seed 1] [--base 2026-11-07] [--force] Deterministic: the same
+// --seed and --base give the same data. NOT idempotent: every run adds another batch (same seed = same names again), so
+// use a fresh database or a different --seed. Refuses the default real database (./data/dossier.db) without --force.
 // Every column from listColumns gets data, hidden ones included (fine for a test dataset).
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { loadEnvConfig } from "@next/env";
-import { CELL_FIELD, parseCell } from "../lib/cells"; // pure (type-only schema import), safe before DATABASE_PATH is loaded
+// pure (type-only schema import), safe before DATABASE_PATH is loaded
+import { CELL_FIELD, parseCell } from "../lib/cells";
 
 loadEnvConfig(process.cwd());
 
@@ -106,10 +107,12 @@ async function main() {
             .returning({ id: applications.id, title: applications.title })
             .all();
           const cellRows = chunk.flatMap((r, k) => {
-            if (ids[k]?.title !== r.title) throw new Error("Insert order mismatch."); // RETURNING order is relied on to pair ids with rows
+            // RETURNING order is relied on to pair ids with rows
+            if (ids[k]?.title !== r.title) throw new Error("Insert order mismatch.");
             return Object.entries(r.cells).map(([cid, raw]) => {
               const type = p.types.get(Number(cid))!;
-              const parsed = parseCell(type, raw); // the app's own validation: a value it would refuse is a bug in the generator
+              // the app's own validation: a value it would refuse is a bug in the generator
+              const parsed = parseCell(type, raw);
               if (!parsed.ok || parsed.value === null)
                 throw new Error(`Generated an invalid ${type} value ${JSON.stringify(raw)}.`);
               return { userId, applicationId: ids[k].id, columnId: Number(cid), [CELL_FIELD[type]]: parsed.value };

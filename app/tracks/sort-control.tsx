@@ -2,7 +2,8 @@ import Link from "next/link";
 import { TRACK_SORTS, TRACK_SORT_LABELS, type TrackSort } from "@/lib/track-overview";
 import { cn } from "@/lib/utils";
 
-// Recent / Name / Most active as three links (`?sort=`; Recent is the plain /tracks), so it works without JS and the choice is in the URL. The current one is `aria-current`.
+// Recent / Name / Most active as three links (`?sort=`; Recent is the plain /tracks), so it works without JS and the
+// choice is in the URL. The current one is `aria-current`.
 export function SortControl({ sort }: { sort: TrackSort }) {
   return (
     <div role="group" aria-label="Sort tracks" className="inline-flex rounded-md border border-input bg-card p-0.5">

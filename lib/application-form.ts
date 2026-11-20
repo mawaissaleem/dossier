@@ -1,4 +1,5 @@
-// Pure form logic: no DB or UI imports. Maps a column to its input and turns form state into the createApplication payload.
+// Pure form logic: no DB or UI imports. Maps a column to its input and turns form state into the createApplication
+// payload.
 import { decodeDefault, type CellScalar } from "./cells";
 import type { ColumnItem } from "./db/columns";
 import type { ColumnType } from "./db/schema";
@@ -6,8 +7,9 @@ import { isDeadline, isPriority } from "./priority";
 import { formatCell } from "./table";
 
 export type InputKind = "text" | "number" | "date" | "checkbox" | "select";
-// Link is a plain text input on purpose: type=url would reject "example.com", which the server accepts and turns into https://example.com/.
-// Number is a text input too (inputMode decimal): type=number rejects values the server accepts and shows its own error text.
+// Link is a plain text input on purpose: type=url would reject "example.com", which the server accepts and turns into
+// https://example.com/. Number is a text input too (inputMode decimal): type=number rejects values the server accepts
+// and shows its own error text.
 export const inputKind = (type: ColumnType): InputKind => {
   switch (type) {
     case "number":
@@ -24,12 +26,14 @@ export const inputKind = (type: ColumnType): InputKind => {
 };
 
 // Keyed by column id, not position, so adding or removing a column never shifts what was typed.
-// Add form: holds only touched fields; buildCreateValues fills the rest from the defaults (or blank) and sends every column.
-// Edit form: starts with every column (initialState); changedState picks what to send. A cleared field ("") is sent as blank.
+// Add form: holds only touched fields; buildCreateValues fills the rest from the defaults (or blank) and sends every
+// column. Edit form: starts with every column (initialState); changedState picks what to send. A cleared field ("") is
+// sent as blank.
 export type FormState = Record<number, string | boolean>;
 export type FormValue = { columnId: number; value: string | number | boolean | null };
-// State of a date input the browser reports as badInput (half-typed or impossible). Sent as is, so the server refuses it with
-// "<Column>: Enter a valid date as YYYY-MM-DD." instead of saving a blank the user did not choose. Shown as an empty input value.
+// State of a date input the browser reports as badInput (half-typed or impossible). Sent as is, so the server refuses
+// it with "<Column>: Enter a valid date as YYYY-MM-DD." instead of saving a blank the user did not choose. Shown as an
+// empty input value.
 export const BAD_DATE = "invalid date";
 
 // Entries for columns that still exist (a deleted column's leftover state is dropped). Strings are sent as typed;
@@ -51,9 +55,10 @@ export function buildValues(
   return out;
 }
 
-// Add form: what each input shows before the user touches it = the column's default, decoded with decodeDefault (the server's decoder).
-// Only columns with a usable default are present; an invalid one, or a select default whose option is no longer among the column's
-// options, is absent and shows blank (the server skips such a default too). The edit form has no defaults and does not use this.
+// Add form: what each input shows before the user touches it = the column's default, decoded with decodeDefault (the
+// server's decoder). Only columns with a usable default are present; an invalid one, or a select default whose option
+// is no longer among the column's options, is absent and shows blank (the server skips such a default too). The edit
+// form has no defaults and does not use this.
 type DefaultCol = Pick<ColumnItem, "id" | "type" | "options" | "defaultValue">;
 export function defaultState(cols: DefaultCol[]): FormState {
   const out: FormState = {};
@@ -68,16 +73,18 @@ export function defaultState(cols: DefaultCol[]): FormState {
   return out;
 }
 
-// Add form payload: EVERY column, with the value the screen shows (touched value, else the default from the props the form rendered
-// with, else blank), so the server never applies a default of its own. That is how "what is shown is what is saved" holds even if a
-// default changed in another tab since the page loaded. A cleared field is sent as blank (null), so no default comes back.
-// Limit: a select default whose option was deleted meanwhile is sent as is and the server refuses it ("Choose a valid option"), saving nothing.
+// Add form payload: EVERY column, with the value the screen shows (touched value, else the default from the props the
+// form rendered with, else blank), so the server never applies a default of its own. That is how "what is shown is what
+// is saved" holds even if a default changed in another tab since the page loaded. A cleared field is sent as blank
+// (null), so no default comes back.
+// Limit: a select default whose option was deleted meanwhile is sent as is and the server refuses it ("Choose a valid
+// option"), saving nothing.
 export function buildCreateValues(cols: DefaultCol[], touched: FormState): FormValue[] {
   return buildValues(cols, { ...Object.fromEntries(cols.map((c) => [c.id, ""])), ...defaultState(cols), ...touched });
 }
 
-// Edit form start state: EVERY column, from the loaded values (no defaults, those are for new applications). Blank shows as "" and an
-// unchecked or blank checkbox as false; a select is its option id as text.
+// Edit form start state: EVERY column, from the loaded values (no defaults, those are for new applications). Blank
+// shows as "" and an unchecked or blank checkbox as false; a select is its option id as text.
 export function initialState(
   cols: Pick<ColumnItem, "id" | "type" | "options">[],
   values: Record<number, CellScalar | null>,
@@ -97,10 +104,11 @@ export function initialState(
   return out;
 }
 
-// The part of `state` that differs from `initial` (what the form loaded), so saving only writes what the user changed and never
-// overwrites a cell edited elsewhere since the page loaded. Per column, compared after trimming strings; missing and false both
-// count as "" (a blank cell and an unchecked box look the same). So retyping the same text, or checking then unchecking a box, is
-// no change; "52000.50" over a loaded "52000.5" is one (compared as text, not as a number) and rewrites the same number.
+// The part of `state` that differs from `initial` (what the form loaded), so saving only writes what the user changed
+// and never overwrites a cell edited elsewhere since the page loaded. Per column, compared after trimming strings;
+// missing and false both count as "" (a blank cell and an unchecked box look the same). So retyping the same text, or
+// checking then unchecking a box, is no change; "52000.50" over a loaded "52000.5" is one (compared as text, not as a
+// number) and rewrites the same number.
 const norm = (v: string | boolean | undefined) => (v === true ? "true" : typeof v === "string" ? v.trim() : "");
 export function changedState(cols: { id: number }[], state: FormState, initial: FormState): FormState {
   const out: FormState = {};
@@ -108,10 +116,11 @@ export function changedState(cols: { id: number }[], state: FormState, initial: 
   return out;
 }
 
-// Essentials = Status (the isStatus column), then Priority (single_select) and Deadline (date) matched by name, trimmed and
-// case-insensitive: the schema has no flag for them. Fixed order: status, priority, deadline. A hidden column is never essential.
-// Limits: renaming "Deadline" or changing its type moves it to `rest`; with two matches the first (column order) wins, the other goes to `rest`.
-// A track missing any of them just has fewer essentials. `rest` keeps column order.
+// Essentials = Status (the isStatus column), then Priority (single_select) and Deadline (date) matched by name, trimmed
+// and case-insensitive: the schema has no flag for them. Fixed order: status, priority, deadline. A hidden column is
+// never essential.
+// Limits: renaming "Deadline" or changing its type moves it to `rest`; with two matches the first (column order) wins,
+// the other goes to `rest`. A track missing any of them just has fewer essentials. `rest` keeps column order.
 type SplitCol = { name: string; type: ColumnType; hidden: boolean; isStatus: boolean };
 export { isPriority };
 export function splitEssentials<T extends SplitCol>(cols: T[]): { essentials: T[]; rest: T[] } {
@@ -128,7 +137,8 @@ export const errorNamesColumn = (error: string | null | undefined, cols: { name:
   !!error && cols.some((c) => error.startsWith(`${c.name}: `));
 
 // Which field a server error is about: a column id, "title", or null for a form-level error (e.g. "Could not save").
-// Same "<column name>: " prefix rule as errorNamesColumn; title errors come from checkTitle in app/actions/applications.ts.
+// Same "<column name>: " prefix rule as errorNamesColumn; title errors come from checkTitle in
+// app/actions/applications.ts.
 export function errorField(
   error: string | null | undefined,
   cols: { id: number; name: string }[],

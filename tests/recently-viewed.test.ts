@@ -78,7 +78,8 @@ describe("recording a view (data layer and action)", () => {
     await recordTrackView(b, "board", 200);
     await recordTrackView(a, "table", 300);
     expect(await stored()).toEqual([v(a, "table", 300), v(b, "board", 200)]);
-    expect((await getRecentlyViewed(300 + 3 * 3_600_000)).map((e) => e.when)).toEqual(["3 hours ago", "3 hours ago"]); // the age in words, computed at the request
+    // the age in words, computed at the request
+    expect((await getRecentlyViewed(300 + 3 * 3_600_000)).map((e) => e.when)).toEqual(["3 hours ago", "3 hours ago"]);
     expect(
       db
         .select()

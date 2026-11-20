@@ -4,8 +4,9 @@ import { CheckIcon } from "lucide-react";
 import { RadioGroup } from "radix-ui";
 import { PALETTE, chipClasses } from "@/lib/colors";
 
-// Colour picker: one swatch per palette token on the theme chip tokens. A Radix radio group, so it is one Tab stop and arrows move the choice.
-// The selected swatch has a check and a solid foreground border (not colour alone); the accessible name is the token.
+// Colour picker: one swatch per palette token on the theme chip tokens. A Radix radio group, so it is one Tab stop and
+// arrows move the choice. The selected swatch has a check and a solid foreground border (not colour alone); the
+// accessible name is the token.
 export function ColorPicker({
   value,
   onChange,

@@ -4,7 +4,8 @@ import type { getPlannerList } from "@/lib/db/planner";
 
 export type RankingItems = Awaited<ReturnType<typeof getPlannerList>>;
 
-// `start` = the rank of the first item, so a list that continues another keeps counting. Shared by /planner and the live preview in /planner/settings (the dashboard has its own rows, app/plan-card.tsx).
+// `start` = the rank of the first item, so a list that continues another keeps counting. Shared by /planner and the
+// live preview in /planner/settings (the dashboard has its own rows, app/plan-card.tsx).
 export function RankingList({ items, start = 1 }: { items: RankingItems; start?: number }) {
   return (
     <ol start={start} className="flex flex-col gap-2">

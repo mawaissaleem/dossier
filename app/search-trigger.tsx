@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { chordLabel, isMacPlatform } from "@/lib/search-palette";
 import { RAIL_ITEM, RailLabel, RailTip } from "./rail";
 
-// The palette itself is mounted once, in the app frame (search-palette.tsx); every button that opens it just says so with this event.
+// The palette itself is mounted once, in the app frame (search-palette.tsx); every button that opens it just says so
+// with this event.
 export const OPEN_SEARCH_EVENT = "dossier:open-search";
 const open = () => window.dispatchEvent(new Event(OPEN_SEARCH_EVENT));
 
@@ -17,8 +18,9 @@ export const useIsMac = () =>
     () => false,
   );
 
-// The sidebar's Search item (a button, so it opens the palette instead of going to a page). Expanded it shows the shortcut at the right. `before` runs first (the phone panel closes itself:
-// the palette stays shut while another dialog is open), and the palette then opens on the next tick, once that dialog is marked closed.
+// The sidebar's Search item (a button, so it opens the palette instead of going to a page). Expanded it shows the
+// shortcut at the right. `before` runs first (the phone panel closes itself: the palette stays shut while another
+// dialog is open), and the palette then opens on the next tick, once that dialog is marked closed.
 export function SearchRailButton({ className, before }: { className?: string; before?: () => void }) {
   const mac = useIsMac();
   return (

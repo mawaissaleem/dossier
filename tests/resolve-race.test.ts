@@ -1,6 +1,7 @@
-// resolveInRoot when realpath fails on a target that is there by the time lstat looks: a concurrent upload created that name in
-// between (seen on Windows CI as "That file path is not allowed." for 2 of 8 concurrent uploads), or Windows failed realpath on a
-// busy file. A plain entry must resolve; a symlink, or an entry that cannot be checked, must still be refused.
+// resolveInRoot when realpath fails on a target that is there by the time lstat looks: a concurrent upload created that
+// name in between (seen on Windows CI as "That file path is not allowed." for 2 of 8 concurrent uploads), or Windows
+// failed realpath on a busy file. A plain entry must resolve; a symlink, or an entry that cannot be checked, must still
+// be refused.
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

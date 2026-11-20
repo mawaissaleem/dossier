@@ -23,8 +23,9 @@ export async function appDirs(): Promise<string[]> {
   return Promise.all(dirs.map(real));
 }
 
-// Stored value = the path as typed, normalised (resolve(): no trailing slash, no "." or ".."), NOT its realpath. A symlinked or
-// re-mounted root keeps working and shows what the user typed. The checks below use the realpath, so a symlink into data/ is still refused.
+// Stored value = the path as typed, normalised (resolve(): no trailing slash, no "." or ".."), NOT its realpath. A
+// symlinked or re-mounted root keeps working and shows what the user typed. The checks below use the realpath, so a
+// symlink into data/ is still refused.
 export async function validateFilesRoot(input: unknown): Promise<FilesRootResult> {
   if (typeof input !== "string") return fail("Enter the full path of a folder.");
   const typed = input.trim();

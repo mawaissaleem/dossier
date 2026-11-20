@@ -98,7 +98,8 @@ describe("reorderOptions", () => {
     ];
     for (const list of bad) expect((await reorderOptions(colId, list as number[])).ok).toBe(false);
     expect(JSON.stringify(rows())).toBe(before);
-    // The five well-formed but stale lists refresh so the editor gets the server order back; malformed input never reaches the DB.
+    // The five well-formed but stale lists refresh so the editor gets the server order back; malformed input never
+    // reaches the DB.
     expect(refresh).toHaveBeenCalledTimes(5);
     expect(await reorderOptions(colId, [ids[0], ids[1]])).toEqual({
       ok: false,

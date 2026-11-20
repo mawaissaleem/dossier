@@ -133,7 +133,8 @@ describe("a file in no submission", () => {
     expect(row(f.id)).toBeUndefined();
     expect(await findFileByHash(appId, f.sha256)).toBeNull();
     const again = await store("CV.pdf", "v1");
-    expect(again.storedName).toBe("02-20261108-CV.pdf"); // 01 stays the deleted file's name in History and older backups
+    // 01 stays the deleted file's name in History and older backups
+    expect(again.storedName).toBe("02-20261108-CV.pdf");
     await del(again.id);
     expect((await store("CV.pdf", "v2")).storedName).toBe("03-20261108-CV.pdf");
     expect((await store("Other.pdf", "o")).storedName).toBe("01-20261108-Other.pdf"); // only the same name is affected

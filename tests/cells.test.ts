@@ -91,7 +91,7 @@ describe("parseCell", () => {
     expect(value("link", "http://example.com")).toBe("http://example.com/");
   });
 
-  // 1.8 decision: links are stored normalised (new URL().href); whitespace and control characters are rejected, not stripped.
+  // Links are stored normalised (new URL().href); whitespace and control characters are rejected, not stripped.
   it("normalises stored links", () => {
     expect(value("link", "//example.com")).toBe("https://example.com/");
     expect(value("link", "https:////example.com/x")).toBe("https://example.com/x");

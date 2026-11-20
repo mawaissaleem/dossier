@@ -10,15 +10,16 @@ import { createLatest } from "@/lib/latest";
 type Impact = Awaited<ReturnType<typeof fetchDeleteImpact>>;
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-// Archive needs no confirmation (one click undoes it), so it is a neutral outline button. Delete opens a confirm that states what will be lost,
-// counted fresh on every open (DESIGN.md "Destructive confirms").
+// Archive needs no confirmation (one click undoes it), so it is a neutral outline button. Delete opens a confirm that
+// states what will be lost, counted fresh on every open.
 export function ApplicationActions({ id, archived }: { id: number; archived: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [impact, setImpact] = useState<Impact | null>(null); // null while loading
   const [delError, setDelError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ trackId: number; warning: string } | null>(null); // deleted, but files were left: show it before leaving
+  // deleted, but files were left: show it before leaving
+  const [done, setDone] = useState<{ trackId: number; warning: string } | null>(null);
   const [latest] = useState(createLatest); // a late count from an earlier open must not replace the current one
   const [pending, startTransition] = useTransition();
 
@@ -31,7 +32,8 @@ export function ApplicationActions({ id, archived }: { id: number; archived: boo
     );
   }
 
-  // refresh() after the push, so no cached copy of the track page, /tracks or the dashboard (counts, attention lines) can show the removed application.
+  // refresh() after the push, so no cached copy of the track page, /tracks or the dashboard (counts, attention lines)
+  // can show the removed application.
   function leave(trackId: number) {
     router.push(`/tracks/${trackId}`);
     router.refresh();

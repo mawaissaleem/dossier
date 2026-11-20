@@ -1,7 +1,9 @@
-// Pure (no fs, no DB, no React). Logic behind the upload form on the detail page (5.8): label choice, size guard, response messages.
+// Pure (no fs, no DB, no React). Logic behind the upload form on the detail page: label choice, size guard, response
+// messages.
 import { MAX_UPLOAD_BYTES } from "./upload-form";
 
-export const CUSTOM_LABEL = ""; // select value for "Custom…"; a blank can never be a real label (getFileLabels drops blanks)
+// select value for "Custom…"; a blank can never be a real label (getFileLabels drops blanks)
+export const CUSTOM_LABEL = "";
 
 // One label applies to the whole batch. A custom choice uses the typed text (trimmed; the server validates it).
 export const chooseLabel = (choice: string, custom: string) => (choice === CUSTOM_LABEL ? custom.trim() : choice);
@@ -16,13 +18,15 @@ export function sizeError(sizes: number[]): string | null {
 export type UploadOutcome = {
   ok: boolean;
   stored: string[]; // stored names created (also on a partial failure)
-  duplicates: { originalName: string; storedName: string }[]; // FR-5.7: not stored, an identical file of this application exists
+  // FR-5.7: not stored, an identical file of this application exists
+  duplicates: { originalName: string; storedName: string }[];
   message: string | null; // a general error line; null on success or when only fields are wrong
   fieldErrors: { label?: string; uploadDate?: string; files?: string };
   settingsLink: boolean; // the message is about the files root: show a Settings link
 };
 
-// Maps the route's answer (see app/api/applications/[id]/files/route.ts) to what the form shows. `body` is the parsed JSON or undefined.
+// Maps the route's answer (see app/api/applications/[id]/files/route.ts) to what the form shows. `body` is the parsed
+// JSON or undefined.
 export function describeResponse(status: number, body: unknown): UploadOutcome {
   const b = (body && typeof body === "object" ? body : {}) as {
     files?: unknown;

@@ -21,7 +21,8 @@ describe("highlightSegments", () => {
   it("ignores case and accents in both directions", () => {
     expect(highlightSegments("Uni Zürich", "ZURICH").find((s) => s.match)?.text).toBe("Zürich");
     expect(highlightSegments("Ecole", "école").find((s) => s.match)?.text).toBe("Ecole");
-    expect(highlightSegments("Zu\u0308rich", "zurich").find((s) => s.match)?.text).toBe("Zu\u0308rich"); // decomposed input (u + combining diaeresis)
+    // decomposed input (u + combining diaeresis)
+    expect(highlightSegments("Zu\u0308rich", "zurich").find((s) => s.match)?.text).toBe("Zu\u0308rich");
   });
   it("marks every word and every occurrence, and merges overlaps", () => {
     expect(

@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-// The per-track links under "Tracks" in the expanded sidebar (and the phone panel): name and non-archived count, the current track lit like a NavLink (bg-muted, semibold, 3px accent bar).
-// Not there in the collapsed rail (`wide:` is the expanded state, see globals.css). The list sits beside the Tracks link, not inside it, so the counts are a sibling `<ul>` of links; it scrolls inside the
-// sidebar when long (the wrapper has the slack the focus ring and the bar need, since a scroll area clips what sticks out).
+// The per-track links under "Tracks" in the expanded sidebar (and the phone panel): name and non-archived count, the
+// current track lit like a NavLink (bg-muted, semibold, 3px accent bar). Not there in the collapsed rail (`wide:` is
+// the expanded state, see globals.css). The list sits beside the Tracks link, not inside it, so the counts are a
+// sibling `<ul>` of links; it scrolls inside the sidebar when long (the wrapper has the slack the focus ring and the
+// bar need, since a scroll area clips what sticks out).
 export function TrackNavLinks({ tracks }: { tracks: { id: number; name: string; count: number }[] }) {
   const path = usePathname();
   return (

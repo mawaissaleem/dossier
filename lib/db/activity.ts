@@ -1,5 +1,6 @@
-// Server-only. See lib/db/tracks.ts for the convention. The automatic log of an application (FR-11.2). Every writer takes the CALLER'S
-// transaction, so the change and its event commit or roll back together. History starts with this task: nothing is backfilled.
+// Server-only. See lib/db/tracks.ts for the convention. The automatic log of an application (FR-11.2). Every writer
+// takes the CALLER'S transaction, so the change and its event commit or roll back together. History starts with this
+// task: nothing is backfilled.
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { buildActivityDetails, parseActivityDetails, type ActivityDetails } from "../activity";
 import { getDb } from "./client";
@@ -40,8 +41,9 @@ export function insertStatusEvent(
   });
 }
 
-// Call BEFORE the cell is written: reads the current value, and logs from -> to when the column is a status column and the value really
-// changes (null = blank). Switching which column is the status column (2.9) is not a value change and logs nothing.
+// Call BEFORE the cell is written: reads the current value, and logs from -> to when the column is a status column and
+// the value really changes (null = blank). Switching which column is the status column is not a value change and logs
+// nothing.
 export function logStatusChange(
   tx: Db,
   userId: string,
@@ -92,7 +94,8 @@ export type ActivityItem = {
   details: ActivityDetails;
 };
 
-// Newest first (occurred_at, then id: events of one moment keep their write order, latest on top). For the 7.4 timeline.
+// Newest first (occurred_at, then id: events of one moment keep their write order, latest on top). For the history
+// timeline.
 export async function listActivity(applicationId: number): Promise<ActivityItem[]> {
   return getDb()
     .select()

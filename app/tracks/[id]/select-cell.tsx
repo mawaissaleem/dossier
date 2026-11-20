@@ -10,9 +10,10 @@ import { useSubmissionReview } from "@/app/submission-review";
 import { findOption } from "@/lib/options";
 
 // NativeSelect (full keyboard support) shown as the chosen option's chip. One updateCell call per change; blank clears.
-// useOptimistic shows the new choice while saving and reverts by itself if the save fails (props stay the same).
-// A move to a submitted status that needs the submission review (FR-7.2) is not saved: the server answers needsReview, the select shows the
-// old value again and the review dialog opens; only its Confirm saves (status + submission). Cancel leaves everything as it was.
+// useOptimistic shows the new choice while saving and reverts by itself if the save fails (props stay the same). A move
+// to a submitted status that needs the submission review (FR-7.2) is not saved: the server answers needsReview, the
+// select shows the old value again and the review dialog opens; only its Confirm saves (status + submission). Cancel
+// leaves everything as it was.
 export function SelectCell({
   applicationId,
   columnId,
@@ -69,7 +70,8 @@ export function SelectCell({
   const chosen = findOption(options, shown);
   return (
     <>
-      {/* The chip is what you see; the transparent native select on top is what you click and tab to (full keyboard support, no per-cell Radix). */}
+      {/* The chip is what you see; the transparent native select on top is what you click and tab to (full keyboard
+          support, no per-cell Radix). */}
       <div className="group/sel relative flex h-8 min-w-24 items-center rounded-md hover:bg-muted has-[select:focus-visible]:ring-2 has-[select:focus-visible]:ring-ring">
         {chosen && <OptionChip option={chosen} />}
         <ChevronDownIcon

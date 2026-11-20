@@ -1,10 +1,12 @@
-// Pure (no DB, no UI): the expected file labels of a track (FR-7.3, FR-13.3) and the rule that matches them to file labels.
+// Pure (no DB, no UI): the expected file labels of a track (FR-7.3, FR-13.3) and the rule that matches them to file
+// labels.
 import { MAX_LABEL } from "./upload-form";
 
 export const MAX_EXPECTED_LABELS = 20;
 
-// Matching rule (used by the missing-label warning in 6.5): a file label satisfies an expected label when they are
-// equal after trim and lower-casing. "cv " satisfies "CV"; "Cover letter" does not satisfy "Cover-letter".
+// Matching rule (used by the missing-label warning on the submission form): a file label satisfies an expected label
+// when they are equal after trim and lower-casing. "cv " satisfies "CV"; "Cover letter" does not satisfy
+// "Cover-letter".
 export const labelKey = (label: string) => label.trim().toLowerCase();
 export const labelMatches = (fileLabel: string, expected: string) => labelKey(fileLabel) === labelKey(expected);
 
@@ -12,14 +14,15 @@ export const labelMatches = (fileLabel: string, expected: string) => labelKey(fi
 export const missingLabels = (expected: string[], fileLabels: string[]) =>
   expected.filter((e) => !fileLabels.some((f) => labelMatches(f, e)));
 
-// What to warn about before a submission is created (FR-7.3), given the labels of the files going into it. Messages are shown as they are;
-// empty = no warning. Used by the review dialog (6.4) and by the manual submission (6.6).
+// What to warn about before a submission is created (FR-7.3), given the labels of the files going into it. Messages are
+// shown as they are; empty = no warning. Used by the review dialog and by the manual submission.
 export function submissionWarnings(selectedLabels: string[], expected: string[]): string[] {
   const none = selectedLabels.length === 0 ? ["No files are selected."] : [];
   return [...none, ...missingLabels(expected, selectedLabels).map((l) => `No file labelled ${l}`)];
 }
 
-// Parsed `track.<id>.expected_labels` setting. Never saved or unreadable -> [] (no label warning); entries that are not usable are dropped.
+// Parsed `track.<id>.expected_labels` setting. Never saved or unreadable -> [] (no label warning); entries that are not
+// usable are dropped.
 export function resolveExpectedLabels(stored: unknown): string[] {
   if (!Array.isArray(stored)) return [];
   const seen = new Set<string>();

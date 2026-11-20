@@ -9,7 +9,8 @@ import { StatTile } from "./stat-tile";
 const R = 52;
 const C = 2 * Math.PI * R;
 
-// FR-9.4: the ring (DESIGN.md "Dashboard"), 64px beside the tile's text. The figure is one image with the sentence as its label; the SVG is decoration. The count is in the tile's value.
+// FR-9.4: the ring, 64px beside the tile's text. The figure is one image with the sentence as its label; the SVG is
+// decoration. The count is in the tile's value.
 function Ring({ count, capacity, ratio, met }: { count: number; capacity: number; ratio: number; met: boolean }) {
   return (
     <span
@@ -40,9 +41,11 @@ function Ring({ count, capacity, ratio, met }: { count: number; capacity: number
   );
 }
 
-// FR-9.1 to FR-9.5 and FR-9.7 at a glance: Overdue (always), Next deadline, This week, Wins (only once a win status is configured, so 3 tiles then).
-// Everything is a cached per-request read (lib/db/planner.ts, lib/db/wins.ts), shared with the cards and the summary line. The tile order is the tab order.
-// The tiles are direct children of the dashboard's bento grid (page.tsx): 3 columns of 12 each at xl (4 each with 3 tiles), 2 x 2 from sm, one column on a phone; with 3 tiles the last takes the full row from sm to xl.
+// FR-9.1 to FR-9.5 and FR-9.7 at a glance: Overdue (always), Next deadline, This week, Wins (only once a win status is
+// configured, so 3 tiles then). Everything is a cached per-request read (lib/db/planner.ts, lib/db/wins.ts), shared
+// with the cards and the summary line. The tile order is the tab order. The tiles are direct children of the
+// dashboard's bento grid (page.tsx): 3 columns of 12 each at xl (4 each with 3 tiles), 2 x 2 from sm, one column on a
+// phone; with 3 tiles the last takes the full row from sm to xl.
 export async function DashboardTiles() {
   await connection();
   const today = localToday();

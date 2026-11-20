@@ -1,23 +1,7 @@
-// Server-only. Relocate the files root (8.10, FR-13.1, FR-5.6, NFR-6, AT-14). Two explicit ways, both run by the caller while it holds the
-// lock (lib/files/lock.ts) and both finish with switchFilesRoot, which saves the setting only if the live files are still exactly the set
-// that was moved or found (an upload or delete in between changes the set, so the switch refuses). Tombstoned files (8.8) have no bytes and are ignored.
-//
-// moveStoredFiles: the new folder must exist (as for any files root), be empty, and not contain, sit inside or equal the current root or the backup folder.
-//  1. every live file, in id order: lstat the source (must be a plain file), then rename it into the same relative path in the new folder (same file
-//     system: nothing is read or written). If the rename says EXDEV (another file system) the file is COPIED instead (COPYFILE_EXCL), its SHA-256 is
-//     checked against the database, and the copy is made read-only (0444, as store.ts does). A copy that differs from the record but matches its
-//     source is a file already changed since upload: it moves as it is and is flagged 'mismatch' (a rename would carry it the same way).
-//  2. switchFilesRoot.  3. only after the switch: remove the sources of copied files, then the old application folders that are now empty (rmdir only).
-// Any failure in 1-2 puts everything back (renames reversed, copies removed, the folders made removed) and the old root stays in use. A failure in
-// 3 is a warning: the setting has switched and the data is safe in the new folder. Files Dossier did not store (dropped in by hand, FR-5.11) are never
-// touched: they stay in the old folder, which is itself never removed, and the result says so. Limit: a crash (power loss, kill) mid-move can leave
-// files split between the two folders; the setting still names the old one, so re-pointing it at the new folder after moving the rest back
-// (or the other way round) fixes it.
-//
-// repointStoredFiles: the user already moved the folder. Every live row's path must exist in the new folder as a plain file. One whose size
-// differs from the record (edited outside Dossier, AT-8) is accepted and flagged 'mismatch', as Move does; the hash is NOT re-read here: that
-// would read every byte of the archive in one request (Open and Check files verify it later). A missing file refuses: the refusal lists the
-// first few and saves nothing. There is deliberately no override in v1.
+// Server-only. Relocate the files root (FR-13.1, FR-5.6, NFR-6, AT-14): move the stored files to a new folder, or
+// re-point to a folder the user already moved. Both run while the caller holds the lock (lib/files/lock.ts) and finish
+// with switchFilesRoot, which saves the setting only if the live files are still exactly the set that was moved or
+// found. Tombstoned files have no bytes and are ignored.
 import { createHash } from "node:crypto";
 import { constants, createReadStream } from "node:fs";
 import { chmod, copyFile, lstat, mkdir, readdir, realpath, rename, rmdir, rm, stat } from "node:fs/promises";
@@ -60,6 +44,20 @@ function foldersBelow(top: string, abs: string[]): string[] {
 
 type Step = { src: string; dst: string; copied: boolean };
 
+// moveStoredFiles: the new folder must exist (as for any files root), be empty, and not contain, sit inside or equal
+// the current root or the backup folder.
+//  1. every live file, in id order: lstat the source (must be a plain file), then rename it into the same relative path
+//     in the new folder (same file system: nothing is read or written). If the rename says EXDEV (another file system)
+//     the file is COPIED instead (COPYFILE_EXCL), its SHA-256 is checked against the database, and the copy is made
+//     read-only (0444, as store.ts does). A copy that differs from the record but matches its source is a file already
+//     changed since upload: it moves as it is and is flagged 'mismatch' (a rename would carry it the same way).
+//  2. switchFilesRoot. 3. only after the switch: remove the sources of copied files, then the old application folders
+//     that are now empty (rmdir only). Any failure in 1-2 puts everything back (renames reversed, copies removed, the
+//     folders made removed) and the old root stays in use. A failure in 3 is a warning: the setting has switched and
+//     the data is safe in the new folder. Files Dossier did not store (dropped in by hand, FR-5.11) are never touched:
+//     they stay in the old folder, which is itself never removed, and the result says so. Limit: a crash (power loss,
+//     kill) mid-move can leave files split between the two folders; the setting still names the old one, so re-pointing
+//     it at the new folder after moving the rest back (or the other way round) fixes it.
 export async function moveStoredFiles(
   input: unknown,
   expected: unknown,
@@ -123,7 +121,8 @@ export async function moveStoredFiles(
         done.push({ src, dst, copied: true }); // registered before the check, so a bad copy is removed by the rollback
         const got = await sha256Of(dst);
         if (got !== f.sha256) {
-          // A file already changed since upload (AT-8) is copied as it is and stays flagged, as a same-drive rename would carry it.
+          // A file already changed since upload (AT-8) is copied as it is and stays flagged, as a same-drive rename
+          // would carry it.
           if (got !== (await sha256Of(src)))
             throw new Shown(
               `"${f.relativePath}" did not copy correctly: the copy differs from the original. Check the new drive and try again.`,
@@ -196,6 +195,11 @@ export async function moveStoredFiles(
   };
 }
 
+// repointStoredFiles: the user already moved the folder. Every live row's path must exist in the new folder as a plain
+// file. One whose size differs from the record (edited outside Dossier, AT-8) is accepted and flagged 'mismatch', as
+// Move does; the hash is NOT re-read here: that would read every byte of the archive in one request (Open and Check
+// files verify it later). A missing file refuses: the refusal lists the first few and saves nothing. There is
+// deliberately no override in v1.
 export async function repointStoredFiles(input: unknown): Promise<RepointResult> {
   const v = await validateFilesRoot(input);
   if (!v.ok) return v;

@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TrackMarker } from "./track-marker";
 
-// "Add application" with more than one track: pick the track, then land on its add form (`#add-application`, app/tracks/[id]/page.tsx). Items are real links.
+// "Add application" with more than one track: pick the track, then land on its add form (`#add-application`,
+// app/tracks/[id]/page.tsx). Items are real links.
 export function AddApplicationMenu({ tracks }: { tracks: { id: number; name: string; color: string }[] }) {
   return (
     <DropdownMenu>

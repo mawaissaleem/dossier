@@ -54,7 +54,8 @@ describe("pure slot rules", () => {
       priority: 1,
       deadline: 2,
     });
-    expect(checkSlots({ ...EMPTY, deadline: 2, followUp: 2 }, cols)).toHaveProperty("slots"); // only Priority/Effort matter
+    // only Priority/Effort matter
+    expect(checkSlots({ ...EMPTY, deadline: 2, followUp: 2 }, cols)).toHaveProperty("slots");
   });
   it("checkSlots accepts valid, refuses missing keys, non-integers, foreign ids and wrong types", () => {
     expect(checkSlots({ ...EMPTY, priority: 3, deadline: 5 }, cols)).toEqual({

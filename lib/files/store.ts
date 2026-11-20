@@ -1,15 +1,6 @@
-// Server-only. Stores one uploaded file (5.7): the bytes go to a temp file inside the application folder while the SHA-256 is computed,
-// the stored name gets the next counter, the file is hard-linked into place (link fails if the name exists, so nothing is ever
-// overwritten; where hard links are unsupported it is copied with COPYFILE_EXCL instead), made read-only, and only then the row is
-// inserted. Order and cleanup:
-//  1. temp write  2. link (or copy) to the final name  3. remove the temp name  4. chmod 0o444  5. insert row.
-//  3 comes before 4 because on Windows removing a second name of a read-only file clears the read-only attribute of the shared file.
-//  A failure in 3-5 removes the final file, so a failed upload leaves no row without a file and no file without a row. The temp
-//  file is always removed. A first upload that fails also removes the folder it created (rmdir only removes an empty folder).
-//  Duplicates (FR-5.7): after hashing, a file of the SAME application with the same SHA-256 means nothing is stored: the temp file is
-//  removed, and so is a folder this call created. The result is { ok: true, duplicateOf } instead of { ok: true, file }.
-//  Limit: a crash (power loss, kill) between 2 and 5 can leave a file with no row or a .upload-*.tmp file; nothing sweeps those yet.
-// Two uploads can race for the same counter: a taken name (EEXIST) or a unique-index violation moves on to the next seq.
+// Server-only. Stores one uploaded file: temp write while hashing, hard link (or exclusive copy) to the next free
+// stored name, read-only, then the database row. Nothing is ever overwritten, and a failure leaves no row without a
+// file and no file without a row. The order, cleanup and race handling are described above place().
 import { createHash, randomBytes } from "node:crypto";
 import { constants, createWriteStream } from "node:fs";
 import { chmod, copyFile, link, rename, rm, rmdir } from "node:fs/promises";
@@ -42,15 +33,16 @@ const removeFile = async (p: string) => {
   await chmod(p, 0o666).catch(() => {});
   await rm(p, { force: true }).catch(() => {});
 };
-// FAT/exFAT drives and some network or sync mounts have no hard links: copy instead. COPYFILE_EXCL also refuses to overwrite (EEXIST),
-// and libuv removes a partly written copy itself.
+// FAT/exFAT drives and some network or sync mounts have no hard links: copy instead. COPYFILE_EXCL also refuses to
+// overwrite (EEXIST), and libuv removes a partly written copy itself.
 const NO_HARD_LINKS = new Set(["EPERM", "ENOTSUP", "EOPNOTSUPP", "ENOSYS", "EXDEV"]);
 const putInPlace = (from: string, to: string) =>
   link(from, to).catch((e) =>
     NO_HARD_LINKS.has(code(e)!) ? copyFile(from, to, constants.COPYFILE_EXCL) : Promise.reject(e),
   );
 
-// shortcut: in-process only (one server, one user); a second server process on the same files root is not serialised, upgrade then.
+// shortcut: in-process only (one server, one user); a second server process on the same files root is not serialised,
+// upgrade then.
 const tails = new Map<number, Promise<unknown>>();
 function serialise<T>(applicationId: number, fn: () => Promise<T>): Promise<T> {
   const run = (tails.get(applicationId) ?? Promise.resolve()).then(fn);
@@ -64,7 +56,8 @@ function serialise<T>(applicationId: number, fn: () => Promise<T>): Promise<T> {
 }
 
 // Uploads for one application run one at a time: otherwise two concurrent FIRST uploads would each create a folder.
-// While the files root is being moved (8.10) or a restore runs (8.4) uploads are refused, and neither starts during an upload: see lock.ts.
+// While the files root is being moved or a restore runs uploads are refused, and neither starts during an upload: see
+// lock.ts.
 export async function storeUploadedFile(input: StoreInput): Promise<StoreResult> {
   const write = beginWrite();
   if (!write.ok) return fail("error", write.error);
@@ -95,6 +88,17 @@ export async function storeFileUnlocked({ applicationId, file, label, uploadDate
   return result;
 }
 
+// inserted. Order and cleanup:
+//  1. temp write 2. link (or copy) to the final name 3. remove the temp name 4. chmod 0o444 5. insert row. 3 comes
+//     before 4 because on Windows removing a second name of a read-only file clears the read-only attribute of the
+//     shared file. A failure in 3-5 removes the final file, so a failed upload leaves no row without a file and no file
+//     without a row. The temp file is always removed. A first upload that fails also removes the folder it created
+//     (rmdir only removes an empty folder). Duplicates (FR-5.7): after hashing, a file of the SAME application with the
+//     same SHA-256 means nothing is stored: the temp file is removed, and so is a folder this call created. The result
+//     is { ok: true, duplicateOf } instead of { ok: true, file }.
+//  Limit: a crash (power loss, kill) between 2 and 5 can leave a file with no row or a .upload-*.tmp file; nothing
+//  sweeps those yet. Two uploads can race for the same counter: a taken name (EEXIST) or a unique-index violation moves
+//  on to the next seq.
 async function place(
   applicationId: number,
   file: UploadSource,
@@ -119,7 +123,8 @@ async function place(
     createWriteStream(tmp, { flags: "wx", mode: 0o600 }),
   );
   const sha256 = hash.digest("hex");
-  const same = await findFileByHash(applicationId, sha256); // inside the per-application queue, so a file stored a moment ago is seen
+  // inside the per-application queue, so a file stored a moment ago is seen
+  const same = await findFileByHash(applicationId, sha256);
   if (same) return { ok: true, duplicateOf: same };
 
   const taken: CounterEntry[] = []; // names that lost a race, so the next try moves past them
@@ -154,7 +159,8 @@ async function place(
       });
       return { ok: true, file: { id, storedName: name.storedName, relativePath: rel.path, sizeBytes, sha256 } };
     } catch (e) {
-      // Another upload holds this name in the database: move the bytes back to the temp name (writable again) and try the next seq.
+      // Another upload holds this name in the database: move the bytes back to the temp name (writable again) and try
+      // the next seq.
       if (
         isUniqueViolation(e) &&
         (await chmod(target.path, 0o666)

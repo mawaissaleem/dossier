@@ -1,6 +1,7 @@
 import { NoteTime } from "./note-time";
 
-// One note in the history. Plain text only: React escapes it and `whitespace-pre-wrap` keeps the line breaks; no HTML or markdown is rendered.
+// One note in the history. Plain text only: React escapes it and `whitespace-pre-wrap` keeps the line breaks; no HTML
+// or markdown is rendered.
 export function NoteItem({ body, at }: { body: string; at: Date }) {
   return (
     <li className="rounded-lg border border-border bg-card px-3 py-2">

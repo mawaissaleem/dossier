@@ -65,7 +65,8 @@ describe("notes", () => {
   });
   it("count towards every word: a query may split across title, cells and notes", () => {
     expect(matchApplication(["acme", "berlin", "visa"], "Acme", cells, ["visa pending"])).not.toBeNull();
-    expect(matchApplication(["acme", "visa"], "Acme", cells, ["visa pending"])!.tier).toBe(TIER.note); // the note was needed
+    // the note was needed
+    expect(matchApplication(["acme", "visa"], "Acme", cells, ["visa pending"])!.tier).toBe(TIER.note);
     expect(matchApplication(["acme", "paris"], "Acme", cells, ["visa pending"])).toBeNull();
   });
   it("pick the note with most words, the first given on a tie, and cut the snippet from it", () => {
@@ -96,6 +97,7 @@ describe("matchApplication", () => {
     expect(m.matched.snippet.endsWith("…")).toBe(true);
     expect(m.matched.snippet).toContain("Zürich campus");
     expect(m.matched.snippet.length).toBeLessThan(90);
-    expect(matchApplication(["acme"], "Acme", [{ column: "A", text: "acme" }])!.matched.kind).toBe("title"); // tie: title first
+    // tie: title first
+    expect(matchApplication(["acme"], "Acme", [{ column: "A", text: "acme" }])!.matched.kind).toBe("title");
   });
 });

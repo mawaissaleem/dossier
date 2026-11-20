@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 
-// The one empty-state pattern: a flat dashed panel with a title, a hint and an optional action. Reuse it on every empty list.
+// The one empty-state pattern: a flat dashed panel with a title, a hint and an optional action. Reuse it on every empty
+// list.
 export function EmptyState({
   title,
   description,

@@ -4,9 +4,10 @@ import { useSyncExternalStore } from "react";
 
 const subscribe = () => () => {};
 
-// A date and time in the browser's own zone and language. The server cannot know either, so it renders the same moment in English and
-// UTC (labelled, so it is readable without JS) and the browser replaces it after hydration; the machine-readable value is always in
-// `dateTime`. `dateOnly` drops the time (a submission is dated by day; a backdated one has no real time of day).
+// A date and time in the browser's own zone and language. The server cannot know either, so it renders the same moment
+// in English and UTC (labelled, so it is readable without JS) and the browser replaces it after hydration; the
+// machine-readable value is always in `dateTime`. `dateOnly` drops the time (a submission is dated by day; a backdated
+// one has no real time of day).
 export function NoteTime({ iso, dateOnly }: { iso: string; dateOnly?: boolean }) {
   const opts: Intl.DateTimeFormatOptions = dateOnly
     ? { dateStyle: "medium" }

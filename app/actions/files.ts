@@ -6,7 +6,8 @@ import { checkApplicationFiles, type CheckFilesResult } from "@/lib/files/check"
 import { deleteStoredFile } from "@/lib/files/remove";
 import { isId } from "@/lib/ids";
 
-// Runs on any POST, so the id is checked here. The Host allow-list is proxy.ts (it runs before server actions). refresh() re-renders the badges.
+// Runs on any POST, so the id is checked here. The Host allow-list is proxy.ts (it runs before server actions).
+// refresh() re-renders the badges.
 export async function checkFiles(applicationId: number): Promise<CheckFilesResult> {
   if (!isId(applicationId)) return { ok: false, error: "Application not found." };
   try {
@@ -27,8 +28,9 @@ export async function fetchFileDeleteImpact(
   return impact ? { ok: true, ...impact } : { ok: false, error: "File not found. It may already be deleted." };
 }
 
-// `confirm` must be literally true: the UI sets it only after the user saw what will be lost (NFR-4), and for a file in submissions after the extra
-// "I understand" step (`acknowledged`, also enforced here). `expectedSubmissions` is the count the dialog showed; the data layer refuses if it changed since. Runs on any POST, so checked here.
+// `confirm` must be literally true: the UI sets it only after the user saw what will be lost (NFR-4), and for a file in
+// submissions after the extra "I understand" step (`acknowledged`, also enforced here). `expectedSubmissions` is the
+// count the dialog showed; the data layer refuses if it changed since. Runs on any POST, so checked here.
 export async function deleteFile(
   id: number,
   confirm: boolean,

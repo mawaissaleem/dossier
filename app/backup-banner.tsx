@@ -5,8 +5,8 @@ import { reminderMessage } from "@/lib/backup-reminder";
 import { getBackupReminder } from "@/lib/db/backup";
 import { pendingMigrations } from "@/lib/db/migrations";
 
-// App-wide backup reminder (FR-12.2). Warning style from DESIGN.md; in the page flow, never over content. Request-time (the DB), so the
-// layout puts it inside a Suspense boundary. A failed read shows nothing rather than breaking every page.
+// App-wide backup reminder (FR-12.2). Warning style; in the page flow, never over content. Request-time (the DB), so
+// the layout puts it inside a Suspense boundary. A failed read shows nothing rather than breaking every page.
 export async function BackupBanner() {
   await connection();
   if (pendingMigrations() > 0) return null; // the "database needs updating" message is the only thing on the page then

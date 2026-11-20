@@ -95,7 +95,8 @@ describe("upNext (pure)", () => {
   });
   it("shows all of a short rest with no link", () => {
     expect(upNext(ids(4), ids(3), 12)).toEqual({ shown: [1, 2, 3], start: 5, total: 7, more: false });
-    expect(upNext(ids(4), ids(12), 12)).toMatchObject({ shown: ids(12), more: false }); // exactly the limit: nothing left out
+    // exactly the limit: nothing left out
+    expect(upNext(ids(4), ids(12), 12)).toMatchObject({ shown: ids(12), more: false });
   });
   it("is empty when everything fits in the plan", () => {
     expect(upNext(ids(2), [], 12)).toEqual({ shown: [], start: 3, total: 2, more: false });

@@ -1,5 +1,6 @@
 // Pure: which status options count as "submitted" (FR-3.5), no DB or UI imports.
-// Fallback when the setting was never saved: options labelled "Applied" (Job) or "Submitted" (PhD), matched case-insensitively on any track.
+// Fallback when the setting was never saved: options labelled "Applied" (Job) or "Submitted" (PhD), matched
+// case-insensitively on any track.
 const DEFAULT_LABELS = ["applied", "submitted"];
 
 type Opt = { id: number; label: string };

@@ -8,7 +8,8 @@ import { statusNeedsReview } from "./status-review";
 import { applications, cellValues, columnOptions, columns, type ColumnType } from "./schema";
 import { getUserId } from "./user";
 
-// True if the option exists on that column for this user. The one rule behind "a single_select value must be one of its column's options".
+// True if the option exists on that column for this user. The one rule behind "a single_select value must be one of its
+// column's options".
 export function optionBelongs(
   db: Pick<ReturnType<typeof getDb>, "select">,
   userId: string,
@@ -22,8 +23,9 @@ export function optionBelongs(
     .get();
 }
 
-// needsReview: a status-only save to a submitted status, for an application with no submission yet, is refused and nothing is saved.
-// The caller must go through the submission review (confirmSubmittedStatus) instead. Also enforced here so a stale tab or a direct POST cannot skip it.
+// needsReview: a status-only save to a submitted status, for an application with no submission yet, is refused and
+// nothing is saved. The caller must go through the submission review (confirmSubmittedStatus) instead. Also enforced
+// here so a stale tab or a direct POST cannot skip it.
 export type SetCellResult = { ok: true; value: CellScalar | null } | { ok: false; error: string; needsReview?: true };
 
 // Validates, then upserts one typed field (others null). Blank deletes the row: a missing row means blank.
@@ -72,9 +74,10 @@ export async function setCellValue(applicationId: number, columnId: number, raw:
   return parsed;
 }
 
-// Writes an already validated value: null deletes the row (blank), anything else upserts the one typed field (others null).
-// Shared by setCellValue, updateApplication and the submission writers, so every cell is stored the same way. Callers check ownership and the option,
-// and pass a transaction: a changed status cell writes its status_changed event here (7.3), so no path can change a status without logging it.
+// Writes an already validated value: null deletes the row (blank), anything else upserts the one typed field (others
+// null). Shared by setCellValue, updateApplication and the submission writers, so every cell is stored the same way.
+// Callers check ownership and the option, and pass a transaction: a changed status cell writes its status_changed event
+// here, so no path can change a status without logging it.
 export function writeCell(
   db: Pick<ReturnType<typeof getDb>, "insert" | "delete" | "select">,
   userId: string,

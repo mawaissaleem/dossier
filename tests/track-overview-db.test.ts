@@ -71,9 +71,12 @@ describe("getTrackOverviews and listTrackCounts (data layer)", () => {
 
     const [job, phd] = await getTrackOverviews(TODAY, NOW);
     expect([job.name, phd.name]).toEqual(["Job", "PhD"]);
-    expect([job.color, phd.color]).toEqual(["blue", "teal"]); // the colour comes with the overview: /tracks needs no second track query
+    // the colour comes with the overview: /tracks needs no second track query
+    expect([job.color, phd.color]).toEqual(["blue", "teal"]);
     expect([job.total, job.toApply, job.submitted, job.wins]).toEqual([6, 3, 2, 1]);
-    expect([job.overdue, job.nextDeadlineDays, job.activeCount]).toEqual([1, 1, 5]); // one late; the nearest deadline is tomorrow; touched within 30 days: all but "won" (40 days; "quiet" is exactly 30)
+    // one late; the nearest deadline is tomorrow; touched within 30 days: all but "won" (40 days; "quiet" is exactly
+    // 30)
+    expect([job.overdue, job.nextDeadlineDays, job.activeCount]).toEqual([1, 1, 5]);
     expect(job.attention.map((a) => [a.title, a.kind, a.when])).toEqual([
       ["late", "Deadline", "7 days late"],
       ["soon", "Deadline", "Tomorrow"],

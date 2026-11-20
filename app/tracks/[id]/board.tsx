@@ -43,8 +43,9 @@ import { BoardCard, CARD_BOX, CardFace } from "./board-card";
 const INSTRUCTIONS =
   "To move this card, press Space to pick it up, the left or right arrow key to choose a status, then Space to drop it or Escape to cancel. Press Enter to open the card instead. The Move to menu on the card does the same.";
 
-// Mouse: a pointer must travel 6px, so a click still opens the card. Touch: a 250 ms hold (a quicker swipe scrolls the board). Keyboard: Space.
-// Mouse and touch are two sensors, not PointerSensor, so the touch hold works. Enter is left to the link (it opens the card).
+// Mouse: a pointer must travel 6px, so a click still opens the card. Touch: a 250 ms hold (a quicker swipe scrolls the
+// board). Keyboard: Space. Mouse and touch are two sensors, not PointerSensor, so the touch hold works. Enter is left
+// to the link (it opens the card).
 const keyboardCodes = { start: ["Space"], cancel: ["Escape"], end: ["Space", "Enter"] };
 
 // The enabled columns with their measured rects, for the pure geometry in lib/board.
@@ -54,7 +55,8 @@ const spans = (containers: DroppableContainer[], rects: Parameters<CollisionDete
     return r ? [{ id: c.id, left: r.left, width: r.width, top: r.top }] : [];
   });
 
-// Left and right arrows jump to the next column (the default 25px step would take about twelve presses per column); other keys do nothing.
+// Left and right arrows jump to the next column (the default 25px step would take about twelve presses per column);
+// other keys do nothing.
 const columnCoordinates: KeyboardCoordinateGetter = (
   event,
   { context: { active, collisionRect, droppableRects, droppableContainers } },
@@ -70,8 +72,9 @@ const columnCoordinates: KeyboardCoordinateGetter = (
   return t && { x: t.left + (t.width - collisionRect.width) / 2, y: t.top + 8 };
 };
 
-// The pointer decides for the mouse and touch (a card over the gap between columns is over nothing); the keyboard has no pointer, so the column
-// the card is in horizontally (columnAtX; not closestCenter, which picks a short neighbour of a tall column).
+// The pointer decides for the mouse and touch (a card over the gap between columns is over nothing); the keyboard has
+// no pointer, so the column the card is in horizontally (columnAtX; not closestCenter, which picks a short neighbour of
+// a tall column).
 const collision: CollisionDetection = (args) => {
   if (args.pointerCoordinates) return pointerWithin(args);
   const c = columnAtX(
@@ -81,10 +84,11 @@ const collision: CollisionDetection = (args) => {
   return c ? [{ id: c.id }] : [];
 };
 
-// Board view (FR-4.2): one column per status option, the same rows as the table. The board scrolls sideways inside its own area and each column
-// scrolls up and down, so the page never scrolls sideways. Every card is mounted: 500 cards is a few thousand light nodes, so no virtualisation.
-// `rows` are all the track's rows and `filters` the shared ?f state: the board filters them itself (after any pending move), so a card dropped into a
-// status the filters hide leaves the board at once. A column the status filter leaves out stays, empty, so it is still a drop target.
+// Board view (FR-4.2): one column per status option, the same rows as the table. The board scrolls sideways inside its
+// own area and each column scrolls up and down, so the page never scrolls sideways. Every card is mounted: 500 cards is
+// a few thousand light nodes, so no virtualisation. `rows` are all the track's rows and `filters` the shared ?f state:
+// the board filters them itself (after any pending move), so a card dropped into a status the filters hide leaves the
+// board at once. A column the status filter leaves out stays, empty, so it is still a drop target.
 type Props = { columns: ColumnItem[]; rows: ApplicationRow[]; selects: ColumnItem[]; filters: Filter[] };
 export function Board({ columns, rows, selects, filters }: Props) {
   const status = columns.find((c) => c.isStatus);
@@ -100,13 +104,17 @@ export function Board({ columns, rows, selects, filters }: Props) {
 }
 
 function StatusBoard({ columns, rows, selects, filters, status }: Props & { status: ColumnItem }) {
-  const uid = useId(); // also the DndContext id: without one dnd-kit numbers aria-describedby from a counter that differs between server and client
-  // The card the user just moved, shown in its new column while the save (or the submission review) runs. Dropped to roll back.
+  // also the DndContext id: without one dnd-kit numbers aria-describedby from a counter that differs between server and
+  // client
+  const uid = useId();
+  // The card the user just moved, shown in its new column while the save (or the submission review) runs. Dropped to
+  // roll back.
   const [move, setMove] = useState<Move | null>(null);
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState("");
-  const [hiddenNote, setHiddenNote] = useState(false); // the last move left the board: show the note, not only announce it
+  // the last move left the board: show the note, not only announce it
+  const [hiddenNote, setHiddenNote] = useState(false);
   const note = useRef<HTMLParagraphElement>(null);
   const [, startTransition] = useTransition();
   const locked = useRef(false); // set synchronously: a second drop can land before a re-render
@@ -114,7 +122,8 @@ function StatusBoard({ columns, rows, selects, filters, status }: Props & { stat
   const focusCard = useRef<number | null>(null); // the card to put focus back on once it has rendered in its column
   const cardEl = (id: number | null) =>
     id === null ? null : (root.current?.querySelector<HTMLElement>(`[data-card="${id}"]`) ?? null);
-  // Where the review dialog returns focus when the card it remembered is gone (a cancelled move re-creates the card in its old column).
+  // Where the review dialog returns focus when the card it remembered is gone (a cancelled move re-creates the card in
+  // its old column).
   const [fallback] = useState(() => ({
     get current() {
       return cardEl(focusCard.current);
@@ -127,8 +136,9 @@ function StatusBoard({ columns, rows, selects, filters, status }: Props & { stat
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { keyboardCodes, coordinateGetter: columnCoordinates }),
   );
-  // Once the rows no longer hold the value the move started from (saved and refreshed, or changed elsewhere), forget it, so it cannot come back
-  // if the row later returns to that value. Set during render (React's adjust-state-on-prop-change pattern), not in an effect.
+  // Once the rows no longer hold the value the move started from (saved and refreshed, or changed elsewhere), forget
+  // it, so it cannot come back if the row later returns to that value. Set during render (React's
+  // adjust-state-on-prop-change pattern), not in an effect.
   if (move && (rows.find((r) => r.id === move.rowId)?.values[status.id] ?? null) !== move.from) setMove(null);
   const shown = useMemo(() => applyMove(rows, status.id, move), [rows, status.id, move]);
   const groups = useMemo(() => boardGroups(shown, selects, filters, status), [shown, selects, filters, status]);
@@ -150,7 +160,8 @@ function StatusBoard({ columns, rows, selects, filters, status }: Props & { stat
     if (hiddenNote) note.current?.focus();
   }, [hiddenNote, done]);
 
-  // The one status-change path: the same updateCell and review dialog as the table's select (FR-7.2, 7.3), never a separate save.
+  // The one status-change path: the same updateCell and review dialog as the table's select (FR-7.2), never a separate
+  // save.
   function go(plan: Move | null) {
     if (!plan || locked.current) return; // a drop while a save is in flight is ignored and the card stays where it is
     locked.current = true;
@@ -280,7 +291,8 @@ function StatusBoard({ columns, rows, selects, filters, status }: Props & { stat
   );
 }
 
-// A drop target. While a card is being dragged, every other column can take it; the one under the pointer gets the accent ring and a layer step.
+// A drop target. While a card is being dragged, every other column can take it; the one under the pointer gets the
+// accent ring and a layer step.
 function Column({
   group: g,
   out,

@@ -79,12 +79,13 @@ async function post(
     { params: Promise.resolve({ id: String(id) }) } as never,
   );
 }
-// Default content differs per call: identical bytes in one application are now a duplicate (5.9).
+// Default content differs per call: identical bytes in one application are now a duplicate.
 let n = 0;
 const upload = (name: string, content: Buffer | string = `content ${++n}`, fields?: Record<string, string>) =>
   post(appId, [[name, content]], fields);
 const rows = () => db.select().from(files).all();
-const allEntries = () => readdirSync(root, { recursive: true }).map((e) => String(e).replaceAll("\\", "/")); // Windows lists with backslashes
+// Windows lists with backslashes
+const allEntries = () => readdirSync(root, { recursive: true }).map((e) => String(e).replaceAll("\\", "/"));
 
 beforeEach(async () => {
   db = useTestDb();

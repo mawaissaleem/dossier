@@ -30,8 +30,9 @@ const settingsLink = (
 );
 const noop = () => () => {};
 
-// Upload files to the 5.7 route with fetch + FormData (a server action would cap the body at 1 MB). One label and one date apply to the whole batch.
-// A new selection replaces the old one. The date shows the browser's local today until edited (blank sends today too).
+// Upload files to the upload route with fetch + FormData (a server action would cap the body at 1 MB). One label and
+// one date apply to the whole batch. A new selection replaces the old one. The date shows the browser's local today
+// until edited (blank sends today too).
 export function FileUpload({
   applicationId,
   labels,
@@ -51,7 +52,8 @@ export function FileUpload({
   const [outcome, setOutcome] = useState<UploadOutcome | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
-  const today = useSyncExternalStore(noop, todayLocal, () => ""); // "" on the server and during hydration, so no mismatch
+  // "" on the server and during hydration, so no mismatch
+  const today = useSyncExternalStore(noop, todayLocal, () => "");
 
   if (!rootSet) {
     return (

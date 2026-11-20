@@ -1,11 +1,5 @@
-// Server-only. The database side of a restore (task 8.4). Nothing here touches the live database until swapDatabase, and that is a few
-// synchronous renames, so no request can run between them.
-//  - stagedDatabasePath: where the backup's database copy is unpacked, next to the live file (same file system, so the final move is a rename)
-//  - inspectBackupDb: opens the unpacked copy read-only and judges it (integrity, tables, schema version, counts, its file rows)
-//  - finalizeStagedDb: on the copy only: run pending migrations (older backup), put this computer's own settings back, record what the
-//    reader found for each live file (ok / mismatch / missing, so a restored changed or missing file is flagged at once), re-check
-//  - swapDatabase: closeDb(), the live file (and a stale -wal/-shm) moves aside, the copy takes its place; undo() puts everything back
-// The migrations folder is the app's own ./drizzle (the same one scripts/migrate.ts and the tests use), not user data.
+// Server-only. The database side of a restore. Nothing here touches the live database until swapDatabase, and that is a
+// few synchronous renames, so no request can run between them.
 import { randomBytes } from "node:crypto";
 import { existsSync, renameSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -19,8 +13,10 @@ import { closeDb, getDb } from "./client";
 import { files, settings, type IntegrityState } from "./schema";
 import { getUserId } from "./user";
 
+// The migrations folder is the app's own ./drizzle (the same one scripts/migrate.ts and the tests use), not user data.
 const MIGRATIONS = "./drizzle";
-// Tables the first migration creates: a copy without them is not a Dossier database. Later tables arrive with the migrations.
+// Tables the first migration creates: a copy without them is not a Dossier database. Later tables arrive with the
+// migrations.
 const CORE_TABLES = [
   "__drizzle_migrations",
   "tracks",
@@ -39,17 +35,20 @@ const TABLE_FOR: Record<keyof Counts, string> = {
 };
 
 const livePath = () => resolve(/*turbopackIgnore: true*/ process.env.DATABASE_PATH ?? "");
+// Where the backup's database copy is unpacked, next to the live file (same file system, so the final move is a rename)
 export const stagedDatabasePath = () =>
   join(dirname(livePath()), `${STAGE_PREFIX}${randomBytes(6).toString("hex")}.db`);
 
-// Files that still have bytes (8.8: a deleted file keeps only a row). A backup made before the deleted_at column has none of those.
+// Files that still have bytes (a deleted file keeps only a row). A backup made before the deleted_at column has none of
+// those.
 function liveFiles(sqlite: Database.Database): string {
   return (sqlite.pragma("table_info(files)") as { name: string }[]).some((c) => c.name === "deleted_at")
     ? "files WHERE deleted_at IS NULL"
     : "files";
 }
 
-// All rows: this is a single-user database and the question is "what would be replaced". Files counts live files only, so it matches the zip.
+// All rows: this is a single-user database and the question is "what would be replaced". Files counts live files only,
+// so it matches the zip.
 function countsOf(sqlite: Database.Database): Counts {
   const tables = new Set(
     (sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
@@ -100,6 +99,7 @@ function integrityProblem(sqlite: Database.Database): string | null {
   return null;
 }
 
+// Opens the unpacked copy read-only and judges it (integrity, tables, schema version, counts, its file rows)
 export function inspectBackupDb(file: string): { ok: true; info: BackupDbInfo } | { ok: false; error: string } {
   let sqlite: Database.Database | undefined;
   try {
@@ -151,7 +151,8 @@ export function inspectBackupDb(file: string): { ok: true; info: BackupDbInfo } 
   }
 }
 
-// Reads this computer's own settings from the live database (call it after the safety backup, which updates last_backup_at).
+// Reads this computer's own settings from the live database (call it after the safety backup, which updates
+// last_backup_at).
 const keptRows = () =>
   getDb()
     .select()
@@ -163,8 +164,11 @@ const keptRows = () =>
 export type FileFlags = { ok: string[]; changed: string[]; missing: string[] };
 const FLAG_STATE: Record<keyof FileFlags, IntegrityState> = { ok: "ok", changed: "mismatch", missing: "missing" };
 
-// On the staged copy only: migrate, put the kept settings back (a key unset here is removed from the copy), flag the files, check again.
-// Only rows whose state changes are written, so a clean backup restores byte-identical rows (and stale flags from backup time are cleared).
+// On the copy only: run pending migrations (older backup), put this computer's own settings back, record what the
+// reader found for each live file (ok / mismatch / missing, so a restored changed or missing file is flagged at once),
+// re-check On the staged copy only: migrate, put the kept settings back (a key unset here is removed from the copy),
+// flag the files, check again. Only rows whose state changes are written, so a clean backup restores byte-identical
+// rows (and stale flags from backup time are cleared).
 export function finalizeStagedDb(file: string, flags: FileFlags): void {
   const sqlite = new Database(file);
   try {
@@ -206,7 +210,8 @@ export function finalizeStagedDb(file: string, flags: FileFlags): void {
 
 export type DbSwap = { undo(): void; discard(): void };
 
-// Synchronous on purpose (see the header). Throws, after putting everything back, if a step fails.
+// closeDb(), then the live file (and a stale -wal/-shm) moves aside, the copy takes its place; undo() puts everything
+// back Synchronous on purpose (see the header). Throws, after putting everything back, if a step fails.
 export function swapDatabase(staged: string): DbSwap {
   const live = livePath();
   const aside = `${live}.restore-old-${randomBytes(6).toString("hex")}`;

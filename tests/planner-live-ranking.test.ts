@@ -7,7 +7,7 @@ import { dropTestDb, useTestDb } from "./helpers/db";
 
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
-// 10.7: the settings screen's preview is just getPlannerRanking read after a save, so nothing may be cached between calls.
+// The settings screen's preview is just getPlannerRanking read after a save, so nothing may be cached between calls.
 describe("a settings save changes the ranking on the very next read (AT-11, FR-8.11)", () => {
   const TODAY = "2026-11-12";
   let db: ReturnType<typeof useTestDb>;

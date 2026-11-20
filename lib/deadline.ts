@@ -1,8 +1,10 @@
-// Pure deadline text for the board card (no DB, React or timezone use). Dates are "YYYY-MM-DD" calendar days, never instants: day
-// arithmetic goes through Date.UTC only to count days between two calendar dates, so the result cannot drift with the zone or DST.
+// Pure deadline text for the board card (no DB, React or timezone use). Dates are "YYYY-MM-DD" calendar days, never
+// instants: day arithmetic goes through Date.UTC only to count days between two calendar dates, so the result cannot
+// drift with the zone or DST.
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// Whole days since 1970-01-01 of a valid YYYY-MM-DD, or null (wrong shape, or a day that does not exist such as 2026-02-30).
+// Whole days since 1970-01-01 of a valid YYYY-MM-DD, or null (wrong shape, or a day that does not exist such as
+// 2026-02-30).
 export function dayNumber(s: unknown): number | null {
   const m = typeof s === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(s) : null;
   if (!m) return null;
@@ -20,9 +22,10 @@ export function localToday(now = new Date()): string {
 
 export type Deadline = { date: string; relative: string | null; overdue: boolean };
 
-// "12 Nov 2026" plus a hint relative to `today` ("today", "tomorrow", "in 3 days", "yesterday", "2 days ago"). Overdue = the date is before
-// today, whatever the application's status. null for a blank or invalid value, so the card leaves the line out.
-// `today` null (server render, where the visitor's day is unknown) gives the date only, with no hint and no overdue flag.
+// "12 Nov 2026" plus a hint relative to `today` ("today", "tomorrow", "in 3 days", "yesterday", "2 days ago"). Overdue
+// = the date is before today, whatever the application's status. null for a blank or invalid value, so the card leaves
+// the line out. `today` null (server render, where the visitor's day is unknown) gives the date only, with no hint and
+// no overdue flag.
 export function deadlineInfo(value: unknown, today: string | null): Deadline | null {
   const n = dayNumber(value);
   if (n === null) return null;

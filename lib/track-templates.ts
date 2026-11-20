@@ -1,5 +1,5 @@
 // Pure: the track templates (Job, PhD, Blank) and the name and colour rules for tracks. No DB or UI imports.
-// The Job and PhD definitions are what `npm run db:seed` always created (FR-1.1); a user ruling of 2026-11-17 made them templates the user adds.
+// The Job and PhD definitions are what `npm run db:seed` always created (FR-1.1); they are now templates the user adds.
 import type { ColumnType } from "./db/schema";
 import { PALETTE, isPaletteToken } from "./colors";
 
@@ -109,7 +109,8 @@ export const TEMPLATES: Record<TemplateId, TrackTemplate> = {
 
 export const MAX_TRACK_NAME = 60;
 
-// Trimmed name, 1 to 60 characters, not used by another track of the user (case-insensitive). `others` = the names of the user's other tracks.
+// Trimmed name, 1 to 60 characters, not used by another track of the user (case-insensitive). `others` = the names of
+// the user's other tracks.
 export function checkTrackName(
   name: unknown,
   others: readonly string[],
@@ -126,7 +127,8 @@ export function checkTrackColor(color: unknown): { ok: true; color: string } | {
   return isPaletteToken(color) ? { ok: true, color } : { ok: false, error: "Choose a valid colour." };
 }
 
-// A new track's colour: the first palette token no other track uses, else the least used. Tracks saved before colours existed (null) get one from their id.
+// A new track's colour: the first palette token no other track uses, else the least used. Tracks saved before colours
+// existed (null) get one from their id.
 export function defaultTrackColor(used: readonly (string | null)[]): string {
   const taken = used.filter((c): c is string => c !== null);
   return (

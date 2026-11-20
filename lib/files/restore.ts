@@ -1,35 +1,7 @@
-// Server-only. "Restore from a backup" (FR-12.3, NFR-5, AT-13). Layout, entry rules and limits: lib/backup.ts, lib/restore.ts.
-//
-// readBackup (also the "Check backup" step) changes nothing that exists: it reads the zip and judges it
-//   1. the path (a full path to a regular file, not inside the files folder: a restore replaces that folder and would delete the zip)
-//   2. the entry list from the central directory (checkListing), the manifest (format and version), then the database copy unpacked
-//      and opened read-only (integrity, tables, schema not newer than this app, its file rows with safe paths)
-//   3. every file the database lists is looked up in the zip and hashed. One that is absent or whose bytes differ from the recorded SHA-256
-//      does NOT refuse the backup: since 8.6/8.7 a changed or missing file is a normal, flagged state of the app, and Back up now copies
-//      what is on disk, so refusing would make every backup of that state unrestorable (NFR-5). Such files are listed in the result
-//      (`changed`, `missing`, shown in the check and the confirm), a changed one is restored as it is, and the restored rows are flagged
-//      'mismatch' / 'missing' (finalizeStagedDb), exactly as Open would find them. Files in the zip the database does not list (stray files
-//      in the folder when the backup was made) are restored as they were and counted in the check; nothing records a hash for them.
-//      Structural problems still refuse: the entry rules, the manifest, the database's integrity, a newer schema, unsafe paths.
-//   4. the manifest's file count and size match the zip, and there is room on disk for what will be unpacked
-// With `files.out` it also unpacks every file into a staging folder (mode 0444 as stored files are), hashing as it writes.
-//
-// restoreFromBackup (the only place that replaces anything), in this order:
-//   a. readBackup into staging: the database next to the live file, the files inside the files folder (same file systems, so the
-//      swap is renames). The live data is untouched. Any refusal or failure here removes the staging and stops.
-//   b. the data counts the dialog showed must still match (else refuse: "check again")
-//   c. SAFETY BACKUP of the current state with createBackup into the saved backup folder. No saved folder, or the backup fails: stop,
-//      nothing changed. (Its path is in the result.)
-//   d. finalize the staged database (migrate an older backup, put this computer's settings back, flag changed/missing files, re-check)
-//   e. swap the files (only when the backup holds files), then the database; verify the restored counts; any failure rolls both back
-//   f. the old database and the old files are deleted; a failure only becomes a warning (the restore already worked)
-// Files swap: a files folder can be a mount point or a user's own folder, so it is not renamed. Its CONTENTS move into a hidden
-// sibling folder inside it, then the staged contents move up. When the backup holds no files the files folder is left as it is.
-// Limits: a crash (power loss, kill) mid-swap leaves `.dossier-restore-*` leftovers in the files folder and next to the database,
-// and the old data may sit in them; nothing sweeps those. Backups skip top-level `.dossier-restore-*` folders in the files folder, so
-// the safety backup holds the live files only (not the staged copy). A restore does not stop other requests: one that lands in the
-// few milliseconds of the swap can fail once. Symlinks and empty folders in the files folder are not in a backup and are removed with it.
-// turbopackIgnore on fs calls that take user-typed paths: without it Next warns that the build traces the whole project.
+// Server-only. Restore from a backup (FR-12.3, NFR-5, AT-13). readBackup checks a zip without changing anything;
+// restoreFromBackup replaces the database and files, with a safety backup first and a rollback on failure.
+// Zip layout and entry rules: lib/backup.ts, lib/restore.ts. Limits are noted above restoreFromBackup.
+// turbopackIgnore on fs calls with user-typed paths: without it Next warns that the build traces the whole project.
 import { createHash, randomBytes } from "node:crypto";
 import { createWriteStream } from "node:fs";
 import { chmod, mkdir, mkdtemp, readdir, realpath, rename, rm, rmdir, stat, statfs } from "node:fs/promises";
@@ -63,7 +35,8 @@ import { createBackup } from "./backup";
 import { isFullyAbsolute } from "./relative";
 import { isInside, validateFilesRoot } from "./root";
 
-// `changed` / `missing`: relative paths of files the backup's database lists whose bytes differ from the record / that are not in the zip.
+// `changed` / `missing`: relative paths of files the backup's database lists whose bytes differ from the record / that
+// are not in the zip.
 export type BackupInfo = {
   createdAt: string;
   counts: Counts;
@@ -115,7 +88,8 @@ async function checkZipPath(input: unknown): Promise<string> {
 const entryInfo = (e: Entry): ZipEntryInfo => {
   const raw = e.fileNameRaw;
   const name = raw.toString("utf8");
-  // Names are UTF-8. A name with other bytes and no UTF-8 flag is legacy CP437: its meaning is ambiguous, so it is refused.
+  // Names are UTF-8. A name with other bytes and no UTF-8 flag is legacy CP437: its meaning is ambiguous, so it is
+  // refused.
   if (name.includes("�") || (raw.some((b) => b > 0x7f) && !(e.generalPurposeBitFlag & 0x800)))
     refuse("The backup has an entry whose name Dossier cannot read.");
   return {
@@ -129,8 +103,8 @@ const entryInfo = (e: Entry): ZipEntryInfo => {
   };
 };
 
-// Streams one entry through a SHA-256 and into `out` (created exclusively, so nothing is overwritten) or nowhere. yauzl errors the stream
-// if the real size differs from the declared one.
+// Streams one entry through a SHA-256 and into `out` (created exclusively, so nothing is overwritten) or nowhere. yauzl
+// errors the stream if the real size differs from the declared one.
 async function pump(zip: ZipFile, entry: Entry, out: string | null, mode: number): Promise<string> {
   const hash = createHash("sha256");
   const tap = new Transform({
@@ -175,8 +149,25 @@ async function checkSpace(needs: { dir: string; bytes: number }[]): Promise<void
 type FilesTarget = { out: string } | { refuse: string };
 type Read = { info: BackupInfo; counts: Counts; flags: FileFlags };
 
-// `dbOut`: where the database copy is unpacked (a path that does not exist yet, in a folder that does). `files`: absent = only
-// hash the files (the check); `out` = unpack them into that (not yet existing) folder; `refuse` = the message to give if the backup has files.
+// readBackup (also the "Check backup" step) changes nothing that exists: it reads the zip and judges it
+//   1. the path (a full path to a regular file, not inside the files folder: a restore replaces that folder and would
+//      delete the zip)
+//   2. the entry list from the central directory (checkListing), the manifest (format and version), then the database
+//      copy unpacked and opened read-only (integrity, tables, schema not newer than this app, its file rows with safe
+//      paths)
+//   3. every file the database lists is looked up in the zip and hashed. One that is absent or whose bytes differ from
+//      the recorded SHA-256 does NOT refuse the backup: a changed or missing file is a normal, flagged state of the
+//      app, and Back up now copies what is on disk, so refusing would make every backup of that state unrestorable
+//      (NFR-5). Such files are listed in the result (`changed`, `missing`, shown in the check and the confirm), a
+//      changed one is restored as it is, and the restored rows are flagged 'mismatch' / 'missing' (finalizeStagedDb),
+//      exactly as Open would find them. Files in the zip the database does not list (stray files in the folder when the
+//      backup was made) are restored as they were and counted in the check; nothing records a hash for them. Structural
+//      problems still refuse: the entry rules, the manifest, the database's integrity, a newer schema, unsafe paths.
+//   4. the manifest's file count and size match the zip, and there is room on disk for what will be unpacked With
+//      `files.out` it also unpacks every file into a staging folder (mode 0444 as stored files are), hashing as it
+//      writes. `dbOut`: where the database copy is unpacked (a path that does not exist yet, in a folder that does).
+//      `files`: absent = only hash the files (the check); `out` = unpack them into that (not yet existing) folder;
+//      `refuse` = the message to give if the backup has files.
 async function readBackup(zipPathInput: unknown, dbOut: string, files?: FilesTarget): Promise<Read> {
   const path = await checkZipPath(zipPathInput);
   let zip: ZipFile;
@@ -231,7 +222,8 @@ async function readBackup(zipPathInput: unknown, dbOut: string, files?: FilesTar
     const outDir = files && "out" in files ? files.out : null;
     const unpack = async (rel: string) => {
       const out = outDir ? join(outDir, ...rel.split("/")) : null;
-      if (out && !isInside(out, outDir!)) return refuse("The backup has a file path that leaves its folder."); // checkListing already refuses these
+      // checkListing already refuses these
+      if (out && !isInside(out, outDir!)) return refuse("The backup has a file path that leaves its folder.");
       if (out) await mkdir(dirname(out), { recursive: true });
       const sha = await pump(zip, byName.get(FILES_PREFIX + rel)!, out, 0o600);
       if (out) await chmod(out, 0o444); // stored files are read-only (FR-5.5); the zip's own modes are never applied
@@ -286,7 +278,10 @@ export async function checkBackup(zipPath: unknown): Promise<CheckResult> {
 
 export type FilesSwap = { undo(): Promise<void>; discard(): Promise<void>; aside: string };
 
-// Moves the files folder's contents aside and the staged contents in. Exported for tests (a failing rename).
+// Files swap: a files folder can be a mount point or a user's own folder, so it is not renamed. Its CONTENTS move into
+// a hidden sibling folder inside it, then the staged contents move up. When the backup holds no files the files folder
+// is left as it is. Moves the files folder's contents aside and the staged contents in. Exported for tests (a failing
+// rename).
 export async function swapFiles(root: string, stage: string): Promise<FilesSwap> {
   const aside = join(root, stageName());
   const toAside: string[] = [];
@@ -294,7 +289,8 @@ export async function swapFiles(root: string, stage: string): Promise<FilesSwap>
   const undo = async () => {
     for (const n of placed.reverse()) await rename(join(root, n), join(stage, n));
     for (const n of toAside.reverse()) await rename(join(aside, n), join(root, n));
-    await rmdir(aside).catch(() => {}); // empty now; the files are back either way, so a leftover folder is not a failure
+    // empty now; the files are back either way, so a leftover folder is not a failure
+    await rmdir(aside).catch(() => {});
   };
   try {
     await mkdir(aside);
@@ -316,6 +312,23 @@ export async function swapFiles(root: string, stage: string): Promise<FilesSwap>
   return { undo, aside, discard: () => rm(aside, { recursive: true, force: true }) };
 }
 
+// restoreFromBackup (the only place that replaces anything), in this order:
+//   a. readBackup into staging: the database next to the live file, the files inside the files folder (same file
+//      systems, so the swap is renames). The live data is untouched. Any refusal or failure here removes the staging
+//      and stops.
+//   b. the data counts the dialog showed must still match (else refuse: "check again")
+//   c. SAFETY BACKUP of the current state with createBackup into the saved backup folder. No saved folder, or the
+//      backup fails: stop, nothing changed. (Its path is in the result.)
+//   d. finalize the staged database (migrate an older backup, put this computer's settings back, flag changed/missing
+//      files, re-check)
+//   e. swap the files (only when the backup holds files), then the database; verify the restored counts; any failure
+//      rolls both back
+//   f. the old database and the old files are deleted; a failure only becomes a warning (the restore already worked)
+// Limits: a crash (power loss, kill) mid-swap leaves `.dossier-restore-*` leftovers in the files folder and next to the
+// database, and the old data may sit in them; nothing sweeps those. Backups skip top-level `.dossier-restore-*` folders
+// in the files folder, so the safety backup holds the live files only (not the staged copy). A restore does not stop
+// other requests: one that lands in the few milliseconds of the swap can fail once. Symlinks and empty folders in the
+// files folder are not in a backup and are removed with it.
 export async function restoreFromBackup(zipPath: unknown, expectedInput: unknown): Promise<RestoreResult> {
   const expected = parseExpected(expectedInput);
   if (!expected) return fail("Check the backup again, then restore.");
@@ -353,7 +366,8 @@ export async function restoreFromBackup(zipPath: unknown, expectedInput: unknown
 
     finalizeStagedDb(stagedDb, read.flags);
     try {
-      if (read.info.fileCount > 0) filesSwap = await swapFiles(rootPath!, stageDir!); // the backup has files, so a usable root was required above
+      // the backup has files, so a usable root was required above
+      if (read.info.fileCount > 0) filesSwap = await swapFiles(rootPath!, stageDir!);
       dbSwap = swapDatabase(stagedDb);
       if (!sameCounts(currentCounts(), read.counts)) throw new Error("the restored data did not match the backup");
     } catch (e) {

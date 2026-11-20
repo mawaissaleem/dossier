@@ -47,8 +47,9 @@ const TYPE_ICONS: Record<ColumnType, typeof TypeIcon> = {
 const headCell =
   "sticky top-0 z-20 h-9 border-b border-r border-border bg-card px-2 text-left text-xs font-medium text-muted-foreground";
 
-// `rows` are the rows left after the filters, which track-views.tsx owns (one filter state for table and board, with the empty states).
-// The body only mounts the rows near the viewport (virtual-rows.tsx, task 4.5); the sort still runs on all `rows` here.
+// `rows` are the rows left after the filters, which track-views.tsx owns (one filter state for table and board, with
+// the empty states). The body only mounts the rows near the viewport (virtual-rows.tsx); the sort still runs on all
+// `rows` here.
 export function ApplicationsTable({
   trackId,
   columns,
@@ -61,16 +62,19 @@ export function ApplicationsTable({
   const defs = useMemo(() => buildColumns(columns), [columns]);
   const byId = useMemo(() => new Map(columns.map((c) => [columnId(c), c])), [columns]);
   const visible = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
-  // Sort lives in the URL (?sort=col-3&dir=asc) and runs here on the rows the server sent; a hidden or unknown column means default order.
+  // Sort lives in the URL (?sort=col-3&dir=asc) and runs here on the rows the server sent; a hidden or unknown column
+  // means default order.
   const params = useSearchParams();
   const sort = useMemo(() => parseSort(params.get("sort"), params.get("dir"), visible), [params, visible]);
   const sorted = useMemo(() => sortRows(rows, visible, sort), [rows, visible, sort]);
-  // replaceState (synced with useSearchParams by Next) keeps the click instant: no server round trip, no history entry per click.
+  // replaceState (synced with useSearchParams by Next) keeps the click instant: no server round trip, no history entry
+  // per click.
   const setQuery = (q: string) => window.history.replaceState(null, "", q ? `?${q}` : window.location.pathname);
   const setSort = (s: Sort | null) => setQuery(withSort(params.toString(), s));
   const table = useTable({ features, columns: defs, data: sorted, getRowId });
   const [box, setBox] = useState<HTMLDivElement | null>(null); // the scroll area, which the body's virtualizer watches
-  // A deleted column takes its header, menu and dialog with it, so focus would fall to <body>: it goes to "Add column" once the column is gone.
+  // A deleted column takes its header, menu and dialog with it, so focus would fall to <body>: it goes to "Add column"
+  // once the column is gone.
   const deleting = useRef<number | null>(null);
   const addCell = useRef<HTMLTableCellElement>(null);
   useEffect(() => {
@@ -83,12 +87,14 @@ export function ApplicationsTable({
 
   return (
     <>
-      {/* The table scrolls inside its own area (both ways, so the sticky header and Title column work); the page never scrolls sideways. */}
+      {/* The table scrolls inside its own area (both ways, so the sticky header and Title column work); the page
+          never scrolls sideways. */}
       <div
         ref={setBox}
         className="max-h-[75vh] scroll-pt-10 overflow-auto rounded-lg border border-border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {/* Fixed layout with a colgroup: widths do not depend on which rows are mounted. Rows are 1-based in ARIA and the header is row 1. */}
+        {/* Fixed layout with a colgroup: widths do not depend on which rows are mounted. Rows are 1-based in ARIA
+            and the header is row 1. */}
         <table
           aria-rowcount={sorted.length + 1}
           style={{ minWidth: widths.reduce((a, b) => a + b, 0) }}
@@ -146,13 +152,15 @@ export function ApplicationsTable({
                             onRename={(name) => renameColumn(trackId, col.id, name)}
                             onHide={async () => {
                               const r = await setColumnHidden(trackId, col.id, true);
-                              if (r.ok && sort?.id === header.column.id) setSort(null); // a hidden column cannot be sorted by, so do not leave a stale ?sort=
+                              // a hidden column cannot be sorted by, so do not leave a stale ?sort=
+                              if (r.ok && sort?.id === header.column.id) setSort(null);
                               return r;
                             }}
                             onMove={(dir) => moveColumn(trackId, col.id, dir)}
                             onLoadImpact={() => fetchColumnDeleteImpact(col.id)}
                             onDelete={async (expected) => {
-                              deleting.current = col.id; // set before the call: the new column list can arrive before the action's promise settles
+                              // set before the call: the new column list can arrive before the action's promise settles
+                              deleting.current = col.id;
                               const r = await deleteColumn(col.id, true, expected);
                               if (!r.ok) deleting.current = null;
                               return r;

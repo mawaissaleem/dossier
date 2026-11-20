@@ -63,7 +63,8 @@ describe("groupByStatus", () => {
   });
 });
 
-// 9.4 / FR-4.3: the board filters with the table's filterRows, then groups. Status is column 1 (single-select, options 30 / 10 / 20); Priority is column 2.
+// FR-4.3: the board filters with the table's filterRows, then groups. Status is column 1 (single-select, options 30 /
+// 10 / 20); Priority is column 2.
 describe("boardGroups (filter, then group) and columnFilteredOut", () => {
   const sel = [
     { id: 1, type: "single_select" as const, options: status.options },
@@ -144,7 +145,8 @@ describe("boardGroups (filter, then group) and columnFilteredOut", () => {
     const m = planMove(groupByStatus(rs, status), 1, 1, 20)!;
     expect(hiddenAfterMove(rs[0], sel, [f(1, [10])], 1, m)).toBe(true);
     expect(hiddenAfterMove(rs[0], sel, [f(1, [10, 20])], 1, m)).toBe(false);
-    expect(hiddenAfterMove(rs[0], sel, [f(2, [51])], 1, m)).toBe(true); // already hidden by priority: unchanged by the move
+    // already hidden by priority: unchanged by the move
+    expect(hiddenAfterMove(rs[0], sel, [f(2, [51])], 1, m)).toBe(true);
     expect(hiddenAfterMove(rs[0], sel, [], 1, m)).toBe(false);
     expect(hiddenAfterMove(rs[0], sel, [f(1, [], true)], 1, planMove(groupByStatus(rs, status), 1, 1, null)!)).toBe(
       false,
@@ -165,7 +167,8 @@ describe("planMove and applyMove (board drop, optimistic state)", () => {
   const groups = groupByStatus(rows, status);
   it("plans a move into another column and carries the raw old value", () => {
     expect(planMove(groups, 1, 1, 20)).toEqual({ rowId: 1, from: 10, to: 20 });
-    expect(planMove(groups, 1, 2, 20)).toEqual({ rowId: 2, from: 999, to: 20 }); // deleted option: shown under No status
+    // deleted option: shown under No status
+    expect(planMove(groups, 1, 2, 20)).toEqual({ rowId: 2, from: 999, to: 20 });
     expect(planMove(groups, 1, 1, null)).toEqual({ rowId: 1, from: 10, to: null }); // No status clears the status
   });
   it("plans nothing for the same column, an unknown card or an unknown option", () => {
@@ -196,7 +199,8 @@ describe("planMove and applyMove (board drop, optimistic state)", () => {
   });
 });
 
-// Keyboard drag geometry with the board's real sizes: 288px columns (w-72), a 12px gap, a 264x70 card placed 8px below a column's top.
+// Keyboard drag geometry with the board's real sizes: 288px columns (w-72), a 12px gap, a 264x70 card placed 8px below
+// a column's top.
 describe("columnAtX and nextColumn (keyboard drag)", () => {
   const W = 288,
     CARD = 264;
@@ -233,7 +237,8 @@ describe("columnAtX and nextColumn (keyboard drag)", () => {
   });
   it("picking up and dropping the top card of a tall column keeps it in its own column", () => {
     const cols = [col(0, 800), col(1, 90)];
-    const card = { left: cols[0].left + 12, top: cols[0].top + 49, width: CARD, height: 70 }; // first card under the header
+    // first card under the header
+    const card = { left: cols[0].left + 12, top: cols[0].top + 49, width: CARD, height: 70 };
     expect(columnAtX(mid(card), cols)!.id).toBe("c0");
     expect(closest(card, cols).id).toBe("c1");
   });
@@ -249,7 +254,8 @@ describe("columnAtX and nextColumn (keyboard drag)", () => {
     expect(columnAtX(5, [])).toBeUndefined();
   });
   it("a card shifted left by its list's scrollbar still moves one column per arrow", () => {
-    // Measured in Firefox: a 258px card at col.left + 9 (1px border + 8px padding) beside a 12px scrollbar, so its centre is 6px left of the column's.
+    // Measured in Firefox: a 258px card at col.left + 9 (1px border + 8px padding) beside a 12px scrollbar, so its
+    // centre is 6px left of the column's.
     const cols = [col(0, 900), col(1, 900), col(2, 900)];
     const shifted = (c: (typeof cols)[number]) => c.left + 9 + 258 / 2;
     expect(nextColumn(shifted(cols[0]), 1, cols)!.id).toBe("c1");

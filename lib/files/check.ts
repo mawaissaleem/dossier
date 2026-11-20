@@ -1,5 +1,6 @@
-// Server-only. "Check files" (8.7, FR-5.5 "verifies hashes on demand"): re-verifies every file of one application with verifyStoredFile and
-// records each result. No bytes leave this function. One file at a time, so at most one file (<= the upload cap) is in memory.
+// Server-only. "Check files" (FR-5.5 "verifies hashes on demand"): re-verifies every file of one application with
+// verifyStoredFile and records each result. No bytes leave this function. One file at a time, so at most one file (<=
+// the upload cap) is in memory.
 import { applicationExists, listApplicationFileIds } from "../db/files";
 import { checkSummary, type CheckCounts } from "../file-integrity";
 import { verifyStoredFile } from "./open";

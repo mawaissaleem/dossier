@@ -80,7 +80,8 @@ beforeEach(() => {
     .values({ userId: "local", trackId, name: "Status", type: "single_select", position: 0, isStatus: true })
     .returning()
     .get().id;
-  [toApply, applied, interview] = [opt("To apply", 0), opt("Applied", 1), opt("Interview", 2)]; // "Applied" counts as submitted by default (6.1)
+  // "Applied" counts as submitted by default
+  [toApply, applied, interview] = [opt("To apply", 0), opt("Applied", 1), opt("Interview", 2)];
   appId = db.insert(applications).values({ userId: "local", trackId, title: "A" }).returning().get().id;
   db.insert(cellValues)
     .values({ userId: "local", applicationId: appId, columnId: statusCol, valueOptionId: toApply })
@@ -97,7 +98,8 @@ describe("updateSubmissionNote (FR-7.6)", () => {
     expect(await updateSubmissionNote(id, "  new note  ")).toEqual({ ok: true });
     const after = db.select().from(submissions).where(eq(submissions.id, id)).get()!;
     expect(after.note).toBe("new note");
-    expect({ ...after, note: null, updatedAt: null }).toEqual({ ...before, note: null, updatedAt: null }); // date, application, user and created_at unchanged
+    // date, application, user and created_at unchanged
+    expect({ ...after, note: null, updatedAt: null }).toEqual({ ...before, note: null, updatedAt: null });
     expect(db.select().from(submissionFiles).all()).toEqual(links);
     expect((await listSubmissions(appId))[0]).toMatchObject({
       date: "2026-11-08",
@@ -111,7 +113,8 @@ describe("updateSubmissionNote (FR-7.6)", () => {
     expect(await updateSubmissionNote(id, "x".repeat(NOTE_MAX))).toEqual({ ok: true });
     expect((await updateSubmissionNote(id, "y".repeat(NOTE_MAX + 1))).ok).toBe(false);
     expect(db.select().from(submissions).get()!.note).toBe("x".repeat(NOTE_MAX));
-    expect(await updateSubmissionNote(id, ` ${"z".repeat(NOTE_MAX)} `)).toEqual({ ok: true }); // length is checked after trimming
+    // length is checked after trimming
+    expect(await updateSubmissionNote(id, ` ${"z".repeat(NOTE_MAX)} `)).toEqual({ ok: true });
   });
 
   it("turns a blank, whitespace or null note into null (the note can be cleared)", async () => {
@@ -203,10 +206,12 @@ describe("moving the status backward (FR-7.8)", () => {
     expect((await updateCell(appId, statusCol, toApply)).ok).toBe(true); // table: Applied -> To apply
     expect(statusOf()).toBe(toApply);
     expect(snapshot()).toEqual(before);
-    expect(await updateCell(appId, statusCol, applied)).toMatchObject({ ok: true }); // forward to a submitted status: no needsReview
+    // forward to a submitted status: no needsReview
+    expect(await updateCell(appId, statusCol, applied)).toMatchObject({ ok: true });
     expect(statusOf()).toBe(applied);
     expect(snapshot()).toEqual(before);
-    expect((await updateApplication(appId, "A", [{ columnId: statusCol, value: interview }])).ok).toBe(true); // detail form, backward then forward
+    // detail form, backward then forward
+    expect((await updateApplication(appId, "A", [{ columnId: statusCol, value: interview }])).ok).toBe(true);
     expect((await updateApplication(appId, "A", [{ columnId: statusCol, value: toApply }])).ok).toBe(true);
     expect((await updateApplication(appId, "A", [{ columnId: statusCol, value: applied }])).ok).toBe(true);
     expect(snapshot()).toEqual(before);

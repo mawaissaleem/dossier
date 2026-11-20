@@ -1,9 +1,5 @@
 // Server-only. See lib/db/tracks.ts for the convention.
-// Global search (FR-10.1). No FTS5 and no SQL LIKE: the current user's title and text/link cells are read in 2 queries and matched in
-// JS (lib/search.ts), because SQLite's LIKE and FTS5 do not fold non-ASCII ("Zürich"), and an FTS index would need keeping in sync on
-// every write path. Measured in .claude/work/4.6/coder-1.md. shortcut: reads every text cell and note per search, fine for thousands
-// of rows; if it ever nears 100 ms, move to FTS5 (trigram) kept in sync by triggers. Notes (task 7.5) are a third query, passed to
-// matchApplication as more fields.
+// Global search (FR-10.1), matched in JS rather than SQL; the reasons and the limit are above searchApplications.
 import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { clampLimit, matchApplication, rankHits, searchWords, SEARCH_MAX_QUERY, type Matched } from "../search";
 import { getDb } from "./client";
@@ -18,9 +14,15 @@ export type SearchHit = {
   matched: Matched;
 };
 
-// Current user only, all tracks. Matches the title, every text and link cell and every note (hidden columns too; a link is often the company's
-// site). Archived applications are included and flagged: the user may be answering an old email, and the UI can dim them.
-// Blank or over-long query = []. Order: see rankHits; at most `limit` (default 20, max 50) hits.
+// Global search (FR-10.1). No FTS5 and no SQL LIKE: the current user's title and text/link cells are read in 2 queries
+// and matched in JS (lib/search.ts), because SQLite's LIKE and FTS5 do not fold non-ASCII ("Zürich"), and an FTS index
+// would need keeping in sync on every write path. shortcut: reads every text cell and note per search, fine for
+// thousands of rows; if it ever nears 100 ms, move to FTS5 (trigram) kept in sync by triggers. Notes are a third query,
+// passed to matchApplication as more fields.
+// Current user only, all tracks. Matches the title, every text and link cell and every note (hidden columns too; a link
+// is often the company's site). Archived applications are included and flagged: the user may be answering an old email,
+// and the UI can dim them. Blank or over-long query = []. Order: see rankHits; at most `limit` (default 20, max 50)
+// hits.
 export async function searchApplications(query: string, { limit }: { limit?: number } = {}): Promise<SearchHit[]> {
   const q = query.trim();
   const words = searchWords(q);
@@ -56,7 +58,8 @@ export async function searchApplications(query: string, { limit }: { limit?: num
     if (list) list.push({ column: c.column, text: c.text! });
     else byApp.set(c.applicationId, [{ column: c.column, text: c.text! }]);
   }
-  // Newest note first, so it wins when several notes match equally. The join to applications drops notes of another user's applications.
+  // Newest note first, so it wins when several notes match equally. The join to applications drops notes of another
+  // user's applications.
   const noteRows = db
     .select({ applicationId: notes.applicationId, body: notes.body })
     .from(notes)

@@ -27,8 +27,9 @@ import { storeUploadedFile } from "@/lib/files/store";
 import { dropTestDb, runSeed, useTestDb } from "./helpers/db";
 import { readZip } from "./helpers/zip";
 
-// Task 12.2 (NFR-10): hostile input against every consumer of a stored path or a typed path. The per-function rules are in
-// files-paths.test.ts; this file proves each consumer (Open, zip, delete, move, re-point, upload, the typed-path validators) uses them.
+// NFR-10: hostile input against every consumer of a stored path or a typed path. The per-function rules are in
+// files-paths.test.ts; this file proves each consumer (Open, zip, delete, move, re-point, upload, the typed-path
+// validators) uses them.
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
 
 let db: ReturnType<typeof useTestDb>;
@@ -56,7 +57,8 @@ const open = (id: number) => getFile(req(`/api/files/${id}`), { params: Promise.
 const zip = (id: number, q = "") =>
   getZip(req(`/api/applications/${id}/zip${q}`), { params: Promise.resolve({ id: String(id) }) } as never);
 
-// Every form a tampered files.relative_path might take to leave the root. "%2e%2e%2f" is not here: it is a harmless literal name (below).
+// Every form a tampered files.relative_path might take to leave the root. "%2e%2e%2f" is not here: it is a harmless
+// literal name (below).
 const ESCAPES = [
   "..",
   "../secret.txt",
@@ -101,7 +103,8 @@ describe("a tampered stored path never reaches outside the files root", () => {
     writeFileSync(join(root, "%2e%2e%2fsecret.txt"), "LITERAL");
     setPath(f.id, "%2e%2e%2fsecret.txt");
     const res = await open(f.id);
-    expect(res.status).toBe(409); // the file is inside the root, so it is served-or-flagged, never the parent's secret.txt
+    // the file is inside the root, so it is served-or-flagged, never the parent's secret.txt
+    expect(res.status).toBe(409);
     expect(await res.text()).not.toContain("TOPSECRET");
     setPath(f.id, "%2e%2e/secret.txt"); // a folder named "%2e%2e" does not exist: missing, not the parent
     expect((await open(f.id)).status).toBe(404);

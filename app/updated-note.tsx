@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { UPDATED_COOKIE } from "@/lib/files/update";
 import { dismissUpdatedNote } from "./actions/database";
 
-// One-shot note after "Back up and update": the action sets a short-lived cookie with the safety backup path, this shows it until dismissed
-// (or ten minutes pass). Request-time (cookies), so the layout puts it inside a Suspense boundary.
+// One-shot note after "Back up and update": the action sets a short-lived cookie with the safety backup path, this
+// shows it until dismissed (or ten minutes pass). Request-time (cookies), so the layout puts it inside a Suspense
+// boundary.
 export async function UpdatedNote() {
   const path = (await cookies()).get(UPDATED_COOKIE)?.value;
   if (!path) return null;

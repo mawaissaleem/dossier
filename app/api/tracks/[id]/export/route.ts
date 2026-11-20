@@ -5,10 +5,11 @@ import { contentDisposition } from "@/lib/file-serve";
 import { databaseUpdateResponse } from "@/lib/db/migrations";
 import { isCrossSiteFetch, isLocalHost } from "@/lib/local-request";
 
-// GET /api/tracks/:id/export  downloads the track's table as CSV (lib/csv.ts has the format and the formula guard). It is every
-// application of the track, archived ones too, every column (hidden too), newest first: the table's current filters and sort are NOT applied.
-// 200 CSV attachment (no-store, nosniff); 403 not local or Sec-Fetch-Site cross-site/same-site (it returns the user's data, so another page
-// must not be able to read it); 404 unknown or another user's track.
+// GET /api/tracks/:id/export downloads the track's table as CSV (lib/csv.ts has the format and the formula guard). It
+// is every application of the track, archived ones too, every column (hidden too), newest first: the table's current
+// filters and sort are NOT applied. 200 CSV attachment (no-store, nosniff); 403 not local or Sec-Fetch-Site
+// cross-site/same-site (it returns the user's data, so another page must not be able to read it); 404 unknown or
+// another user's track.
 const NO_STORE = { "Cache-Control": "no-store", "Cross-Origin-Resource-Policy": "same-origin" };
 const json = (error: string, status: number) => NextResponse.json({ error }, { status, headers: NO_STORE });
 

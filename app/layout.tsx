@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   description: "Track your job and PhD applications and find the exact files you sent to each one.",
 };
 
-// The per-track links read the database at request time, so they get their own boundary with no fallback: the navigation around them stays in the static shell. Both navigations (side and phone panel) show them.
+// The per-track links read the database at request time, so they get their own boundary with no fallback: the
+// navigation around them stays in the static shell. Both navigations (side and phone panel) show them.
 const tracks = (
   <Suspense>
     <TrackNav />
@@ -26,7 +27,8 @@ const tracks = (
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // data-theme is set before first paint by the inline script (the choice lives in localStorage, so the layout stays static); the attribute differs from the server's, hence suppressHydrationWarning.
+    // data-theme is set before first paint by the inline script (the choice lives in localStorage, so the layout stays
+    // static); the attribute differs from the server's, hence suppressHydrationWarning.
     <html
       lang="en"
       data-theme={DEFAULT_THEME}
@@ -35,12 +37,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        {/* Copies the sidebar cookie to <html data-sidebar> before first paint (same trick as the theme): the layout stays static and the first paint has the right width. */}
+        {/* Copies the sidebar cookie to <html data-sidebar> before first paint (same trick as the theme): the
+            layout stays static and the first paint has the right width. */}
         <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col md:flex-row">
-        {/* From md up a sticky full-height sidebar: the 72px icon rail, or 240px with labels and track links when expanded (the width eases over 150ms and pushes the page). Below md the same icons form a top bar,
-            so nothing overflows sideways; its logo opens the full navigation as a panel. */}
+        {/* From md up a sticky full-height sidebar: the 72px icon rail, or 240px with labels and track links when
+            expanded (the width eases over 150ms and pushes the page). Below md the same icons form a top bar, so
+            nothing overflows sideways; its logo opens the full navigation as a panel. */}
         <nav
           id="main-nav"
           aria-label="Main"

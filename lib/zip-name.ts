@@ -1,4 +1,5 @@
-// Pure (no fs, no DB). <folder or title slug>-files-YYYYMMDD.zip from the local date; the name is cut to letters and digits joined by "-".
+// Pure (no fs, no DB). <folder or title slug>-files-YYYYMMDD.zip from the local date; the name is cut to letters and
+// digits joined by "-".
 export function applicationZipName(folderOrTitle: string, now: Date): string {
   const slug =
     folderOrTitle

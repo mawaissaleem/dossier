@@ -70,7 +70,8 @@ describe("resolve", () => {
 });
 
 describe("overdue policies", () => {
-  // 1: overdue by one day, no buffers (score -1, not overdue-looking). 2: due today with Big (3) + Heavy (2): score -5, but not overdue.
+  // 1: overdue by one day, no buffers (score -1, not overdue-looking). 2: due today with Big (3) + Heavy (2): score -5,
+  // but not overdue.
   const apps = [app(1, "2026-11-11", NONE), app(2, TODAY, BIG, HEAVY), app(3, "2026-11-20", NONE)];
   it("pin: overdue first and flagged, even ahead of a lower non-overdue score", () => {
     expect(order(apps, "pin", "last")).toMatchObject({ ranked: [1, 2, 3], flags: [true, false, false] });

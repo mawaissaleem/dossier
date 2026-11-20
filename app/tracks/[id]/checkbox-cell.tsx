@@ -4,8 +4,9 @@ import { useOptimistic, useRef, useState, useTransition } from "react";
 import { updateCell } from "@/app/actions/cells";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// Checkbox (components/ui), one updateCell call per toggle. Unchecked is saved as false (not blank); a row with no value also shows unchecked.
-// useOptimistic shows the new state while saving and reverts by itself if the save fails (props stay the same).
+// Checkbox (components/ui), one updateCell call per toggle. Unchecked is saved as false (not blank); a row with no
+// value also shows unchecked. useOptimistic shows the new state while saving and reverts by itself if the save fails
+// (props stay the same).
 export function CheckboxCell({
   applicationId,
   columnId,

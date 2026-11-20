@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NOTE_BODY_MAX } from "@/lib/notes";
 
-// The "add a note" form (FR-11.1). Ctrl/Cmd+Enter submits. The box keeps the text until the server accepts it, and is cleared only then.
-// `sending` (a ref) stops a second submit in the same tick, before the disabled state has rendered.
+// The "add a note" form (FR-11.1). Ctrl/Cmd+Enter submits. The box keeps the text until the server accepts it, and is
+// cleared only then. `sending` (a ref) stops a second submit in the same tick, before the disabled state has rendered.
 export function AddNote({ applicationId }: { applicationId: number }) {
   const uid = useId();
   const [body, setBody] = useState("");
@@ -62,7 +62,8 @@ export function AddNote({ applicationId }: { applicationId: number }) {
         }}
         readOnly={busy}
         rows={3}
-        maxLength={NOTE_BODY_MAX + 1000} // a soft cap on typing; the exact limit is enforced on the server and reported inline
+        // a soft cap on typing; the exact limit is enforced on the server and reported inline
+        maxLength={NOTE_BODY_MAX + 1000}
         placeholder="Write a note (Ctrl+Enter to add)"
         aria-invalid={error?.field ? true : undefined}
         aria-describedby={error ? `${uid}-err` : undefined}

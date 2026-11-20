@@ -16,8 +16,8 @@ export type UpcomingDeadline = Omit<DeadlineInput, "deadline"> & {
   text: string;
 };
 
-// FR-9.3: items due today or later, nearest first (ties: lower id), at most `limit`. Overdue, blank and invalid deadlines are left out.
-// 1 day is "Tomorrow", so the unit is only ever plural.
+// FR-9.3: items due today or later, nearest first (ties: lower id), at most `limit`. Overdue, blank and invalid
+// deadlines are left out. 1 day is "Tomorrow", so the unit is only ever plural.
 export function upcomingDeadlines(items: readonly DeadlineInput[], today: string, limit: number): UpcomingDeadline[] {
   const t = dayNumber(today);
   if (t === null) throw new Error(`today must be a YYYY-MM-DD day, got ${String(today)}`);
@@ -45,7 +45,8 @@ export const overdueText = (days: number) => `Overdue by ${days} ${days === 1 ? 
 
 export type OverdueAlert = Omit<DeadlineInput, "deadline"> & { date: string; days: number; text: string };
 
-// FR-9.5: items whose deadline is before today, most overdue first (ties: lower id). Due today, future, blank and invalid deadlines are left out.
+// FR-9.5: items whose deadline is before today, most overdue first (ties: lower id). Due today, future, blank and
+// invalid deadlines are left out.
 export function overdueAlerts(items: readonly DeadlineInput[], today: string): OverdueAlert[] {
   const t = dayNumber(today);
   if (t === null) throw new Error(`today must be a YYYY-MM-DD day, got ${String(today)}`);
@@ -59,7 +60,7 @@ export function overdueAlerts(items: readonly DeadlineInput[], today: string): O
   return out.sort((a, b) => b.days - a.days || a.id - b.id);
 }
 
-// ---- 11.5: weekly progress (FR-9.4). Weeks are Monday to Sunday calendar days (ISO), never instants. ----
+// ---- weekly progress (FR-9.4). Weeks are Monday to Sunday calendar days (ISO), never instants. ----
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const dayString = (n: number) => new Date(n * 86_400_000).toISOString().slice(0, 10);
 
@@ -70,7 +71,8 @@ export function weekStart(day: string): string {
   return dayString(n - ((((n + 3) % 7) + 7) % 7)); // double % so days before 1970 work
 }
 
-// Monday, Sunday and a label for the week containing `today`: "10–16 Nov", "30 Nov – 6 Dec", "29 Dec 2026 – 4 Jan 2027" (year only when the week spans two).
+// Monday, Sunday and a label for the week containing `today`: "10–16 Nov", "30 Nov – 6 Dec", "29 Dec 2026 – 4 Jan 2027"
+// (year only when the week spans two).
 export function weekRange(today: string): { start: string; end: string; label: string } {
   const start = weekStart(today);
   const end = dayString(dayNumber(start)! + 6);
@@ -85,7 +87,8 @@ export function weekRange(today: string): { start: string; end: string; label: s
   return { start, end, label };
 }
 
-// How many applications' first-submission dates (one per application) fall in the week starting `monday`. Invalid dates are not counted.
+// How many applications' first-submission dates (one per application) fall in the week starting `monday`. Invalid dates
+// are not counted.
 export function countInWeek(firstDates: readonly string[], monday: string): number {
   const s = dayNumber(monday);
   if (s === null) throw new Error(`monday must be a YYYY-MM-DD day, got ${String(monday)}`);
@@ -105,17 +108,18 @@ export type WeeklyProgress = {
   label: string;
 };
 
-// `ratio` is capped at 1 for the ring ("5 of 4" is a full ring); `count` is not capped. Future-dated submissions count when still inside this week.
+// `ratio` is capped at 1 for the ring ("5 of 4" is a full ring); `count` is not capped. Future-dated submissions count
+// when still inside this week.
 export function weeklyProgress(firstDates: readonly string[], capacity: number, today: string): WeeklyProgress {
   const range = weekRange(today);
   const count = countInWeek(firstDates, range.start);
   return { count, capacity, ratio: capacity > 0 ? Math.min(1, count / capacity) : 1, met: count >= capacity, ...range };
 }
 
-// ---- 11.6: streak (FR-9.4). ----
-// Consecutive weeks ending with last week whose count (first-submission dates) is at least `capacity`, plus this week when it already meets it;
-// this week not yet met does not break it, any earlier week below capacity ends it. Past weeks use the capacity given (history is not stored).
-// Look-back is capped at `maxWeeks` past weeks. Dates after this week and invalid dates are ignored. One pass to bucket by week, then a walk back.
+// ---- streak (FR-9.4). ---- Consecutive weeks ending with last week whose count (first-submission dates) is at least
+// `capacity`, plus this week when it already meets it; this week not yet met does not break it, any earlier week below
+// capacity ends it. Past weeks use the capacity given (history is not stored). Look-back is capped at `maxWeeks` past
+// weeks. Dates after this week and invalid dates are ignored. One pass to bucket by week, then a walk back.
 export function streak(
   firstDates: readonly string[],
   capacity: number,
@@ -137,7 +141,7 @@ export function streak(
   return { weeks, thisWeekMet };
 }
 
-// ---- 11.7: the one-sentence summary under the header, from the numbers the cards already show. ----
+// ---- the one-sentence summary under the header, from the numbers the cards already show. ----
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const MONTHS_LONG = [
   "January",
@@ -154,7 +158,8 @@ const MONTHS_LONG = [
   "December",
 ];
 
-// "Thursday 12 November · 2 overdue · next deadline in 3 days · 1 of 4 this week". Overdue only when there is any; the deadline part only with an upcoming one.
+// "Thursday 12 November · 2 overdue · next deadline in 3 days · 1 of 4 this week". Overdue only when there is any; the
+// deadline part only with an upcoming one.
 export function summaryLine(
   today: string,
   s: { overdue: number; nextDays: number | null; count: number; capacity: number },
@@ -170,11 +175,12 @@ export function summaryLine(
   return parts.join(" · ");
 }
 
-// ---- DASH.1: the text and tone of the four stat tiles at the top of the dashboard (pure, so the wording is tested). ----
+// ---- the text and tone of the four stat tiles at the top of the dashboard (pure, so the wording is tested). ----
 export type TileText = { value: string; hint: string };
 const dayWord = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
 
-// Always shown. Calm "0 / Nothing late"; otherwise the count, the most overdue item and how many more follow ("PhD · X, 2 days late · +3 more"). `alert` = destructive border and number.
+// Always shown. Calm "0 / Nothing late"; otherwise the count, the most overdue item and how many more follow ("PhD · X,
+// 2 days late · +3 more"). `alert` = destructive border and number.
 export function overdueTile(items: readonly OverdueAlert[]): TileText & { alert: boolean } {
   const [first] = items;
   if (!first) return { value: "0", hint: "Nothing late", alert: false };
@@ -186,14 +192,16 @@ export function overdueTile(items: readonly OverdueAlert[]): TileText & { alert:
   };
 }
 
-// The nearest upcoming deadline: "Today" / "Tomorrow" / "3 days" over "PhD · Title". None: "None / No upcoming deadlines".
+// The nearest upcoming deadline: "Today" / "Tomorrow" / "3 days" over "PhD · Title". None: "None / No upcoming
+// deadlines".
 export function deadlineTile(first: UpcomingDeadline | undefined): TileText {
   return first
     ? { value: first.text, hint: `${first.trackName} · ${first.title}` }
     : { value: "None", hint: "No upcoming deadlines" };
 }
 
-// One line from the goal and the streak: met says so (with the streak when there is one); otherwise how many more it takes.
+// One line from the goal and the streak: met says so (with the streak when there is one); otherwise how many more it
+// takes.
 export function weekHint(p: { count: number; capacity: number; met: boolean; streak: number }): string {
   const streakText = p.streak > 0 ? `${p.streak}-week streak` : null;
   if (p.met) return streakText ? `Goal met · ${streakText}` : "Weekly goal met";
@@ -201,22 +209,23 @@ export function weekHint(p: { count: number; capacity: number; met: boolean; str
   return streakText ? `${streakText} · ${more}` : more;
 }
 
-// ---- DASH.3: the bento. ----
-// A stat tile's value as a big part and a muted unit: "3 days" -> "3" + " days", "1 of 4" -> "1" + " of 4", "Today" and "None" have no unit. The first word is the big part.
+// ---- the bento. ---- A stat tile's value as a big part and a muted unit: "3 days" -> "3" + " days", "1 of 4" -> "1" +
+// " of 4", "Today" and "None" have no unit. The first word is the big part.
 export function splitValue(value: string): { big: string; unit: string } {
   const i = value.indexOf(" ");
   return i < 0 ? { big: value, unit: "" } : { big: value.slice(0, i), unit: value.slice(i) };
 }
 
-// How many items share the row of item `index` in a grid with `perRow` items per row: perRow, except in an incomplete last row, whose items share it
-// (so no cell is empty). The dashboard's track cards and its All tracks tile use it to pick their column spans (12 / n at xl, 2 / n below).
+// How many items share the row of item `index` in a grid with `perRow` items per row: perRow, except in an incomplete
+// last row, whose items share it (so no cell is empty). The dashboard's track cards and its All tracks tile use it to
+// pick their column spans (12 / n at xl, 2 / n below).
 export function itemsInRow(index: number, count: number, perRow: number): number {
   const lastRow = Math.ceil(count / perRow) - 1;
   return Math.floor(index / perRow) === lastRow ? count - lastRow * perRow : perRow;
 }
 
-// ---- DASH.4: the plan card's "Up next". ----
-// The first `limit` of the ranking after this week's plan, numbered on from it (rank `start`, as on /planner), and `total` = the whole ranking for "All N in Planner" (shown only when `more`).
+// ---- the plan card's "Up next". ---- The first `limit` of the ranking after this week's plan, numbered on from it
+// (rank `start`, as on /planner), and `total` = the whole ranking for "All N in Planner" (shown only when `more`).
 export function upNext<T>(
   plan: readonly unknown[],
   rest: readonly T[],

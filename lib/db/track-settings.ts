@@ -14,7 +14,8 @@ export const submittedKey = (trackId: number) => `track.${trackId}.submitted_sta
 export const winKey = (trackId: number) => `track.${trackId}.win_statuses`;
 export const expectedLabelsKey = (trackId: number) => `track.${trackId}.expected_labels`;
 
-// Options of the track's current status column, in order. Empty when the track is not the user's or has no status column.
+// Options of the track's current status column, in order. Empty when the track is not the user's or has no status
+// column.
 export function statusOptions(trackId: number) {
   const userId = getUserId();
   return getDb()
@@ -35,8 +36,9 @@ export function statusOptions(trackId: number) {
     .all();
 }
 
-// Option ids that count as submitted. Saved ids that are no longer status options (deleted, or a switched status column) are dropped silently.
-// Never saved: options labelled Applied / Submitted (case-insensitive), so a database made before this setting existed still works.
+// Option ids that count as submitted. Saved ids that are no longer status options (deleted, or a switched status
+// column) are dropped silently. Never saved: options labelled Applied / Submitted (case-insensitive), so a database
+// made before this setting existed still works.
 export async function getSubmittedStatuses(trackId: number): Promise<number[]> {
   return submittedStatusIds(trackId);
 }
@@ -57,7 +59,8 @@ export async function isSubmittedStatus(trackId: number, optionId: number | null
   return optionId !== null && (await getSubmittedStatuses(trackId)).includes(optionId);
 }
 
-// Replaces the set. Refuses ids that are not options of this track's status column; an empty list is allowed (nothing counts as submitted).
+// Replaces the set. Refuses ids that are not options of this track's status column; an empty list is allowed (nothing
+// counts as submitted).
 export async function setSubmittedStatuses(trackId: number, ids: unknown): Promise<SubmittedResult> {
   const options = statusOptions(trackId);
   if (!options.length) return { ok: false, error: "This track has no status options." };
@@ -67,7 +70,8 @@ export async function setSubmittedStatuses(trackId: number, ids: unknown): Promi
   return { ok: true };
 }
 
-// Option ids that count as wins (FR-9.7). Never saved: options labelled Interview / Offer; once saved the saved list wins, even if empty. Deleted options are dropped.
+// Option ids that count as wins (FR-9.7). Never saved: options labelled Interview / Offer; once saved the saved list
+// wins, even if empty. Deleted options are dropped.
 export function winStatusIds(trackId: number): number[] {
   return resolveWinStatuses(readSetting(winKey(trackId)), statusOptions(trackId));
 }
@@ -78,7 +82,8 @@ export async function getWinChoices(trackId: number) {
   return options.map((o) => ({ ...o, on: on.has(o.id) }));
 }
 
-// Replaces the set; same validation as setSubmittedStatuses (every id must be an option of this track's status column; empty is allowed).
+// Replaces the set; same validation as setSubmittedStatuses (every id must be an option of this track's status column;
+// empty is allowed).
 export async function setWinStatuses(trackId: number, ids: unknown): Promise<SubmittedResult> {
   const options = statusOptions(trackId);
   if (!options.length) return { ok: false, error: "This track has no status options." };
@@ -95,12 +100,14 @@ const ownsTrack = (trackId: number) =>
     .where(and(eq(tracks.id, trackId), eq(tracks.userId, getUserId())))
     .get() !== undefined;
 
-// The labels a file set should have (FR-7.3). Never saved or unreadable -> empty list (no warning); the templates (lib/track-templates.ts) are the only source of defaults.
+// The labels a file set should have (FR-7.3). Never saved or unreadable -> empty list (no warning); the templates
+// (lib/track-templates.ts) are the only source of defaults.
 export async function getExpectedLabels(trackId: number): Promise<string[]> {
   return resolveExpectedLabels(await getSetting(expectedLabelsKey(trackId)));
 }
 
-// Replaces the list after validating it (see checkExpectedLabels). Refuses tracks that are not the user's; nothing is saved on error.
+// Replaces the list after validating it (see checkExpectedLabels). Refuses tracks that are not the user's; nothing is
+// saved on error.
 export async function setExpectedLabels(trackId: number, labels: unknown): Promise<SubmittedResult> {
   if (!ownsTrack(trackId)) return { ok: false, error: "Track not found." };
   const checked = checkExpectedLabels(labels);

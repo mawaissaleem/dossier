@@ -74,8 +74,8 @@ async function CapacitySection() {
   return <CapacityForm initial={await getCapacity()} />;
 }
 
-// The live preview: read per request like /planner. Every settings action calls refresh(), which re-renders this page's server components,
-// so a save in any section redraws this list in the same round trip (no manual reload).
+// The live preview: read per request like /planner. Every settings action calls refresh(), which re-renders this page's
+// server components, so a save in any section redraws this list in the same round trip (no manual reload).
 async function PreviewSection() {
   await connection();
   const { capacity, plan, rest } = await getWeeksPlan(localToday());

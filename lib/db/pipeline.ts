@@ -7,9 +7,10 @@ import { statusOptions } from "./track-settings";
 import { listTracks } from "./tracks";
 import { getUserId } from "./user";
 
-// One grouped query over the user's non-archived applications, joined to each track's status column (`columns.is_status`) and the
-// application's value in it; labels, colours and order come from `column_options` (statusOptions), so a rename shows at once. A track
-// with no status column is not skipped: it gets its total and no segments. Tracks keep their own order; one with no applications has total 0.
+// One grouped query over the user's non-archived applications, joined to each track's status column
+// (`columns.is_status`) and the application's value in it; labels, colours and order come from `column_options`
+// (statusOptions), so a rename shows at once. A track with no status column is not skipped: it gets its total and no
+// segments. Tracks keep their own order; one with no applications has total 0.
 export async function getPipelineCounts(): Promise<TrackPipeline[]> {
   const db = getDb();
   const userId = getUserId();

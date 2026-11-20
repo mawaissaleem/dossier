@@ -17,9 +17,9 @@ import { moveStoredFiles, repointStoredFiles, type MoveResult, type RepointResul
 import { validateFilesRoot, type FilesRootResult } from "@/lib/files/root";
 import { sumBytes } from "@/lib/relocate";
 
-// First-time setup (or the same folder again): validate, then save; nothing is saved on error. Once live files exist, a different folder must go
-// through Move or Re-point (8.10): a plain save would leave every stored file unreachable. Takes the shared lock (lib/files/lock.ts) so it cannot
-// run during a backup, restore or move, or while an upload is running.
+// First-time setup (or the same folder again): validate, then save; nothing is saved on error. Once live files exist, a
+// different folder must go through Move or Re-point: a plain save would leave every stored file unreachable. Takes the
+// shared lock (lib/files/lock.ts) so it cannot run during a backup, restore or move, or while an upload is running.
 export async function saveFilesRoot(input: string): Promise<FilesRootResult> {
   const r = await validateFilesRoot(input); // also rejects non-strings: this runs on any POST
   if (!r.ok) return r;
@@ -45,7 +45,7 @@ export async function saveFilesRoot(input: string): Promise<FilesRootResult> {
   return r;
 }
 
-// The Move confirm's impact, read fresh on every open (DESIGN.md): how many live files and bytes will move, and from where.
+// The Move confirm's impact, read fresh on every open: how many live files and bytes will move, and from where.
 export async function fetchMoveImpact(): Promise<
   { ok: true; fileCount: number; totalBytes: number; from: string | null } | { ok: false; error: string }
 > {
@@ -57,7 +57,7 @@ export async function fetchMoveImpact(): Promise<
   }
 }
 
-// Move (8.10), after the confirmation. `expected` = the count and size the dialog showed; the move refuses if they changed.
+// Move, after the confirmation. `expected` = the count and size the dialog showed; the move refuses if they changed.
 export async function moveFilesRoot(input: unknown, expected: unknown): Promise<MoveResult> {
   const lock = tryLock("move");
   if (!lock.ok) return lock;
@@ -73,7 +73,8 @@ export async function moveFilesRoot(input: unknown, expected: unknown): Promise<
   }
 }
 
-// Re-point (8.10): the user already moved the folder; saves it only if every stored file is there (a size that differs is flagged as changed, as Move does).
+// Re-point: the user already moved the folder; saves it only if every stored file is there (a size that differs is
+// flagged as changed, as Move does).
 export async function repointFilesRoot(input: unknown): Promise<RepointResult> {
   const lock = tryLock("move");
   if (!lock.ok) return lock;
@@ -104,7 +105,8 @@ export async function saveSubmittedStatuses(
   }
 }
 
-// Which status options count as wins on the dashboard for a track (FR-9.7). Validated in the data layer: this runs on any POST.
+// Which status options count as wins on the dashboard for a track (FR-9.7). Validated in the data layer: this runs on
+// any POST.
 export async function saveWinStatuses(
   trackId: number,
   ids: unknown,
@@ -203,8 +205,9 @@ export async function saveCapacity(capacity: unknown): Promise<{ ok: true } | { 
   }
 }
 
-// Restores every planner rule to the shipped defaults (FR-8.11). Touches nothing outside the planner settings and buffers.
-// `confirm` must be literally true: the UI sets it only after the confirm dialog (NFR-4); this runs on any POST.
+// Restores every planner rule to the shipped defaults (FR-8.11). Touches nothing outside the planner settings and
+// buffers. `confirm` must be literally true: the UI sets it only after the confirm dialog (NFR-4); this runs on any
+// POST.
 export async function resetPlanner(confirm: boolean): Promise<{ ok: true } | { ok: false; error: string }> {
   if (confirm !== true) return { ok: false, error: "Resetting must be confirmed. Nothing was changed." };
   try {

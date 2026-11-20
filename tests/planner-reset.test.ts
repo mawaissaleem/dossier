@@ -232,7 +232,8 @@ describe("resetPlannerSettings", () => {
     );
 
     await resetPlannerSettings();
-    expect(db.select().from(columnOptions).where(eq(columnOptions.id, t1.id)).get()!.bufferDays).toBe(7); // Tier is no longer a slot
+    // Tier is no longer a slot
+    expect(db.select().from(columnOptions).where(eq(columnOptions.id, t1.id)).get()!.bufferDays).toBe(7);
     expect((await getPlannerBuffers(job)).priority!.options.map((o) => o.bufferDays)).toEqual(
       priority!.options.map((o) => defaultBuffer("priority", o.label)),
     );
